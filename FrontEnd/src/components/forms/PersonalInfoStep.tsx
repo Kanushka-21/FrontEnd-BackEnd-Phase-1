@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowRight, ArrowLeft } from 'lucide-react';
+import { ArrowRight, ArrowLeft, User, Store } from 'lucide-react';
 import { useRegistration, useFormValidation } from '@/hooks';
 import { validators } from '@/utils';
 import { UserRegistrationRequest, RegistrationStep } from '@/types';
@@ -22,6 +22,7 @@ const PersonalInfoStep: React.FC = () => {
     address: '',
     dateOfBirth: '',
     nicNumber: '',
+    userRole: 'buyer',
   };
 
   const validationRules = {
@@ -53,6 +54,7 @@ const PersonalInfoStep: React.FC = () => {
       if (required) return required;
       return validators.nic(value);
     },
+    userRole: validators.required,
   };
 
   const {
@@ -78,6 +80,11 @@ const PersonalInfoStep: React.FC = () => {
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
     setValue(field, e.target.value);
+  };
+
+  const handleRoleChange = (role: 'buyer' | 'seller') => {
+    setValue('userRole', role);
+    setTouched('userRole');
   };
 
   const handleInputBlur = (field: keyof UserRegistrationRequest) => () => {
@@ -121,6 +128,52 @@ const PersonalInfoStep: React.FC = () => {
     <div className="h-full w-full p-6 flex flex-col">
       {/* Form Content - Full Size */}
       <form onSubmit={handleSubmit} className="flex-1 flex flex-col">
+        
+        {/* User Role Selection - Full Width */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-secondary-900 mb-3">
+            Select Your Role <span className="text-red-500">*</span>
+          </label>
+          <div className="grid grid-cols-2 gap-4">
+            <div
+              className={`border-2 rounded-lg p-4 cursor-pointer transition-all duration-200 ${
+                values.userRole === 'buyer'
+                  ? 'border-primary-500 bg-primary-50'
+                  : 'border-secondary-200 hover:border-secondary-300'
+              }`}
+              onClick={() => handleRoleChange('buyer')}
+            >
+              <div className="flex items-center space-x-3">
+                <User className="w-6 h-6 text-primary-600" />
+                <div>
+                  <h4 className="font-semibold text-secondary-900">Buyer</h4>
+                  <p className="text-sm text-secondary-600">Purchase gemstones</p>
+                </div>
+              </div>
+            </div>
+            
+            <div
+              className={`border-2 rounded-lg p-4 cursor-pointer transition-all duration-200 ${
+                values.userRole === 'seller'
+                  ? 'border-primary-500 bg-primary-50'
+                  : 'border-secondary-200 hover:border-secondary-300'
+              }`}
+              onClick={() => handleRoleChange('seller')}
+            >
+              <div className="flex items-center space-x-3">
+                <Store className="w-6 h-6 text-primary-600" />
+                <div>
+                  <h4 className="font-semibold text-secondary-900">Seller</h4>
+                  <p className="text-sm text-secondary-600">Sell gemstones</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          {touched.userRole && errors.userRole && (
+            <p className="mt-2 text-sm text-red-600">{errors.userRole}</p>
+          )}
+        </div>
+
         {/* Form Fields - Expanded Layout */}
         <div className="flex-1 grid grid-cols-2 gap-6 content-start">
           {/* First Column */}

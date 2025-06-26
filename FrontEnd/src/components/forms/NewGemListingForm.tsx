@@ -140,7 +140,8 @@ const NewGemListingForm: React.FC<GemListingFormProps> = ({
     fileList,
   };
 
-  // Certificate upload configuration  const certificateUploadProps: UploadProps = {
+  // Certificate upload configuration
+  const certificateUploadProps: UploadProps = {
     onRemove: () => {
       setCertificateFile([]);
     },

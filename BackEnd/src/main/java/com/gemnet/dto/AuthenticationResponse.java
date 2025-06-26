@@ -10,12 +10,13 @@ public class AuthenticationResponse {
     private String lastName;
     private Boolean isVerified;
     private String verificationStatus;
+    private String role; // User role for routing
     
     // Constructors
     public AuthenticationResponse() {}
     
     public AuthenticationResponse(String token, String userId, String email, String firstName, 
-                                  String lastName, Boolean isVerified, String verificationStatus) {
+                                  String lastName, Boolean isVerified, String verificationStatus, String role) {
         this.token = token;
         this.userId = userId;
         this.email = email;
@@ -23,6 +24,7 @@ public class AuthenticationResponse {
         this.lastName = lastName;
         this.isVerified = isVerified;
         this.verificationStatus = verificationStatus;
+        this.role = role;
     }
     
     // Getters and Setters
@@ -49,4 +51,7 @@ public class AuthenticationResponse {
     
     public String getVerificationStatus() { return verificationStatus; }
     public void setVerificationStatus(String verificationStatus) { this.verificationStatus = verificationStatus; }
+    
+    public String getRole() { return role; }
+    public void setRole(String role) { this.role = role; }
 }

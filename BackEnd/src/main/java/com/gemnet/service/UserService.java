@@ -74,6 +74,9 @@ public class UserService {
                 request.getNicNumber()
             );
             
+            // Set user role
+            user.setUserRole(request.getUserRole() != null ? request.getUserRole().toUpperCase() : "BUYER");
+            
             // Set default roles
             Set<String> roles = new HashSet<>();
             roles.add("USER");
@@ -294,6 +297,7 @@ public class UserService {
             status.put("firstName", user.getFirstName());
             status.put("lastName", user.getLastName());
             status.put("nicNumber", user.getNicNumber());
+            status.put("userRole", user.getUserRole());
             status.put("isVerified", user.getIsVerified());
             status.put("verificationStatus", user.getVerificationStatus());
             status.put("isFaceVerified", user.getIsFaceVerified());
@@ -358,7 +362,8 @@ public class UserService {
                 user.getFirstName(),
                 user.getLastName(),
                 user.getIsVerified(),
-                user.getVerificationStatus()
+                user.getVerificationStatus(),
+                user.getUserRole() != null ? user.getUserRole().toLowerCase() : "buyer"
             );
             
             System.out.println("✅ Login successful for: " + request.getEmail());

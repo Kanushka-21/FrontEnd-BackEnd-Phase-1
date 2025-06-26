@@ -29,6 +29,9 @@ public interface UserRepository extends MongoRepository<User, String> {
     // Find users by verification status
     List<User> findByVerificationStatus(String verificationStatus);
     
+    // Find users by role
+    List<User> findByUserRole(String userRole);
+    
     // Find active users
     List<User> findByIsActive(boolean isActive);
     

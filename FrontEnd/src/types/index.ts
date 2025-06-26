@@ -15,6 +15,7 @@ export interface UserRegistrationRequest {
   address: string;
   dateOfBirth: string;
   nicNumber: string;
+  userRole: 'buyer' | 'seller';
 }
 
 export interface LoginRequest {
