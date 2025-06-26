@@ -21,6 +21,10 @@ import DashboardLayout from '@/components/layout/DashboardLayout.new';
 // Auth Context
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 
+// Auth Components
+import RoleProtectedRoute from '@/components/auth/RoleProtectedRoute';
+import DashboardRedirect from '@/components/auth/DashboardRedirect';
+
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -85,19 +89,20 @@ const AppRoutes: React.FC = () => {
             path="/dashboard"
             element={
               <ProtectedRoute>
-                <Navigate to="/buyer/dashboard" replace />
+                <DashboardRedirect />
               </ProtectedRoute>
             }
           />
           
-          {/* Buyer Protected Routes */}          <Route
+          {/* Buyer Protected Routes */}
+          <Route
             path="/buyer/dashboard"
             element={
-              <ProtectedRoute>
+              <RoleProtectedRoute allowedRoles={['buyer']}>
                 <DashboardLayout>
                   <BuyerDashboard />
                 </DashboardLayout>
-              </ProtectedRoute>
+              </RoleProtectedRoute>
             }
           />
 
@@ -121,14 +126,15 @@ const AppRoutes: React.FC = () => {
                 </DashboardLayout>
               </ProtectedRoute>
             }
-          />          {/* Seller Protected Routes */}          <Route
+          />          {/* Seller Protected Routes */}
+          <Route
             path="/seller/dashboard"
             element={
-              <ProtectedRoute>
+              <RoleProtectedRoute allowedRoles={['seller']}>
                 <DashboardLayout>
                   <SellerDashboard />
                 </DashboardLayout>
-              </ProtectedRoute>
+              </RoleProtectedRoute>
             }
           />
           <Route
@@ -160,14 +166,15 @@ const AppRoutes: React.FC = () => {
                 </DashboardLayout>
               </ProtectedRoute>
             }
-          />          {/* Admin Protected Routes */}          <Route
+          />          {/* Admin Protected Routes */}
+          <Route
             path="/admin/dashboard"
             element={
-              <ProtectedRoute>
+              <RoleProtectedRoute allowedRoles={['admin']}>
                 <DashboardLayout>
                   <AdminDashboard />
                 </DashboardLayout>
-              </ProtectedRoute>
+              </RoleProtectedRoute>
             }
           />
           <Route

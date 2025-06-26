@@ -76,11 +76,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         // Role-based routing
         const userRole = response.data.role?.toLowerCase() || 'buyer';
+        console.log('🔄 Redirecting user based on role:', userRole);
+        
         if (userRole === 'admin') {
+          console.log('👑 Redirecting to admin dashboard');
           navigate('/admin/dashboard');
         } else if (userRole === 'seller') {
+          console.log('🏪 Redirecting to seller dashboard');
           navigate('/seller/dashboard');
         } else {
+          console.log('🛒 Redirecting to buyer dashboard');
           navigate('/buyer/dashboard');
         }
         
