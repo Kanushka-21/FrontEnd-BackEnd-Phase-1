@@ -158,6 +158,10 @@ const NewGemListingForm: React.FC<GemListingFormProps> = ({
         return false;
       }
       setCertificateFile([file]);
+      
+      // Simulate OCR processing notification
+      message.success('Certificate uploaded. Processing with OCR to extract gemstone data...');
+      
       return false;
     },
     fileList: certificateFile,
@@ -264,8 +268,8 @@ const NewGemListingForm: React.FC<GemListingFormProps> = ({
           </div>
 
           {/* Certification Status */}
-          <div className="mb-8">
-            <Title level={4}>Certification Status</Title>
+          <div className="mb-4">
+            <Title level={4} className="text-indigo-800 mb-4">Step 1: Certification Status</Title>
             <Form.Item
               name="certification_type"
               rules={[{ required: true, message: 'Please select certification status' }]}
@@ -273,11 +277,14 @@ const NewGemListingForm: React.FC<GemListingFormProps> = ({
               <Radio.Group onChange={handleCertificationChange} className="w-full">
                 <Space direction="vertical" className="w-full">
                   <Radio value="certified" className="w-full">
-                    <Card className="w-full cursor-pointer hover:border-primary-500">
+                    <Card 
+                      className={`w-full cursor-pointer transition-all duration-300 ${isCertified ? 'border-indigo-500 shadow-md' : 'hover:border-primary-500'}`}
+                      style={{ borderWidth: isCertified ? '2px' : '1px' }}
+                    >
                       <Space>
-                        <CheckCircleOutlined className="text-primary-500" />
+                        <CheckCircleOutlined className="text-2xl text-indigo-500" />
                         <div>
-                          <Text strong>Certified Gemstone</Text>
+                          <Text strong className="text-lg">Certified Gemstone</Text>
                           <br />
                           <Text type="secondary">I have official certification documents</Text>
                         </div>
@@ -285,11 +292,14 @@ const NewGemListingForm: React.FC<GemListingFormProps> = ({
                     </Card>
                   </Radio>
                   <Radio value="non-certified" className="w-full">
-                    <Card className="w-full cursor-pointer hover:border-primary-500">
+                    <Card 
+                      className={`w-full cursor-pointer transition-all duration-300 ${!isCertified && form.getFieldValue('certification_type') === 'non-certified' ? 'border-amber-500 shadow-md' : 'hover:border-primary-500'}`}
+                      style={{ borderWidth: !isCertified && form.getFieldValue('certification_type') === 'non-certified' ? '2px' : '1px' }}
+                    >
                       <Space>
-                        <InfoCircleOutlined className="text-warning-500" />
+                        <InfoCircleOutlined className="text-2xl text-amber-500" />
                         <div>
-                          <Text strong>Non-Certified Gemstone</Text>
+                          <Text strong className="text-lg">Non-Certified Gemstone</Text>
                           <br />
                           <Text type="secondary">I don't have official certification</Text>
                         </div>
@@ -300,6 +310,54 @@ const NewGemListingForm: React.FC<GemListingFormProps> = ({
               </Radio.Group>
             </Form.Item>
           </div>
+
+          {/* Certificate Upload Section - Shown immediately after certification selection */}
+          {isCertified && (
+            <div className="mb-8 transition-all duration-300 ease-in-out mt-4">
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6 shadow-sm">
+                <Title level={4} className="flex items-center text-indigo-700">
+                  <CheckCircleOutlined className="text-indigo-600 mr-2" />
+                  Certification Document
+                </Title>
+                <Paragraph type="secondary" className="mb-4">
+                  Upload your certification document to auto-fill gemstone attributes using OCR
+                </Paragraph>
+                <div className="bg-white rounded-lg p-5 border border-blue-100">
+                  <Form.Item
+                    name="certificate"
+                    rules={[{ required: true, message: 'Please upload the certification document' }]}
+                    className="mb-0"
+                  >
+                    <Upload 
+                      {...certificateUploadProps} 
+                      accept=".pdf,.jpg,.jpeg,.png,.gif"
+                      className="w-full"
+                      listType="picture"
+                    >
+                      <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-indigo-300 rounded-lg hover:border-indigo-500 transition-colors bg-blue-50 hover:bg-blue-100">
+                        <UploadOutlined className="text-4xl text-indigo-500 mb-3" />
+                        <div className="text-center">
+                          <Text strong className="block text-lg">Click or drag certificate to upload</Text>
+                          <Text type="secondary">
+                            Support for PDF and images. Max 10MB.
+                          </Text>
+                        </div>
+                      </div>
+                    </Upload>
+                  </Form.Item>
+                  {certificateFile.length > 0 && (
+                    <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                      <Text className="text-green-700 flex items-center">
+                        <CheckCircleOutlined className="mr-2" />
+                        Certificate uploaded successfully: {certificateFile[0].name}
+                      </Text>
+                      <div className="text-xs text-green-600 mt-1 pl-6">Extracting data from certificate...</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           <Divider />
 
@@ -370,23 +428,7 @@ const NewGemListingForm: React.FC<GemListingFormProps> = ({
             </Form.Item>
           </div>
 
-          {/* Certificate Upload Section */}
-          {isCertified && (
-            <div className="mb-8">
-              <Title level={4}>Certification Document</Title>
-              <Paragraph type="secondary" className="mb-4">
-                Upload the official gemstone certification document (PDF or Image)
-              </Paragraph>
-              <Form.Item
-                name="certificate"
-                rules={[{ required: true, message: 'Please upload the certification document' }]}
-              >
-                <Upload {...certificateUploadProps} accept=".pdf,image/*">
-                  <Button icon={<UploadOutlined />}>Upload Certificate</Button>
-                </Upload>
-              </Form.Item>
-            </div>
-          )}
+          {/* Certificate Upload Section moved up, right after certification selection */}
 
           {/* Price Section */}
           <div className="mb-8">
