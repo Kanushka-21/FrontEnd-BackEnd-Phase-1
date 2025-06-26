@@ -67,6 +67,9 @@ public class User {
     // User roles
     private Set<String> roles;
     
+    // User role (BUYER, SELLER, ADMIN)
+    private String userRole;
+    
     // Account status
     private Boolean isActive = true;
     private Boolean isLocked = false;
@@ -91,6 +94,7 @@ public class User {
         this.dateOfBirth = dateOfBirth;
         this.nicNumber = nicNumber;
         this.verificationStatus = "PENDING";
+        this.userRole = "BUYER"; // Default role
     }
     
     // Getters and Setters
@@ -150,6 +154,9 @@ public class User {
     
     public Set<String> getRoles() { return roles; }
     public void setRoles(Set<String> roles) { this.roles = roles; }
+    
+    public String getUserRole() { return userRole; }
+    public void setUserRole(String userRole) { this.userRole = userRole; }
     
     public Boolean getIsActive() { return isActive; }
     public void setIsActive(Boolean isActive) { this.isActive = isActive; }

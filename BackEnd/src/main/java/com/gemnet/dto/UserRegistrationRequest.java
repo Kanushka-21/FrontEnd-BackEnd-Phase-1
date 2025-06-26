@@ -34,11 +34,15 @@ public class UserRegistrationRequest {
     @NotBlank(message = "NIC number is required")
     private String nicNumber;
     
+    @NotBlank(message = "User role is required")
+    private String userRole; // BUYER, SELLER
+    
     // Constructors
     public UserRegistrationRequest() {}
     
     public UserRegistrationRequest(String firstName, String lastName, String email, String password,
-                                   String phoneNumber, String address, String dateOfBirth, String nicNumber) {
+                                   String phoneNumber, String address, String dateOfBirth, String nicNumber,
+                                   String userRole) {
         this.firstName = firstName;
         this.lastName = lastName;
         this.email = email;
@@ -47,6 +51,7 @@ public class UserRegistrationRequest {
         this.address = address;
         this.dateOfBirth = dateOfBirth;
         this.nicNumber = nicNumber;
+        this.userRole = userRole;
     }
     
     // Getters and Setters
@@ -73,4 +78,7 @@ public class UserRegistrationRequest {
     
     public String getNicNumber() { return nicNumber; }
     public void setNicNumber(String nicNumber) { this.nicNumber = nicNumber; }
+    
+    public String getUserRole() { return userRole; }
+    public void setUserRole(String userRole) { this.userRole = userRole; }
 }

@@ -36,16 +36,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState<boolean>(true);
   const navigate = useNavigate();
   const location = useLocation();
-
   // Check if user is authenticated on mount
   useEffect(() => {
     const token = localStorage.getItem('authToken');
     const storedUser = localStorage.getItem('userData');
-
+    
     if (token && storedUser) {
       try {
         const userData = JSON.parse(storedUser);
-        setUser(userData);
+        // Add token back to userData for complete AuthenticationResponse
+        const completeUserData = { ...userData, token };
+        setUser(completeUserData);
         setIsAuthenticated(true);
       } catch (error) {
         console.error('Error parsing stored user data:', error);
@@ -69,8 +70,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         localStorage.setItem('authToken', token);
         localStorage.setItem('userData', JSON.stringify(userData));
         
-        setUser(userData);
+        // Keep complete response data including token
+        setUser(response.data);
         setIsAuthenticated(true);
+        
+        // Role-based routing
+        const userRole = response.data.role?.toLowerCase() || 'buyer';
+        if (userRole === 'admin') {
+          navigate('/admin/dashboard');
+        } else if (userRole === 'seller') {
+          navigate('/seller/dashboard');
+        } else {
+          navigate('/buyer/dashboard');
+        }
         
         toast.success('Login successful!');
         return true;
