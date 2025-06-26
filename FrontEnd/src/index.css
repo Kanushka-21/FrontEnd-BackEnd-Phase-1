@@ -1,0 +1,791 @@
+@import 'antd/dist/reset.css';
+/* Import Noto Sans Sinhala font from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Sinhala:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-secondary-200;
+  }
+  
+  body {
+    @apply bg-secondary-50 text-secondary-900 font-sans;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  .font-sinhala {
+    font-family: 'Noto Sans Sinhala', sans-serif;
+    font-size: 1.05em;
+    letter-spacing: 0.01em;
+    line-height: 1.6;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary-600 hover:bg-primary-700 active:bg-primary-800 text-white font-medium px-6 py-3 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  .btn-secondary {
+    @apply bg-white hover:bg-secondary-50 text-secondary-700 font-medium px-6 py-3 rounded-lg border border-secondary-300 transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+  }
+  
+  .input-field {
+    @apply w-full px-4 py-3 rounded-lg border border-secondary-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-500 focus:ring-opacity-20 transition-all duration-200 bg-white placeholder-secondary-400;
+  }
+  
+  .card {
+    @apply bg-white rounded-xl shadow-sm border border-secondary-200 p-6;
+  }
+  
+  .progress-step {
+    @apply flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300;
+  }
+  
+  .progress-step.active {
+    @apply bg-primary-600 border-primary-600 text-white;
+  }
+  
+  .progress-step.completed {
+    @apply bg-primary-600 border-primary-600 text-white;
+  }
+  
+  .progress-step.pending {
+    @apply bg-white border-secondary-300 text-secondary-400;
+  }
+  
+  .camera-overlay {
+    @apply absolute inset-0 border-4 border-primary-500 rounded-lg;
+  }
+  
+  .verification-success {
+    @apply bg-green-50 border-green-200 text-green-800;
+  }
+  
+  .verification-error {
+    @apply bg-red-50 border-red-200 text-red-800;
+  }
+  /* Dashboard styling */
+  .dashboard-tabs .ant-tabs-nav {
+    margin-bottom: 1rem;
+  }
+  
+  .dashboard-tabs .ant-tabs-tab {
+    border-top-left-radius: 0.5rem;
+    border-top-right-radius: 0.5rem;
+    border-bottom: none;
+    padding: 0.5rem 1rem;
+    transition: all 0.2s;
+  }
+  
+  .dashboard-tabs .ant-tabs-tab-active {
+    background-color: rgba(239, 246, 255, 1);
+    color: rgba(29, 78, 216, 1);
+    font-weight: 500;
+  }
+  
+  .dashboard-tabs .ant-tabs-tab-btn {
+    font-size: 1rem;
+  }
+  
+  .custom-table .ant-table-thead > tr > th {
+    background-color: rgba(248, 250, 252, 1);
+    color: rgba(51, 65, 85, 1);
+    font-weight: 500;
+  }
+  
+  .pagination-modern .ant-pagination-item-active {
+    border-color: rgba(37, 99, 235, 1);
+    background-color: rgba(239, 246, 255, 1);
+  }
+  
+  .pagination-modern .ant-pagination-item-active a {
+    color: rgba(29, 78, 216, 1);
+  }
+  
+  /* New Premium Dashboard Styles */
+  .custom-tabs .ant-tabs-nav:before {
+    border-bottom: none !important;
+  }
+  
+  .custom-tabs .ant-tabs-tab {
+    margin: 0 !important;
+    padding: 12px 16px !important;
+    transition: all 0.3s ease;
+    border-radius: 0 !important;
+    border-top-left-radius: 8px !important;
+    border-top-right-radius: 8px !important;
+  }
+  
+  .custom-tabs .ant-tabs-tab-active {
+    background-color: #fff !important;
+    font-weight: 600 !important;
+  }
+  
+  .custom-tabs .ant-tabs-card-bar .ant-tabs-tab-active {
+    border-bottom-color: #fff !important;
+  }
+  
+  .custom-tabs .ant-tabs-content {
+    padding: 16px !important;
+    margin-top: -1px !important;
+  }
+  
+  /* Mobile Responsive Fixes */
+  @media (max-width: 640px) {
+    .custom-tabs .ant-tabs-tab {
+      padding: 8px 12px !important;
+      margin: 0 2px !important;
+    }
+    
+    .custom-tabs .ant-tabs-nav-list {
+      flex-wrap: nowrap !important;
+      overflow-x: auto !important;
+    }
+    
+    .ant-card-body {
+      padding: 12px !important;
+    }
+    
+    /* Improve table display on small screens */
+    .ant-table-content {
+      overflow-x: auto !important;
+    }
+  }
+  
+  /* Gemstone Detail Modal Styles */
+  .gemstone-detail-modal .ant-modal-content {
+    @apply rounded-lg overflow-hidden p-0;
+  }
+  
+  .gemstone-detail-modal .ant-modal-close {
+    @apply top-4 right-4;
+  }
+  
+  .gemstone-modal-content {
+    @apply flex flex-col;
+  }
+  
+  .gemstone-image-col {
+    @apply p-0 relative;
+  }
+  
+  .gemstone-image-container {
+    @apply w-full h-full relative;
+  }
+  
+  .gemstone-detail-image {
+    @apply w-full h-full object-cover;
+  }
+  
+  .gemstone-stats {
+    @apply flex justify-between p-2 text-xs text-gray-600 bg-gray-100 border-t;
+  }
+  
+  .gemstone-details-col {
+    @apply p-0 bg-white;
+  }
+  
+  .details-content {
+    @apply p-6;
+  }
+  
+  .gemstone-tabs {
+    @apply flex border-b mb-6;
+  }
+  
+  .gemstone-tabs .tab {
+    @apply p-2 cursor-pointer mr-4 relative;
+  }
+  
+  .gemstone-tabs .tab.active {
+    @apply text-blue-600 font-medium;
+  }
+  
+  .gemstone-tabs .tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: #1890ff;
+  }
+  
+  .gemstone-main-details .gemstone-title {
+    @apply m-0 mb-4 font-semibold text-gray-800;
+  }
+  
+  .gemstone-properties {
+    @apply mb-6;
+  }
+  
+  .detail-row {
+    @apply flex border-b py-3;
+  }
+  
+  .detail-row:last-child {
+    @apply border-b-0;
+  }
+  
+  .detail-label {
+    @apply w-24 font-medium text-gray-600;
+  }
+  
+  .detail-value {
+    @apply flex-1 text-gray-800;
+  }
+  
+  .description-section {
+    @apply mb-6;
+  }
+  
+  .section-title {
+    @apply font-semibold mb-2 text-gray-800;
+  }
+  
+  .current-auction-info {
+    @apply flex mb-6;
+  }
+  
+  .current-auction-info > div {
+    @apply flex-1;
+  }
+  
+  .info-label {
+    @apply text-sm text-gray-600 mb-1;
+  }
+  
+  .current-price {
+    @apply text-2xl font-semibold text-blue-600;
+  }
+  
+  .auction-time {
+    @apply text-2xl font-semibold;
+  }
+  
+  .place-bid {
+    @apply mb-4;
+  }
+  
+  .bid-inputs {
+    @apply flex gap-2 my-2;
+  }
+  
+  .bid-inputs .ant-input-number {
+    @apply flex-1;
+  }
+  
+  .place-bid-button {
+    @apply min-w-[100px];
+  }
+  
+  .min-bid {
+    @apply text-xs text-gray-600;
+  }
+  
+  .bid-notice {
+    @apply bg-orange-50 border border-orange-200 rounded p-3 mt-4;
+  }
+  
+  .notice-title {
+    @apply font-semibold text-orange-600 mb-1;
+  }
+  
+  .notice-text {
+    @apply text-xs text-orange-700;
+  }
+  
+  /* Gemstone Card Styling */
+  .gemstone-card {
+    @apply shadow-md transition-all duration-300 ease-in-out;
+  }
+  
+  .gemstone-card:hover {
+    @apply shadow-lg;
+  }
+  
+  .gemstone-card .ant-card-body {
+    @apply p-4;
+  }
+  
+  /* View Details Button Styling */
+  .view-details-btn {
+    height: 36px !important;
+    font-size: 14px !important;
+    border-radius: 4px !important;
+    width: 100% !important;
+    margin: 0 !important;
+    transition: all 0.2s ease !important;
+  }
+
+  .view-details-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Gemstone Detail Modal */
+  .gemstone-detail-modal .ant-modal-content {
+    @apply rounded-lg overflow-hidden p-0;
+  }
+  
+  .gemstone-detail-modal .ant-modal-body {
+    @apply p-0;
+  }
+  
+  .gemstone-detail-modal .ant-modal-close {
+    @apply top-4 right-4;
+  }
+  
+  /* Enhanced modal responsiveness */
+  .gemstone-detail-modal {
+    width: 90% !important;
+    max-width: 900px !important;
+  }
+
+  @media (max-width: 768px) {
+    .gemstone-detail-modal {
+      width: 95% !important;
+    }
+    
+    .gemstone-image-col {
+      height: 300px !important;
+    }
+    
+    .gemstone-detail-image {
+      height: 100% !important;
+      object-fit: cover !important;
+    }
+    
+    .details-content {
+      padding: 16px !important;
+    }
+  }
+  
+  /* Make all gemstone cards consistent in size */
+  .ant-card.gemstone-card {
+    height: 100% !important;
+  }
+
+  .gemstone-card .ant-card-cover {
+    height: 240px !important;
+    overflow: hidden !important;
+  }
+
+  .gemstone-card .ant-card-cover img {
+    height: 100% !important;
+    width: 100% !important;
+    object-fit: cover !important;
+    transition: transform 0.3s ease !important;
+  }
+
+  .gemstone-card:hover .ant-card-cover img {
+    transform: scale(1.05);
+  }
+  
+  /* Media queries for responsive cards */
+  @media screen and (max-width: 768px) {
+    .gemstone-card .ant-card-body {
+      @apply p-3;
+    }
+    
+    .gemstone-detail-modal .ant-modal-content {
+      @apply m-0 mx-2;
+    }
+    
+    .gemstone-detail-modal .details-content {
+      @apply p-4;
+    }
+    
+    .details-content .current-price,
+    .details-content .auction-time {
+      @apply text-3xl;
+    }
+    
+    .detail-row {
+      @apply py-2;
+    }
+    
+    .detail-label {
+      @apply w-20;
+    }
+  }
+  
+  /* Tab Styling inside modal */
+  .gemstone-tabs {
+    @apply flex border-b mb-6;
+  }
+  
+  .gemstone-tabs .tab {
+    @apply p-2 cursor-pointer mr-4 relative;
+  }
+  
+  .gemstone-tabs .tab.active {
+    @apply text-blue-600 font-medium;
+  }
+  
+  .gemstone-tabs .tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: #1890ff;
+  }
+  
+  /* Gemstone detail rows */
+  .detail-row {
+    @apply flex border-b py-3;
+  }
+  
+  .detail-row:last-child {
+    @apply border-b-0;
+  }
+  
+  .detail-label {
+    @apply w-24 font-medium text-gray-600;
+  }
+  
+  .detail-value {
+    @apply flex-1 text-gray-800;
+  }
+  
+  .gemstone-stats {
+    @apply flex justify-between p-2 text-xs text-gray-600 bg-gray-100 border-t;
+  }
+  
+  .description-section {
+    @apply mb-6;
+  }
+  
+  .section-title {
+    @apply font-semibold mb-2 text-gray-800;
+  }
+  
+  .current-auction-info {
+    @apply flex mb-6;
+  }
+  
+  .current-auction-info > div {
+    @apply flex-1;
+  }
+  
+  .info-label {
+    @apply text-sm text-gray-600 mb-1;
+  }
+  
+  .current-price {
+    @apply text-2xl font-semibold text-blue-600;
+  }
+  
+  .auction-time {
+    @apply text-2xl font-semibold;
+  }
+  
+  .place-bid {
+    @apply mb-4;
+  }
+  
+  .bid-inputs {
+    @apply flex gap-2 my-2;
+  }
+  
+  .bid-inputs .ant-input-number {
+    @apply flex-1;
+  }
+  
+  .place-bid-button {
+    @apply min-w-[100px];
+  }
+  
+  .min-bid {
+    @apply text-xs text-gray-600;
+  }
+  
+  .bid-notice {
+    @apply bg-orange-50 border border-orange-200 rounded p-3 mt-4;
+  }
+  
+  .notice-title {
+    @apply font-semibold text-orange-600 mb-1;
+  }
+  
+  .notice-text {
+    @apply text-xs text-orange-700;
+  }
+  
+  /* Premium Dashboard Styles */
+  .dashboard-stats-card {
+    @apply bg-white rounded-xl shadow-sm border border-secondary-200 p-6 transition-all duration-300 hover:shadow-md relative overflow-hidden;
+  }
+  
+  .dashboard-stats-card::before {
+    content: '';
+    @apply absolute -top-10 -right-10 w-24 h-24 bg-gradient-to-br from-primary-100 to-transparent rounded-full opacity-70;
+  }
+  
+  .dashboard-stats-card.premium {
+    @apply bg-gradient-to-br from-white to-secondary-50;
+  }
+  
+  /* Responsive Tables */
+  .responsive-table-container {
+    @apply w-full overflow-x-auto rounded-lg;
+  }
+  
+  .responsive-table {
+    @apply min-w-full divide-y divide-secondary-200;
+  }
+  
+  /* Responsive Dashboard Grid */
+  .dashboard-grid {
+    @apply grid gap-6;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+  
+  /* Premium Tabs */
+  .premium-tabs {
+    @apply flex flex-wrap border-b border-secondary-200 mb-6 overflow-x-auto;
+  }
+  
+  .premium-tab {
+    @apply px-4 py-3 text-secondary-600 font-medium text-sm cursor-pointer whitespace-nowrap;
+  }
+  
+  .premium-tab.active {
+    @apply text-primary-600 border-b-2 border-primary-600 font-semibold;
+  }
+  
+  .premium-tab:hover:not(.active) {
+    @apply text-secondary-800 bg-secondary-50;
+  }
+  
+  /* Mobile optimizations */
+  @media (max-width: 640px) {
+    .dashboard-welcome {
+      @apply px-4 py-6;
+    }
+    
+    .dashboard-stats-grid {
+      @apply grid-cols-1 gap-3;
+    }
+    
+    .premium-tabs {
+      @apply pb-1;
+    }
+    
+    .premium-tab {
+      @apply px-3 py-2;
+    }
+    
+    .responsive-table th,
+    .responsive-table td {
+      padding: 0.625rem 0.75rem;
+      font-size: 0.875rem;
+    }
+  }
+
+  /* Hero Carousel Styles */
+  .hero-carousel .ant-carousel .slick-dots {
+    @apply bottom-6;
+  }
+
+  .hero-carousel .ant-carousel .slick-dots li {
+    @apply w-8 md:w-12;
+  }
+
+  .hero-carousel .ant-carousel .slick-dots li button {
+    @apply h-[3px] md:h-1 bg-white/30;
+  }
+
+  .hero-carousel .ant-carousel .slick-dots li.slick-active button {
+    @apply bg-yellow-400;
+  }
+
+  .hero-carousel .ant-carousel .slick-dots-bottom {
+    @apply bottom-4;
+  }
+
+  .hero-carousel .ant-carousel .custom-dots {
+    @apply mb-0;
+  }
+
+  .hero-carousel .ant-carousel .slick-slide {
+    @apply pointer-events-auto;
+  }
+
+  /* Badge glow effect for verified items */
+  .ant-badge-status-success::before {
+    content: '';
+    @apply absolute inset-0 rounded-full animate-ping bg-green-500/30;
+    animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+  }
+
+  /* Hero section additional styles */
+  .hero-stats-card {
+    @apply bg-blue-800/50 backdrop-blur-sm border border-blue-700/50 transition-all duration-300 hover:border-yellow-400/50;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    background-image: linear-gradient(to right, var(--primary-600), var(--accent-600));
+    background-clip: text;
+    color: transparent;
+  }
+  
+  .bg-gradient-primary {
+    background-image: linear-gradient(to right, var(--primary-600), var(--accent-600));
+  }
+  
+  .animate-bounce-slow {
+    animation: bounce 2s infinite;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background-color: rgba(241, 245, 249, 1);
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(203, 213, 225, 1);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(148, 163, 184, 1);
+}
+
+/* Loading spinner */
+.spinner {
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #3b82f6;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Fade in animation */
+.fade-in {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Marketplace responsive fixes */
+@media (max-width: 576px) {
+  .ant-card-cover img {
+    height: 200px !important;
+    object-fit: cover;
+  }
+
+  .ant-card-body {
+    padding: 16px 12px;
+  }
+  
+  .gemstone-detail-modal .ant-modal-body {
+    padding: 0;
+  }
+
+  .gemstone-image-col {
+    min-height: 250px;
+  }
+  
+  .gemstone-stats {
+    flex-direction: row;
+    padding: 8px;
+  }
+  
+  .current-auction-info {
+    flex-direction: column;
+    gap: 16px;
+  }
+}
+
+@media (min-width: 577px) and (max-width: 991px) {
+  .ant-card-cover img {
+    height: 220px !important;
+    object-fit: cover;
+  }
+}
+
+/* Global container styles for consistent layout */
+.container-fluid {
+  width: 100%;
+  margin-right: auto;
+  margin-left: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 1200px) {
+  .container-fluid {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+@media (max-width: 992px) {
+  .container-fluid {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+}
+
+.container-fluid {
+    @apply w-full max-w-none px-3 sm:px-4 lg:px-6 xl:px-8;
+  }
+  
+  .container-mobile {
+    @apply px-2 sm:px-4 lg:px-6;
+  }
+  
+  /* Mobile-first responsive text sizing */
+  .text-responsive-sm {
+    @apply text-sm sm:text-base lg:text-lg;
+  }
+  
+  .text-responsive-lg {
+    @apply text-lg sm:text-xl lg:text-2xl;
+  }
+  
+  .text-responsive-xl {
+    @apply text-xl sm:text-2xl lg:text-3xl xl:text-4xl;
+  }
+  
+  /* Mobile-specific spacing */
+  .space-y-mobile {
+    @apply space-y-3 sm:space-y-4 lg:space-y-6;
+  }
+  
+  .p-mobile {
+    @apply p-3 sm:p-4 lg:p-6;
+  }
+  
+  .py-mobile {
+    @apply py-6 sm:py-8 lg:py-12;
+  }
+  
+  /* Ensure mobile touch targets are at least 44px */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
