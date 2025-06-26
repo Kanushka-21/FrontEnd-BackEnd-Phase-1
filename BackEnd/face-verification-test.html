@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GemNet Face Verification Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1, h2 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        .card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #34495e;
+        }
+        input[type="text"], 
+        input[type="email"],
+        input[type="password"],
+        input[type="tel"],
+        input[type="date"],
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        textarea {
+            height: 60px;
+            resize: vertical;
+        }
+        .file-input {
+            margin-top: 10px;
+        }
+        .preview {
+            max-width: 100%;
+            max-height: 200px;
+            margin-top: 10px;
+            border-radius: 4px;
+            display: none;
+        }
+        .button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            display: block;
+            width: 100%;
+            margin-top: 15px;
+            transition: background-color 0.3s;
+        }
+        .button:hover {
+            background-color: #2980b9;
+        }
+        .button:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+        .result {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 20px;
+            border-left: 5px solid #3498db;
+            display: none;
+        }
+        .error {
+            border-left: 5px solid #e74c3c;
+            color: #e74c3c;
+        }
+        .success {
+            border-left: 5px solid #2ecc71;
+            color: #2ecc71;
+        }
+        .steps {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+        .step {
+            flex: 1;
+            text-align: center;
+            padding: 10px;
+            background-color: #ecf0f1;
+            border-radius: 4px;
+            margin: 0 5px;
+            position: relative;
+        }
+        .step.active {
+            background-color: #3498db;
+            color: white;
+        }
+        .step.completed {
+            background-color: #2ecc71;
+            color: white;
+        }
+        .step:not(:last-child):after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            right: -15px;
+            width: 20px;
+            height: 2px;
+            background-color: #bdc3c7;
+            z-index: 1;
+        }
+        .network-info {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+        #server-status {
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        .status-checking {
+            background-color: #f39c12;
+        }
+        .status-online {
+            background-color: #2ecc71;
+        }
+        .status-offline {
+            background-color: #e74c3c;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>GemNet Face Verification</h1>
+    
+    <div id="server-status">
+        <span class="status-indicator status-checking"></span>
+        Checking server status...
+    </div>
+    
+    <div class="steps">
+        <div class="step active">1. Register</div>
+        <div class="step">2. Face Verification</div>
+        <div class="step">3. NIC Verification</div>
+        <div class="step">4. Complete</div>
+    </div>
+
+    <!-- Registration Card -->
+    <div id="registration-card" class="card">
+        <h2>User Registration</h2>
+        <form id="registration-form">
+            <div class="form-group">
+                <label for="firstName">First Name</label>
+                <input type="text" id="firstName" name="firstName" required>
+            </div>
+            <div class="form-group">
+                <label for="lastName">Last Name</label>
+                <input type="text" id="lastName" name="lastName" required>
+            </div>
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <div class="form-group">
+                <label for="phoneNumber">Phone Number</label>
+                <input type="tel" id="phoneNumber" name="phoneNumber" required>
+            </div>
+            <div class="form-group">
+                <label for="address">Address</label>
+                <textarea id="address" name="address" required></textarea>
+            </div>
+            <div class="form-group">
+                <label for="dateOfBirth">Date of Birth</label>
+                <input type="date" id="dateOfBirth" name="dateOfBirth" required>
+            </div>
+            <div class="form-group">
+                <label for="nicNumber">NIC Number</label>
+                <input type="text" id="nicNumber" name="nicNumber" required>
+            </div>
+            <button type="submit" class="button">Register</button>
+        </form>
+        <div id="registration-result" class="result"></div>
+    </div>
+
+    <!-- Face Verification Card (Hidden initially) -->
+    <div id="face-verification-card" class="card hidden">
+        <h2>Face Verification</h2>
+        <div class="form-group">
+            <label for="faceImage">Upload your face image</label>
+            <input type="file" id="faceImage" name="faceImage" accept="image/*" class="file-input">
+            <img id="facePreview" class="preview" alt="Face Preview">
+        </div>
+        <button id="verify-face-btn" class="button" disabled>Verify Face</button>
+        <div id="face-result" class="result"></div>
+    </div>
+
+    <!-- NIC Verification Card (Hidden initially) -->
+    <div id="nic-verification-card" class="card hidden">
+        <h2>NIC Verification</h2>
+        <div class="form-group">
+            <label for="nicImage">Upload your NIC image</label>
+            <input type="file" id="nicImage" name="nicImage" accept="image/*" class="file-input">
+            <img id="nicPreview" class="preview" alt="NIC Preview">
+        </div>
+        <button id="verify-nic-btn" class="button" disabled>Verify NIC</button>
+        <div id="nic-result" class="result"></div>
+    </div>
+
+    <!-- Verification Status Card (Hidden initially) -->
+    <div id="verification-status-card" class="card hidden">
+        <h2>Verification Status</h2>
+        <div id="status-result" class="result"></div>
+        <button id="check-status-btn" class="button">Check Status</button>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE_URL = 'http://localhost:9091';
+        let currentUserId = null;
+        
+        // DOM Elements
+        const serverStatus = document.getElementById('server-status');
+        const registrationCard = document.getElementById('registration-card');
+        const faceVerificationCard = document.getElementById('face-verification-card');
+        const nicVerificationCard = document.getElementById('nic-verification-card');
+        const verificationStatusCard = document.getElementById('verification-status-card');
+        const registrationForm = document.getElementById('registration-form');
+        const registrationResult = document.getElementById('registration-result');
+        const faceImage = document.getElementById('faceImage');
+        const facePreview = document.getElementById('facePreview');
+        const verifyFaceBtn = document.getElementById('verify-face-btn');
+        const faceResult = document.getElementById('face-result');
+        const nicImage = document.getElementById('nicImage');
+        const nicPreview = document.getElementById('nicPreview');
+        const verifyNicBtn = document.getElementById('verify-nic-btn');
+        const nicResult = document.getElementById('nic-result');
+        const checkStatusBtn = document.getElementById('check-status-btn');
+        const statusResult = document.getElementById('status-result');
+        const steps = document.querySelectorAll('.step');
+        
+        // Check server status on page load
+        checkServerStatus();
+        
+        // Event Listeners
+        registrationForm.addEventListener('submit', handleRegistration);
+        faceImage.addEventListener('change', handleFaceImageChange);
+        verifyFaceBtn.addEventListener('click', handleFaceVerification);
+        nicImage.addEventListener('change', handleNicImageChange);
+        verifyNicBtn.addEventListener('click', handleNicVerification);
+        checkStatusBtn.addEventListener('click', checkVerificationStatus);
+        
+        // Helper Functions
+        function checkServerStatus() {
+            fetch(`${API_BASE_URL}/api/auth/health`)
+                .then(response => {
+                    if (response.ok) {
+                        serverStatus.innerHTML = '<span class="status-indicator status-online"></span> Server is online';
+                    } else {
+                        throw new Error('Server responded with an error');
+                    }
+                    return response.json();
+                })
+                .catch(error => {
+                    console.error('Server check failed:', error);
+                    serverStatus.innerHTML = '<span class="status-indicator status-offline"></span> Server is offline. API calls will fail!';
+                    
+                    // Add diagnostic info
+                    const diagnosticInfo = document.createElement('div');
+                    diagnosticInfo.className = 'network-info';
+                    diagnosticInfo.textContent = `Trying to connect to: ${API_BASE_URL}. Check if server is running on port 9091 and CORS is enabled.`;
+                    serverStatus.appendChild(diagnosticInfo);
+                });
+        }
+        
+        function updateSteps(activeIndex) {
+            steps.forEach((step, index) => {
+                step.className = 'step';
+                if (index === activeIndex) {
+                    step.classList.add('active');
+                } else if (index < activeIndex) {
+                    step.classList.add('completed');
+                }
+            });
+        }
+        
+        function showCard(card) {
+            registrationCard.classList.add('hidden');
+            faceVerificationCard.classList.add('hidden');
+            nicVerificationCard.classList.add('hidden');
+            verificationStatusCard.classList.add('hidden');
+            card.classList.remove('hidden');
+        }
+        
+        function displayResult(element, message, isSuccess = false, isError = false) {
+            element.textContent = message;
+            element.style.display = 'block';
+            element.className = 'result';
+            if (isSuccess) element.classList.add('success');
+            if (isError) element.classList.add('error');
+        }
+        
+        function clearResult(element) {
+            element.style.display = 'none';
+            element.textContent = '';
+        }
+        
+        async function handleRegistration(event) {
+            event.preventDefault();
+            clearResult(registrationResult);
+            
+            const formData = {
+                firstName: document.getElementById('firstName').value,
+                lastName: document.getElementById('lastName').value,
+                email: document.getElementById('email').value,
+                password: document.getElementById('password').value,
+                phoneNumber: document.getElementById('phoneNumber').value,
+                address: document.getElementById('address').value,
+                dateOfBirth: document.getElementById('dateOfBirth').value,
+                nicNumber: document.getElementById('nicNumber').value
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const result = await response.json();
+                console.log('Registration response:', result);
+                
+                if (result.success) {
+                    displayResult(registrationResult, `Registration successful! User ID: ${result.data}`, true);
+                    currentUserId = result.data;
+                    updateSteps(1);
+                    setTimeout(() => {
+                        showCard(faceVerificationCard);
+                    }, 1000);
+                } else {
+                    displayResult(registrationResult, `Registration failed: ${result.message}`, false, true);
+                }
+            } catch (error) {
+                console.error('Registration error:', error);
+                displayResult(
+                    registrationResult, 
+                    `Network error: ${error.message}. Check if the server is running and CORS is properly configured.`, 
+                    false, 
+                    true
+                );
+                
+                // Add network debugging info
+                const debugInfo = document.createElement('div');
+                debugInfo.className = 'network-info';
+                debugInfo.textContent = `Debug info: Attempting to connect to ${API_BASE_URL}/api/auth/register`;
+                registrationResult.appendChild(debugInfo);
+            }
+        }
+        
+        function handleFaceImageChange(event) {
+            clearResult(faceResult);
+            const file = event.target.files[0];
+            if (file) {
+                facePreview.src = URL.createObjectURL(file);
+                facePreview.style.display = 'block';
+                verifyFaceBtn.disabled = false;
+            } else {
+                facePreview.style.display = 'none';
+                verifyFaceBtn.disabled = true;
+            }
+        }
+        
+        async function handleFaceVerification() {
+            if (!currentUserId) {
+                displayResult(faceResult, "User ID not found. Please register first.", false, true);
+                return;
+            }
+            
+            clearResult(faceResult);
+            const file = faceImage.files[0];
+            if (!file) {
+                displayResult(faceResult, "Please select a face image.", false, true);
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('faceImage', file);
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/auth/verify-face/${currentUserId}`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                console.log('Face verification response:', result);
+                
+                if (result.success) {
+                    displayResult(faceResult, "Face verification successful!", true);
+                    updateSteps(2);
+                    setTimeout(() => {
+                        showCard(nicVerificationCard);
+                    }, 1000);
+                } else {
+                    displayResult(faceResult, `Face verification failed: ${result.message}`, false, true);
+                }
+            } catch (error) {
+                console.error('Face verification error:', error);
+                displayResult(faceResult, `Network error: ${error.message}`, false, true);
+            }
+        }
+        
+        function handleNicImageChange(event) {
+            clearResult(nicResult);
+            const file = event.target.files[0];
+            if (file) {
+                nicPreview.src = URL.createObjectURL(file);
+                nicPreview.style.display = 'block';
+                verifyNicBtn.disabled = false;
+            } else {
+                nicPreview.style.display = 'none';
+                verifyNicBtn.disabled = true;
+            }
+        }
+        
+        async function handleNicVerification() {
+            if (!currentUserId) {
+                displayResult(nicResult, "User ID not found. Please register first.", false, true);
+                return;
+            }
+            
+            clearResult(nicResult);
+            const file = nicImage.files[0];
+            if (!file) {
+                displayResult(nicResult, "Please select an NIC image.", false, true);
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('nicImage', file);
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/auth/verify-nic/${currentUserId}`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                console.log('NIC verification response:', result);
+                
+                if (result.success) {
+                    displayResult(nicResult, "NIC verification successful!", true);
+                    updateSteps(3);
+                    setTimeout(() => {
+                        showCard(verificationStatusCard);
+                        checkVerificationStatus();
+                    }, 1000);
+                } else {
+                    displayResult(nicResult, `NIC verification failed: ${result.message}`, false, true);
+                }
+            } catch (error) {
+                console.error('NIC verification error:', error);
+                displayResult(nicResult, `Network error: ${error.message}`, false, true);
+            }
+        }
+        
+        async function checkVerificationStatus() {
+            if (!currentUserId) {
+                displayResult(statusResult, "User ID not found. Please register first.", false, true);
+                return;
+            }
+            
+            clearResult(statusResult);
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/auth/user-status/${currentUserId}`);
+                const result = await response.json();
+                console.log('Status check response:', result);
+                
+                if (result.success) {
+                    const status = result.data.verificationStatus;
+                    const isVerified = result.data.isVerified;
+                    const isFaceVerified = result.data.isFaceVerified;
+                    const isNicVerified = result.data.isNicVerified;
+                    
+                    let statusHTML = `
+                        <h3>Verification Status: ${status}</h3>
+                        <p>Overall verification: ${isVerified ? '✅ Complete' : '⏳ Pending'}</p>
+                        <p>Face verification: ${isFaceVerified ? '✅ Verified' : '⏳ Pending'}</p>
+                        <p>NIC verification: ${isNicVerified ? '✅ Verified' : '⏳ Pending'}</p>
+                    `;
+                    
+                    statusResult.innerHTML = statusHTML;
+                    statusResult.style.display = 'block';
+                    
+                    if (isVerified) {
+                        statusResult.classList.add('success');
+                    }
+                } else {
+                    displayResult(statusResult, `Status check failed: ${result.message}`, false, true);
+                }
+            } catch (error) {
+                console.error('Status check error:', error);
+                displayResult(statusResult, `Network error: ${error.message}`, false, true);
+            }
+        }
+    </script>
+</body>
+</html>
