@@ -213,12 +213,13 @@ const HomePage: React.FC = () => {
               autoplay 
               effect="fade"
               dots={{ className: "custom-dots" }}
-              className="hero-carousel rounded-lg"
+              className="hero-carousel"
               autoplaySpeed={6000}
-            >              {/* Slide 1: Main intro */}
-              <div className="relative rounded-lg overflow-hidden">
-                <div className="absolute inset-0 bg-blue-500/20 backdrop-blur-sm"></div>
-                <Row gutter={[16, 24]} align="middle" className="min-h-[350px] sm:min-h-[400px] lg:min-h-[480px] relative z-30">
+            >
+              {/* Slide 1: Main intro */}
+              <div className="rounded-2xl overflow-hidden shadow-lg">
+                <div className="bg-blue-500/20 backdrop-blur-sm p-6 sm:p-8 md:p-10 lg:p-12">
+                  <Row gutter={[16, 24]} align="middle" className="min-h-[350px] sm:min-h-[400px] lg:min-h-[480px] relative z-30">
                   <Col xs={24}>
                     <motion.div
                       initial={{ opacity: 0, y: 30 }}
@@ -257,10 +258,13 @@ const HomePage: React.FC = () => {
                     </motion.div>
                   </Col>
                 </Row>
-              </div>              {/* Slide 2: Price Prediction */}
-              <div className="rounded-lg overflow-hidden">
-                <div className="absolute inset-0 bg-blue-500/20 backdrop-blur-sm"></div>
-                <Row gutter={[16, 24]} align="middle" className="min-h-[350px] sm:min-h-[400px] lg:min-h-[480px] relative z-30">
+                </div>
+              </div>
+              
+              {/* Slide 2: Price Prediction */}
+              <div className="rounded-2xl overflow-hidden shadow-lg">
+                <div className="bg-blue-500/20 backdrop-blur-sm p-6 sm:p-8 md:p-10 lg:p-12">
+                  <Row gutter={[16, 24]} align="middle" className="min-h-[350px] sm:min-h-[400px] lg:min-h-[480px] relative z-30">
                   <Col xs={24} lg={12}>
                     <motion.div
                       initial={{ opacity: 0, y: 30 }}
@@ -343,10 +347,13 @@ const HomePage: React.FC = () => {
                     </motion.div>
                   </Col>
                 </Row>
-              </div>              {/* Slide 3: Verification Process */}
-              <div className="rounded-lg overflow-hidden mx-4 sm:mx-6 lg:mx-8">
-                <div className="absolute inset-0 bg-blue-500/20 backdrop-blur-sm"></div>
-                <Row gutter={[16, 24]} align="middle" className="min-h-[350px] sm:min-h-[400px] lg:min-h-[480px] relative z-30 px-4 sm:px-6 lg:px-8">
+                </div>
+              </div>
+              
+              {/* Slide 3: Verification Process */}
+              <div className="rounded-2xl overflow-hidden shadow-lg">
+                <div className="bg-blue-500/20 backdrop-blur-sm p-6 sm:p-8 md:p-10 lg:p-12">
+                  <Row gutter={[16, 24]} align="middle" className="min-h-[350px] sm:min-h-[400px] lg:min-h-[480px] relative z-30">
                   <Col xs={24} lg={12}>
                     <motion.div
                       initial={{ opacity: 0, y: 30 }}
@@ -419,6 +426,7 @@ const HomePage: React.FC = () => {
                     </motion.div>
                   </Col>
                 </Row>
+                </div>
               </div>
             </Carousel>
           </div>
