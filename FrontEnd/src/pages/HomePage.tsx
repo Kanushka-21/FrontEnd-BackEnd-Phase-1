@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   Layout as AntLayout, Row, Col, Card, Button, Badge, Rate, Tag, Typography, 
-  Space, Input, InputNumber, Statistic, Avatar, Carousel, Drawer
+  Space, Input, InputNumber, Statistic, Avatar, Drawer, Carousel
 } from 'antd';
 import { 
   EyeOutlined, HeartOutlined, CheckCircleOutlined, UserOutlined, 
@@ -177,14 +177,24 @@ const HomePage: React.FC = () => {
       {/* Modern Header */}
       <Header transparent={false} />
       <Content>        {/* Enhanced Hero Section with Carousel */}
-        <section className="relative bg-gradient-to-br from-blue-700 via-blue-800 to-blue-900 text-white overflow-hidden min-h-[400px] sm:min-h-[500px] lg:min-h-[600px] xl:min-h-[700px]">
-          <div className="absolute inset-0 bg-black/20"></div>
+        <section className="relative text-white overflow-hidden min-h-[400px] sm:min-h-[500px] lg:min-h-[600px] xl:min-h-[700px]">
+          {/* Blurred background image */}
+          <div 
+            className="absolute inset-0 blur-[0.5px]"
+            style={{
+              backgroundImage: `url('/src/gem32.webp')`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat'
+            }}
+          ></div>
+          <div className="absolute inset-0 bg-black/30"></div>
           {/* Animated background patterns */}
           <div className="absolute inset-0 overflow-hidden">
             <div className="absolute -top-20 -right-20 w-32 h-32 sm:w-48 sm:h-48 lg:w-64 lg:h-64 bg-yellow-400 rounded-full opacity-10 animate-pulse"></div>
-            <div className="absolute top-1/3 -left-20 w-24 h-24 sm:w-36 sm:h-36 lg:w-48 lg:h-48 bg-blue-300 rounded-full opacity-10 animate-pulse delay-1000"></div>
+            <div className="absolute top-1/3 -left-20 w-24 h-24 sm:w-36 sm:h-36 lg:w-48 lg:h-48 bg-gray-300 rounded-full opacity-10 animate-pulse delay-1000"></div>
             <div className="absolute -bottom-20 right-1/3 w-28 h-28 sm:w-42 sm:h-42 lg:w-56 lg:h-56 bg-white rounded-full opacity-10 animate-pulse delay-500"></div>
-            <div className="absolute hidden md:block top-1/4 right-1/4 w-20 h-20 lg:w-32 lg:h-32 bg-blue-400 rounded-full opacity-10 animate-pulse delay-1500"></div>
+            <div className="absolute hidden md:block top-1/4 right-1/4 w-20 h-20 lg:w-32 lg:h-32 bg-gray-400 rounded-full opacity-10 animate-pulse delay-1500"></div>
             <motion.div 
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -195,16 +205,20 @@ const HomePage: React.FC = () => {
               }}
               className="absolute -left-10 -bottom-10 w-32 h-32 sm:w-48 sm:h-48 lg:w-64 lg:h-64 bg-gradient-to-br from-yellow-400/20 to-yellow-500/5 rounded-full blur-xl"
             />
-          </div>          {/* Hero Content */}
+          </div>
+          
+          {/* Hero Content */}
           <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-8 sm:py-12 md:py-16 lg:py-24 xl:py-32">
             <Carousel 
               autoplay 
               effect="fade"
               dots={{ className: "custom-dots" }}
-              className="hero-carousel"
+              className="hero-carousel rounded-lg"
               autoplaySpeed={6000}
             >              {/* Slide 1: Main intro */}
-              <div>                <Row gutter={[16, 24]} align="middle" className="min-h-[350px] sm:min-h-[400px] lg:min-h-[480px]">
+              <div className="relative rounded-lg overflow-hidden">
+                <div className="absolute inset-0 bg-blue-500/20 backdrop-blur-sm"></div>
+                <Row gutter={[16, 24]} align="middle" className="min-h-[350px] sm:min-h-[400px] lg:min-h-[480px] relative z-30">
                   <Col xs={24}>
                     <motion.div
                       initial={{ opacity: 0, y: 30 }}
@@ -244,8 +258,9 @@ const HomePage: React.FC = () => {
                   </Col>
                 </Row>
               </div>              {/* Slide 2: Price Prediction */}
-              <div>
-                <Row gutter={[16, 24]} align="middle" className="min-h-[350px] sm:min-h-[400px] lg:min-h-[480px]">
+              <div className="rounded-lg overflow-hidden">
+                <div className="absolute inset-0 bg-blue-500/20 backdrop-blur-sm"></div>
+                <Row gutter={[16, 24]} align="middle" className="min-h-[350px] sm:min-h-[400px] lg:min-h-[480px] relative z-30">
                   <Col xs={24} lg={12}>
                     <motion.div
                       initial={{ opacity: 0, y: 30 }}
@@ -329,8 +344,9 @@ const HomePage: React.FC = () => {
                   </Col>
                 </Row>
               </div>              {/* Slide 3: Verification Process */}
-              <div>
-                <Row gutter={[16, 24]} align="middle" className="min-h-[350px] sm:min-h-[400px] lg:min-h-[480px]">
+              <div className="rounded-lg overflow-hidden mx-4 sm:mx-6 lg:mx-8">
+                <div className="absolute inset-0 bg-blue-500/20 backdrop-blur-sm"></div>
+                <Row gutter={[16, 24]} align="middle" className="min-h-[350px] sm:min-h-[400px] lg:min-h-[480px] relative z-30 px-4 sm:px-6 lg:px-8">
                   <Col xs={24} lg={12}>
                     <motion.div
                       initial={{ opacity: 0, y: 30 }}
@@ -426,12 +442,10 @@ const HomePage: React.FC = () => {
                         <Statistic 
                           value={stat.value} 
                           className="!mb-0"
-                          valueStyle={{                            fontSize: '1.5rem', 
+                          valueStyle={{
+                            fontSize: '1.5rem', 
                             fontWeight: 'bold',
-                            color: '#1f2937',
-                            '@media (min-width: 768px)': {
-                              fontSize: '2.5rem',
-                            }
+                            color: '#1f2937'
                           }}
                         />
                         <Text className="text-gray-600 font-medium text-sm md:text-base">{stat.title}</Text>
