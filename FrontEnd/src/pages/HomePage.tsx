@@ -177,10 +177,10 @@ const HomePage: React.FC = () => {
       {/* Modern Header */}
       <Header transparent={false} />
       <Content>        {/* Enhanced Hero Section with Carousel */}
-        <section className="relative text-white overflow-hidden min-h-[400px] sm:min-h-[500px] lg:min-h-[600px] xl:min-h-[700px]">
+        <section className="relative text-white overflow-hidden min-h-[400px] sm:min-h-[500px] lg:min-h-[700px] xl:min-h-[800px]">
           {/* Blurred background image */}
           <div 
-            className="absolute inset-0 blur-[0.5px]"
+            className="absolute inset-0 blur-[12px]"
             style={{
               backgroundImage: `url('/src/gem32.webp')`,
               backgroundSize: 'cover',
@@ -188,24 +188,7 @@ const HomePage: React.FC = () => {
               backgroundRepeat: 'no-repeat'
             }}
           ></div>
-          <div className="absolute inset-0 bg-black/30"></div>
-          {/* Animated background patterns */}
-          <div className="absolute inset-0 overflow-hidden">
-            <div className="absolute -top-20 -right-20 w-32 h-32 sm:w-48 sm:h-48 lg:w-64 lg:h-64 bg-yellow-400 rounded-full opacity-10 animate-pulse"></div>
-            <div className="absolute top-1/3 -left-20 w-24 h-24 sm:w-36 sm:h-36 lg:w-48 lg:h-48 bg-gray-300 rounded-full opacity-10 animate-pulse delay-1000"></div>
-            <div className="absolute -bottom-20 right-1/3 w-28 h-28 sm:w-42 sm:h-42 lg:w-56 lg:h-56 bg-white rounded-full opacity-10 animate-pulse delay-500"></div>
-            <div className="absolute hidden md:block top-1/4 right-1/4 w-20 h-20 lg:w-32 lg:h-32 bg-gray-400 rounded-full opacity-10 animate-pulse delay-1500"></div>
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ 
-                duration: 15,
-                repeat: Infinity,
-                repeatType: "reverse"
-              }}
-              className="absolute -left-10 -bottom-10 w-32 h-32 sm:w-48 sm:h-48 lg:w-64 lg:h-64 bg-gradient-to-br from-yellow-400/20 to-yellow-500/5 rounded-full blur-xl"
-            />
-          </div>
+
           
           {/* Hero Content */}
           <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-8 sm:py-12 md:py-16 lg:py-24 xl:py-32">
@@ -219,14 +202,9 @@ const HomePage: React.FC = () => {
               {/* Slide 1: Main intro */}
               <div className="rounded-2xl overflow-hidden shadow-lg">
                 <div className="bg-blue-500/20 backdrop-blur-sm p-6 sm:p-8 md:p-10 lg:p-12">
-                  <Row gutter={[16, 24]} align="middle" className="min-h-[350px] sm:min-h-[400px] lg:min-h-[480px] relative z-30">
+                  <Row gutter={[16, 24]} align="middle" className="min-h-[350px] sm:min-h-[400px] lg:min-h-[580px] xl:min-h-[680px] relative z-30">
                   <Col xs={24}>
-                    <motion.div
-                      initial={{ opacity: 0, y: 30 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.8 }}
-                      className="space-y-4 sm:space-y-6 lg:space-y-8 text-center"
-                    >
+                    <div className="space-y-4 sm:space-y-6 lg:space-y-8 text-center">
                       <div className="inline-block px-3 py-1 bg-blue-500/30 backdrop-blur-sm rounded-full mb-2">
                         <Text className="text-yellow-300 text-xs sm:text-sm font-medium">Sri Lanka's Premier Gemstone Marketplace</Text>
                       </div>
@@ -255,7 +233,7 @@ const HomePage: React.FC = () => {
                           Join GemNet
                         </Button>
                       </Space>
-                    </motion.div>
+                    </div>
                   </Col>
                 </Row>
                 </div>
@@ -264,14 +242,9 @@ const HomePage: React.FC = () => {
               {/* Slide 2: Price Prediction */}
               <div className="rounded-2xl overflow-hidden shadow-lg">
                 <div className="bg-blue-500/20 backdrop-blur-sm p-6 sm:p-8 md:p-10 lg:p-12">
-                  <Row gutter={[16, 24]} align="middle" className="min-h-[350px] sm:min-h-[400px] lg:min-h-[480px] relative z-30">
+                  <Row gutter={[16, 24]} align="middle" className="min-h-[350px] sm:min-h-[400px] lg:min-h-[580px] xl:min-h-[680px] relative z-30">
                   <Col xs={24} lg={12}>
-                    <motion.div
-                      initial={{ opacity: 0, y: 30 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.8 }}
-                      className="space-y-4 sm:space-y-6 lg:space-y-8 text-center lg:text-left"
-                    >
+                    <div className="space-y-4 sm:space-y-6 lg:space-y-8 text-center lg:text-left">
                       <div className="inline-block px-3 py-1 bg-blue-500/30 backdrop-blur-sm rounded-full mb-2">
                         <Text className="text-yellow-300 text-xs sm:text-sm font-medium">AI-Powered Price Estimation</Text>
                       </div>
@@ -292,15 +265,10 @@ const HomePage: React.FC = () => {
                           Explore Marketplace
                         </Button>
                       </Space>
-                    </motion.div>
+                    </div>
                   </Col>
                   <Col xs={24} lg={12}>
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.8, delay: 0.2 }}
-                      className="relative mx-auto max-w-xs sm:max-w-sm lg:max-w-none mt-6 lg:mt-0"
-                    >
+                    <div className="relative mx-auto max-w-xs sm:max-w-sm lg:max-w-none mt-6 lg:mt-0">
                       <div className="relative z-10 bg-gradient-to-br from-blue-900/80 to-blue-800/80 backdrop-blur-sm rounded-2xl p-4 sm:p-6 shadow-[0_15px_50px_-15px_rgba(0,0,0,0.3)]">
                         <div className="flex items-start mb-4 sm:mb-6">
                           <div className="w-1/3 pr-2">
@@ -344,7 +312,7 @@ const HomePage: React.FC = () => {
                           <Text className="text-blue-200 text-xs">Confidence: High</Text>
                         </div>
                       </div>
-                    </motion.div>
+                    </div>
                   </Col>
                 </Row>
                 </div>
@@ -353,14 +321,9 @@ const HomePage: React.FC = () => {
               {/* Slide 3: Verification Process */}
               <div className="rounded-2xl overflow-hidden shadow-lg">
                 <div className="bg-blue-500/20 backdrop-blur-sm p-6 sm:p-8 md:p-10 lg:p-12">
-                  <Row gutter={[16, 24]} align="middle" className="min-h-[350px] sm:min-h-[400px] lg:min-h-[480px] relative z-30">
+                  <Row gutter={[16, 24]} align="middle" className="min-h-[350px] sm:min-h-[400px] lg:min-h-[580px] xl:min-h-[680px] relative z-30">
                   <Col xs={24} lg={12}>
-                    <motion.div
-                      initial={{ opacity: 0, y: 30 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.8 }}
-                      className="space-y-4 sm:space-y-6 lg:space-y-8 text-center lg:text-left"
-                    >
+                    <div className="space-y-4 sm:space-y-6 lg:space-y-8 text-center lg:text-left">
                       <div className="inline-block px-3 py-1 bg-blue-500/30 backdrop-blur-sm rounded-full mb-2">
                         <Text className="text-yellow-300 text-xs sm:text-sm font-medium">Trust & Verification</Text>
                       </div>
@@ -381,15 +344,10 @@ const HomePage: React.FC = () => {
                           Get Verified Today
                         </Button>
                       </Space>
-                    </motion.div>
+                    </div>
                   </Col>
                   <Col xs={24} lg={12}>
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.8, delay: 0.2 }}
-                      className="relative mx-auto max-w-xs sm:max-w-sm lg:max-w-none mt-6 lg:mt-0"
-                    >
+                    <div className="relative mx-auto max-w-xs sm:max-w-sm lg:max-w-none mt-6 lg:mt-0">
                       <div className="relative z-10 rounded-2xl overflow-hidden shadow-[0_15px_50px_-15px_rgba(0,0,0,0.3)]">
                         <div className="bg-gradient-to-br from-blue-900/90 to-blue-800/90 backdrop-blur-sm p-4 sm:p-6">
                           <div className="flex flex-col space-y-3 sm:space-y-4">
@@ -423,7 +381,7 @@ const HomePage: React.FC = () => {
                           </div>
                         </div>
                       </div>
-                    </motion.div>
+                    </div>
                   </Col>
                 </Row>
                 </div>
