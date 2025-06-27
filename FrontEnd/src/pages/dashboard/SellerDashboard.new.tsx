@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import GemListingForm from '../../components/forms/GemListingForm';
+import NewGemListingForm from '../../components/forms/NewGemListingForm';
 import { 
   Card, Row, Col, Table, Button, Tag, 
   Tabs, Space, Modal, Form, Input, InputNumber, message
@@ -602,7 +602,7 @@ const SellerDashboard: React.FC = () => {
         destroyOnClose
       >
         <div className="-mx-6 -mt-6">
-          <GemListingForm onSubmit={handleAddListing} onCancel={() => setIsAddListingModalVisible(false)} />
+          <NewGemListingForm onSubmit={handleAddListing} onCancel={() => setIsAddListingModalVisible(false)} />
         </div>
       </Modal>
 
