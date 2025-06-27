@@ -519,116 +519,113 @@
     @apply text-xs text-orange-700;
   }
   
-  /* Premium Dashboard Styles */
-  .dashboard-stats-card {
-    @apply bg-white rounded-xl shadow-sm border border-secondary-200 p-6 transition-all duration-300 hover:shadow-md relative overflow-hidden;
+  /* Premium Homepage Styles */
+  .hero-carousel .ant-carousel .ant-carousel-dots {
+    bottom: 20px !important;
   }
   
-  .dashboard-stats-card::before {
+  .hero-carousel .ant-carousel .ant-carousel-dots li {
+    @apply w-3 h-3 mx-1;
+  }
+  
+  .hero-carousel .ant-carousel .ant-carousel-dots li button {
+    @apply w-full h-full rounded-full bg-white/40 border-0 hover:bg-white/60 transition-all;
+  }
+  
+  .hero-carousel .ant-carousel .ant-carousel-dots li.ant-carousel-dots-active button {
+    @apply bg-yellow-400 hover:bg-yellow-300;
+  }
+  
+  .feature-card {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .feature-card::before {
     content: '';
-    @apply absolute -top-10 -right-10 w-24 h-24 bg-gradient-to-br from-primary-100 to-transparent rounded-full opacity-70;
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transition: left 0.6s;
   }
   
-  .dashboard-stats-card.premium {
-    @apply bg-gradient-to-br from-white to-secondary-50;
+  .feature-card:hover::before {
+    left: 100%;
   }
   
-  /* Responsive Tables */
-  .responsive-table-container {
-    @apply w-full overflow-x-auto rounded-lg;
+  .testimonial-card {
+    position: relative;
+    overflow: hidden;
   }
   
-  .responsive-table {
-    @apply min-w-full divide-y divide-secondary-200;
-  }
-  
-  /* Responsive Dashboard Grid */
-  .dashboard-grid {
-    @apply grid gap-6;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  }
-  
-  /* Premium Tabs */
-  .premium-tabs {
-    @apply flex flex-wrap border-b border-secondary-200 mb-6 overflow-x-auto;
-  }
-  
-  .premium-tab {
-    @apply px-4 py-3 text-secondary-600 font-medium text-sm cursor-pointer whitespace-nowrap;
-  }
-  
-  .premium-tab.active {
-    @apply text-primary-600 border-b-2 border-primary-600 font-semibold;
-  }
-  
-  .premium-tab:hover:not(.active) {
-    @apply text-secondary-800 bg-secondary-50;
-  }
-  
-  /* Mobile optimizations */
-  @media (max-width: 640px) {
-    .dashboard-welcome {
-      @apply px-4 py-6;
-    }
-    
-    .dashboard-stats-grid {
-      @apply grid-cols-1 gap-3;
-    }
-    
-    .premium-tabs {
-      @apply pb-1;
-    }
-    
-    .premium-tab {
-      @apply px-3 py-2;
-    }
-    
-    .responsive-table th,
-    .responsive-table td {
-      padding: 0.625rem 0.75rem;
-      font-size: 0.875rem;
-    }
-  }
-
-  /* Hero Carousel Styles */
-  .hero-carousel .ant-carousel .slick-dots {
-    @apply bottom-6;
-  }
-
-  .hero-carousel .ant-carousel .slick-dots li {
-    @apply w-8 md:w-12;
-  }
-
-  .hero-carousel .ant-carousel .slick-dots li button {
-    @apply h-[3px] md:h-1 bg-white/30;
-  }
-
-  .hero-carousel .ant-carousel .slick-dots li.slick-active button {
-    @apply bg-yellow-400;
-  }
-
-  .hero-carousel .ant-carousel .slick-dots-bottom {
-    @apply bottom-4;
-  }
-
-  .hero-carousel .ant-carousel .custom-dots {
-    @apply mb-0;
-  }
-
-  .hero-carousel .ant-carousel .slick-slide {
-    @apply pointer-events-auto;
-  }
-
-  /* Badge glow effect for verified items */
-  .ant-badge-status-success::before {
+  .testimonial-card::after {
     content: '';
-    @apply absolute inset-0 rounded-full animate-ping bg-green-500/30;
-    animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg, #3b82f6, #1d4ed8, #3b82f6);
+    border-radius: 1rem;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.3s;
   }
-
-  /* Hero section additional styles */
-  .hero-stats-card {
-    @apply bg-blue-800/50 backdrop-blur-sm border border-blue-700/50 transition-all duration-300 hover:border-yellow-400/50;
+  
+  .testimonial-card:hover::after {
+    opacity: 1;
+  }
+  
+  /* Glassmorphism effects */
+  .glass-effect {
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+  
+  /* Custom animations */
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+  
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.3); }
+    50% { box-shadow: 0 0 40px rgba(59, 130, 246, 0.6); }
+  }
+  
+  .float-animation {
+    animation: float 3s ease-in-out infinite;
+  }
+  
+  .pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+  
+  /* Enhanced button styles */
+  .premium-button {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+  
+  .premium-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.6s;
+  }
+  
+  .premium-button:hover::before {
+    left: 100%;
   }
 }
 
