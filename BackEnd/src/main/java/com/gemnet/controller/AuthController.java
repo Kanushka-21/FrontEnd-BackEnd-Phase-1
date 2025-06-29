@@ -349,7 +349,7 @@ public class AuthController {
             
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            System.err.println("❌ Admin login  error for " + request.getUsername() + ": " + e.getMessage());
+            System.err.println("❌ Admin login   error for " + request.getUsername() + ": " + e.getMessage());
             return ResponseEntity.ok(ApiResponse.error("Admin login failed: " + e.getMessage()));
         }
     }
