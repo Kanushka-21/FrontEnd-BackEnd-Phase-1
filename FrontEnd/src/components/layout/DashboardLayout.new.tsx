@@ -35,8 +35,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   ];
   
   const handleLogout = () => {
-    logout();
-    navigate('/');
+    console.log('🚪 DashboardLayout: Logout button clicked');
+    logout(); // Let the logout function handle the redirect
   };
 
   const quickLinks = [

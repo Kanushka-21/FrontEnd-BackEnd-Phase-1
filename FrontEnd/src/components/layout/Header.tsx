@@ -34,8 +34,8 @@ const Header: React.FC<HeaderProps> = ({ transparent = false }) => {
   ];
   
   const handleLogout = () => {
-    logout();
-    navigate('/');
+    console.log('🚪 Header: Logout button clicked');
+    logout(); // Let the logout function handle the redirect
   };
 
   const quickLinks = [

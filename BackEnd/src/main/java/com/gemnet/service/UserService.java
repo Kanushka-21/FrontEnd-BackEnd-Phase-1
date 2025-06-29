@@ -3,6 +3,9 @@ package com.gemnet.service;
 import com.gemnet.dto.UserRegistrationRequest;
 import com.gemnet.dto.LoginRequest;
 import com.gemnet.dto.AuthenticationResponse;
+import com.gemnet.dto.AdminRegistrationRequest;
+import com.gemnet.dto.AdminLoginRequest;
+import com.gemnet.dto.AdminAuthenticationResponse;
 import com.gemnet.dto.ApiResponse;
 import com.gemnet.model.User;
 import com.gemnet.repository.UserRepository;
@@ -76,12 +79,7 @@ public class UserService {
             
             // Set user role
             user.setUserRole(request.getUserRole() != null ? request.getUserRole().toUpperCase() : "BUYER");
-            
-            // Set default roles
-            Set<String> roles = new HashSet<>();
-            roles.add("USER");
-            user.setRoles(roles);
-            
+
             // Set initial verification status
             user.setVerificationStatus("PENDING");
             user.setIsVerified(false);
@@ -339,6 +337,10 @@ public class UserService {
             
             User user = userOpt.get();
             
+            // Debug user role
+            System.out.println("🔍 Debug - User role for " + request.getEmail() + ": " + user.getUserRole());
+            System.out.println("🔍 Debug - User role is null: " + (user.getUserRole() == null));
+            
             // Check password
             if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
                 System.err.println("❌ Invalid password for: " + request.getEmail());
@@ -349,6 +351,24 @@ public class UserService {
             if (user.getIsLocked()) {
                 System.err.println("❌ Account locked: " + request.getEmail());
                 return ApiResponse.error("Account is locked. Please contact support.");
+            }
+            
+            // Handle role extraction - check both userRole field and roles array
+            String userRole = user.getUserRole();
+            
+            // If userRole is null, try to get from roles array
+            if (userRole == null || userRole.isEmpty()) {
+                if (user.getRoles() != null && !user.getRoles().isEmpty()) {
+                    // Get the first role from the roles array
+                    userRole = user.getRoles().iterator().next();
+                    System.out.println("🔄 Found role in roles array for " + request.getEmail() + ": " + userRole);
+                } else {
+                    // No role found anywhere, set default
+                    System.out.println("⚠️ No role found for " + request.getEmail() + ", setting default BUYER role");
+                    userRole = "BUYER";
+                    user.setUserRole("BUYER");
+                    userRepository.save(user);
+                }
             }
             
             // Generate JWT token
@@ -363,10 +383,10 @@ public class UserService {
                 user.getLastName(),
                 user.getIsVerified(),
                 user.getVerificationStatus(),
-                user.getUserRole() != null ? user.getUserRole().toLowerCase() : "buyer"
+                userRole.toLowerCase()
             );
             
-            System.out.println("✅ Login successful for: " + request.getEmail());
+            System.out.println("✅ Login successful for: " + request.getEmail() + " with role: " + userRole.toLowerCase());
             return ApiResponse.success("Login successful", response);
             
         } catch (Exception e) {
@@ -388,4 +408,191 @@ public class UserService {
     public Optional<User> findById(String id) {
         return userRepository.findById(id);
     }
+    
+    /**
+     * Update users with null roles to have default BUYER role
+     */
+    public ApiResponse<String> updateUsersWithNullRoles() {
+        try {
+            System.out.println("🔄 Updating users with null roles...");
+            
+            int updatedCount = 0;
+            
+            // Find all users and fix their roles
+            for (User user : userRepository.findAll()) {
+                boolean needsUpdate = false;
+                String roleToSet = null;
+                
+                // Check if userRole field is empty
+                if (user.getUserRole() == null || user.getUserRole().isEmpty()) {
+                    // Try to get role from roles array
+                    if (user.getRoles() != null && !user.getRoles().isEmpty()) {
+                        // Use the first role from the array
+                        roleToSet = user.getRoles().iterator().next();
+                        System.out.println("🔄 Migrating role for " + user.getEmail() + " from roles array: " + roleToSet);
+                    } else {
+                        // No role found anywhere, set default
+                        roleToSet = "BUYER";
+                        System.out.println("🔄 Setting default BUYER role for " + user.getEmail());
+                    }
+                    needsUpdate = true;
+                }
+                
+                if (needsUpdate && roleToSet != null) {
+                    user.setUserRole(roleToSet.toUpperCase());
+                    userRepository.save(user);
+                    updatedCount++;
+                    System.out.println("✅ Updated user " + user.getEmail() + " with role: " + roleToSet.toUpperCase());
+                }
+            }
+            
+            return ApiResponse.success("Users updated successfully", 
+                "Updated " + updatedCount + " users with proper roles");
+            
+        } catch (Exception e) {
+            System.err.println("❌ Error updating users: " + e.getMessage());
+            return ApiResponse.error("Failed to update users: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Register a new admin user
+     */
+    public ApiResponse<String> registerAdmin(AdminRegistrationRequest request) {
+        try {
+            System.out.println("👑 Admin registration attempt for username: " + request.getUsername());
+            
+            // Check if username already exists
+            if (userRepository.existsByUsername(request.getUsername())) {
+                System.err.println("❌ Username already exists: " + request.getUsername());
+                return ApiResponse.error("Username already exists");
+            }
+            
+            // Check if email already exists
+            if (userRepository.existsByEmail(request.getEmail())) {
+                System.err.println("❌ Email already exists: " + request.getEmail());
+                return ApiResponse.error("Email already exists");
+            }
+            
+            // Check if employee ID already exists
+            Optional<User> existingEmployeeId = userRepository.findAll().stream()
+                .filter(user -> request.getEmployeeId().equals(user.getEmployeeId()))
+                .findFirst();
+            
+            if (existingEmployeeId.isPresent()) {
+                System.err.println("❌ Employee ID already exists: " + request.getEmployeeId());
+                return ApiResponse.error("Employee ID already exists");
+            }
+            
+            // Create new admin user
+            User admin = new User();
+            admin.setUsername(request.getUsername());
+            admin.setEmail(request.getEmail());
+            admin.setPassword(passwordEncoder.encode(request.getPassword()));
+            admin.setFirstName(request.getFirstName());
+            admin.setLastName(request.getLastName());
+            admin.setPhoneNumber(request.getContactNumber());
+            admin.setDepartment(request.getDepartment());
+            admin.setEmployeeId(request.getEmployeeId());
+            admin.setAdminNotes(request.getAdminNotes());
+            admin.setAccessLevel(request.getAccessLevel());
+            
+            // Set admin-specific values
+            admin.setUserRole("ADMIN");
+            admin.setVerificationStatus("VERIFIED"); // Admins are pre-verified
+            admin.setIsVerified(true);
+            admin.setIsActive(true);
+            admin.setIsLocked(false);
+            
+            // Set default values for non-admin fields (as they're required but not used for admins)
+            admin.setAddress("N/A - Admin Account");
+            admin.setDateOfBirth("N/A");
+            admin.setNicNumber("N/A-" + request.getEmployeeId()); // Use employee ID as unique identifier
+            
+            // Set roles
+            Set<String> roles = new HashSet<>();
+            roles.add("ADMIN");
+            admin.setRoles(roles);
+            
+            // Save admin user
+            User savedAdmin = userRepository.save(admin);
+            
+            System.out.println("✅ Admin registered successfully: " + savedAdmin.getUsername() + 
+                             " (ID: " + savedAdmin.getId() + ")");
+            
+            return ApiResponse.success("Admin account created successfully", 
+                "Admin ID: " + savedAdmin.getId() + ", Username: " + savedAdmin.getUsername());
+            
+        } catch (Exception e) {
+            System.err.println("❌ Admin registration error: " + e.getMessage());
+            e.printStackTrace();
+            return ApiResponse.error("Admin registration failed: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Admin login with username and password
+     */
+    public ApiResponse<AdminAuthenticationResponse> loginAdmin(AdminLoginRequest request) {
+        try {
+            System.out.println("👑 Admin login attempt for username: " + request.getUsername());
+            
+            // Find admin by username
+            Optional<User> adminOpt = userRepository.findByUsernameAndIsActive(request.getUsername(), true);
+            if (!adminOpt.isPresent()) {
+                System.err.println("❌ Admin not found or inactive: " + request.getUsername());
+                return ApiResponse.error("Invalid username or password");
+            }
+            
+            User admin = adminOpt.get();
+            
+            // Verify this is actually an admin user
+            if (!"ADMIN".equalsIgnoreCase(admin.getUserRole())) {
+                System.err.println("❌ User is not an admin: " + request.getUsername() + 
+                                 " (Role: " + admin.getUserRole() + ")");
+                return ApiResponse.error("Access denied. Admin privileges required.");
+            }
+            
+            // Check password
+            if (!passwordEncoder.matches(request.getPassword(), admin.getPassword())) {
+                System.err.println("❌ Invalid password for admin: " + request.getUsername());
+                return ApiResponse.error("Invalid username or password");
+            }
+            
+            // Check if account is locked
+            if (admin.getIsLocked()) {
+                System.err.println("❌ Admin account locked: " + request.getUsername());
+                return ApiResponse.error("Account is locked. Please contact system administrator.");
+            }
+            
+            // Generate JWT token using username as identifier for admins
+            String token = jwtTokenProvider.generateToken(admin.getUsername());
+            
+            // Create admin response
+            AdminAuthenticationResponse response = new AdminAuthenticationResponse(
+                token,
+                admin.getId(),
+                admin.getUsername(),
+                admin.getEmail(),
+                admin.getFirstName(),
+                admin.getLastName(),
+                admin.getUserRole().toLowerCase(),
+                admin.getDepartment(),
+                admin.getEmployeeId(),
+                admin.getAccessLevel(),
+                admin.getIsActive()
+            );
+            
+            System.out.println("✅ Admin login successful: " + request.getUsername() + 
+                             " (Department: " + admin.getDepartment() + 
+                             ", Access Level: " + admin.getAccessLevel() + ")");
+            
+            return ApiResponse.success("Admin login successful", response);
+            
+        } catch (Exception e) {
+            System.err.println("❌ Admin login error for " + request.getUsername() + ": " + e.getMessage());
+            return ApiResponse.error("Admin login failed: " + e.getMessage());
+        }
+    }
 }
+

@@ -14,9 +14,10 @@ import {
   Meeting,
   MeetingData
 } from '@/types';
+import { AdminLoginRequest, AdminAuthenticationResponse } from '@/Admin/types/AdminTypes';
 
 // API Configuration
-const API_BASE_URL = 'http://localhost:9091';
+const API_BASE_URL = 'http://localhost:9092';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -161,6 +162,12 @@ export const authAPI = {
         }
       };
     }
+  },
+
+  // Admin login
+  adminLogin: async (credentials: AdminLoginRequest): Promise<ApiResponse<AdminAuthenticationResponse>> => {
+    const response: AxiosResponse<ApiResponse<AdminAuthenticationResponse>> = await api.post('/api/auth/admin/login', credentials);
+    return response.data;
   },
 };
 

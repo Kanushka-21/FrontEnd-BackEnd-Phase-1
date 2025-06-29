@@ -268,4 +268,89 @@ public class AuthController {
         
         return ResponseEntity.ok(ApiResponse.success("Authentication service is running", status));
     }
+    
+    // ============================================
+    // ADMIN ENDPOINTS
+    // ============================================
+    
+    @PostMapping("/admin/register")
+    @Operation(summary = "Register new admin", description = "Create a new admin account with administrative privileges")
+    @CrossOrigin(origins = "*", allowedHeaders = "*", methods = {RequestMethod.POST})
+    public ResponseEntity<ApiResponse<String>> registerAdmin(@Valid @RequestBody AdminRegistrationRequest request) {
+        try {
+            System.out.println("👑 Admin registration attempt for username: " + request.getUsername());
+            System.out.println("👑 Admin details: " + request.getFirstName() + " " + request.getLastName() + 
+                             ", Department: " + request.getDepartment() + ", Employee ID: " + request.getEmployeeId());
+            
+            // Enhanced validation for admin-specific fields
+            if (request.getUsername() == null || request.getUsername().isEmpty()) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("Username is required"));
+            }
+            if (request.getEmail() == null || request.getEmail().isEmpty()) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("Email is required"));
+            }
+            if (request.getPassword() == null || request.getPassword().isEmpty()) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("Password is required"));
+            }
+            if (request.getDepartment() == null || request.getDepartment().isEmpty()) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("Department is required"));
+            }
+            if (request.getEmployeeId() == null || request.getEmployeeId().isEmpty()) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("Employee ID is required"));
+            }
+            if (request.getFirstName() == null || request.getFirstName().isEmpty() ||
+                request.getLastName() == null || request.getLastName().isEmpty()) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("First name and last name are required"));
+            }
+            if (request.getContactNumber() == null || request.getContactNumber().isEmpty()) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("Contact number is required"));
+            }
+            
+            // MongoDB connection check
+            try {
+                long userCount = userRepository.count();
+                System.out.println("✅ MongoDB connection verified for admin registration - Current user count: " + userCount);
+            } catch (Exception dbEx) {
+                System.err.println("❌ MongoDB connection error during admin registration: " + dbEx.getMessage());
+                return ResponseEntity.status(503)
+                    .body(ApiResponse.error("Database connection failed. Please try again later.", 
+                                          dbEx.getMessage()));
+            }
+            
+            ApiResponse<String> response = userService.registerAdmin(request);
+            
+            if (response.isSuccess()) {
+                System.out.println("✅ Admin registered successfully: " + response.getData());
+                return ResponseEntity.status(201).body(response);
+            } else {
+                System.out.println("❌ Admin registration failed: " + response.getMessage());
+                return ResponseEntity.status(400).body(response);
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Admin registration error: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(ApiResponse.error("Admin registration failed: " + e.getMessage()));
+        }
+    }
+    
+    @PostMapping("/admin/login")
+    @Operation(summary = "Admin login", description = "Authenticate admin user with username and password")
+    @CrossOrigin(origins = "*", allowedHeaders = "*", methods = {RequestMethod.POST})
+    public ResponseEntity<ApiResponse<AdminAuthenticationResponse>> loginAdmin(@Valid @RequestBody AdminLoginRequest request) {
+        try {
+            System.out.println("👑 Admin login attempt for username: " + request.getUsername());
+            ApiResponse<AdminAuthenticationResponse> response = userService.loginAdmin(request);
+            
+            if (response.isSuccess()) {
+                System.out.println("✅ Admin login successful for: " + request.getUsername());
+            } else {
+                System.out.println("❌ Admin login failed for: " + request.getUsername() + " - " + response.getMessage());
+            }
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            System.err.println("❌ Admin login error for " + request.getUsername() + ": " + e.getMessage());
+            return ResponseEntity.ok(ApiResponse.error("Admin login failed: " + e.getMessage()));
+        }
+    }
 }
