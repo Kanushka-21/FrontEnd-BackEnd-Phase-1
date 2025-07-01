@@ -218,7 +218,7 @@ const HomePage: React.FC = () => {
             >              {/* Slide 1: Main intro */}
               <div className="relative rounded-lg overflow-hidden">
                 <div className="absolute inset-0 bg-blue-500/20 backdrop-blur-sm"></div>
-                <Row gutter={[16, 24]} align="middle" className="min-h-[350px] sm:min-h-[400px] lg:min-h-[480px] relative z-30">
+                <Row gutter={[16, 24]} align="middle" className="min-h-[420px] sm:min-h-[480px] lg:min-h-[560px] xl:min-h-[620px] relative z-30 rounded-xl lg:rounded-2xl xl:rounded-3xl bg-gradient-to-br from-blue-600/10 to-blue-800/10 backdrop-blur-sm border border-blue-400/20 px-6 sm:px-8 lg:px-12 py-6 sm:py-8 lg:py-10">
                   <Col xs={24}>
                     <motion.div
                       initial={{ opacity: 0, y: 30 }}
@@ -260,7 +260,7 @@ const HomePage: React.FC = () => {
               </div>              {/* Slide 2: Price Prediction */}
               <div className="rounded-lg overflow-hidden">
                 <div className="absolute inset-0 bg-blue-500/20 backdrop-blur-sm"></div>
-                <Row gutter={[16, 24]} align="middle" className="min-h-[350px] sm:min-h-[400px] lg:min-h-[480px] relative z-30">
+                <Row gutter={[16, 24]} align="middle" className="min-h-[420px] sm:min-h-[480px] lg:min-h-[560px] xl:min-h-[620px] relative z-30 rounded-xl lg:rounded-2xl xl:rounded-3xl bg-gradient-to-br from-blue-600/10 to-blue-800/10 backdrop-blur-sm border border-blue-400/20 px-6 sm:px-8 lg:px-12 py-6 sm:py-8 lg:py-10">
                   <Col xs={24} lg={12}>
                     <motion.div
                       initial={{ opacity: 0, y: 30 }}
@@ -344,9 +344,9 @@ const HomePage: React.FC = () => {
                   </Col>
                 </Row>
               </div>              {/* Slide 3: Verification Process */}
-              <div className="rounded-lg overflow-hidden mx-4 sm:mx-6 lg:mx-8">
+              <div className="relative rounded-lg overflow-hidden">
                 <div className="absolute inset-0 bg-blue-500/20 backdrop-blur-sm"></div>
-                <Row gutter={[16, 24]} align="middle" className="min-h-[350px] sm:min-h-[400px] lg:min-h-[480px] relative z-30 px-4 sm:px-6 lg:px-8">
+                <Row gutter={[16, 24]} align="middle" className="min-h-[420px] sm:min-h-[480px] lg:min-h-[560px] xl:min-h-[620px] relative z-30 rounded-xl lg:rounded-2xl xl:rounded-3xl bg-gradient-to-br from-blue-600/10 to-blue-800/10 backdrop-blur-sm border border-blue-400/20 px-6 sm:px-8 lg:px-12 py-6 sm:py-8 lg:py-10">
                   <Col xs={24} lg={12}>
                     <motion.div
                       initial={{ opacity: 0, y: 30 }}
