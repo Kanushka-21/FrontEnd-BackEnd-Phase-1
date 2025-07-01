@@ -173,14 +173,14 @@ const HomePage: React.FC = () => {
     setMobileMenuOpen(!mobileMenuOpen);
   };
   return (
-    <AntLayout className="min-h-screen bg-gray-50">
+    <AntLayout className="min-h-screen bg-gray-50 overflow-x-hidden w-full max-w-[100vw]">
       {/* Modern Header */}
       <Header transparent={false} />
-      <Content>        {/* Enhanced Hero Section with Carousel */}
-        <section className="relative text-white overflow-hidden min-h-[400px] sm:min-h-[500px] lg:min-h-[600px] xl:min-h-[700px]">
+      <Content className="overflow-x-hidden w-full max-w-[100vw]">        {/* Enhanced Hero Section with Carousel */}
+        <section className="relative text-white overflow-hidden overflow-x-hidden min-h-[320px] xxs:min-h-[330px] xs:min-h-[360px] sm:min-h-[450px] lg:min-h-[600px] xl:min-h-[700px] w-full max-w-[100vw]">
           {/* Blurred background image */}
           <div 
-            className="absolute inset-0 blur-[0.5px]"
+            className="absolute inset-0 blur-[1px]"
             style={{
               backgroundImage: `url('/src/gem32.webp')`,
               backgroundSize: 'cover',
@@ -208,47 +208,47 @@ const HomePage: React.FC = () => {
           </div>
           
           {/* Hero Content */}
-          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-8 sm:py-12 md:py-16 lg:py-24 xl:py-32">
+          <div className="relative max-w-7xl w-full mx-auto px-2 xxs:px-3 xs:px-5 sm:px-6 lg:px-12 py-4 xxs:py-5 xs:py-6 sm:py-12 md:py-16 lg:py-24 xl:py-32 overflow-x-hidden">
             <Carousel 
               autoplay 
               effect="fade"
               dots={{ className: "custom-dots" }}
-              className="hero-carousel rounded-lg"
+              className="hero-carousel rounded-lg overflow-hidden w-full"
               autoplaySpeed={6000}
             >              {/* Slide 1: Main intro */}
-              <div className="relative rounded-lg overflow-hidden">
+              <div className="relative rounded-lg xs:rounded-xl lg:rounded-2xl xl:rounded-3xl overflow-hidden">
                 <div className="absolute inset-0 bg-blue-500/20 backdrop-blur-sm"></div>
-                <Row gutter={[16, 24]} align="middle" className="min-h-[420px] sm:min-h-[480px] lg:min-h-[560px] xl:min-h-[620px] relative z-30 rounded-xl lg:rounded-2xl xl:rounded-3xl bg-gradient-to-br from-blue-600/10 to-blue-800/10 backdrop-blur-sm border border-blue-400/20 px-6 sm:px-8 lg:px-12 py-6 sm:py-8 lg:py-10">
+                <Row gutter={[2, 4]} xxs:gutter={[4, 6]} xs:gutter={[8, 12]} sm:gutter={[16, 16]} align="middle" className="min-h-[280px] xxs:min-h-[290px] xs:min-h-[310px] sm:min-h-[380px] lg:min-h-[480px] xl:min-h-[560px] relative z-30 rounded-lg xs:rounded-xl lg:rounded-2xl xl:rounded-3xl bg-gradient-to-br from-blue-600/10 to-blue-800/10 backdrop-blur-sm border border-blue-400/20 px-1 xxs:px-2 xs:px-4 sm:px-6 lg:px-12 py-2 xxs:py-3 xs:py-4 sm:py-6 lg:py-8">
                   <Col xs={24}>
                     <motion.div
                       initial={{ opacity: 0, y: 30 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.8 }}
-                      className="space-y-4 sm:space-y-6 lg:space-y-8 text-center"
+                      className="space-y-3 xs:space-y-4 sm:space-y-6 lg:space-y-8 text-center"
                     >
-                      <div className="inline-block px-3 py-1 bg-blue-500/30 backdrop-blur-sm rounded-full mb-2">
-                        <Text className="text-yellow-300 text-xs sm:text-sm font-medium">Sri Lanka's Premier Gemstone Marketplace</Text>
+                      <div className="inline-block px-1 xxs:px-2 xs:px-3 py-1 bg-blue-500/30 backdrop-blur-sm rounded-full mb-1 xs:mb-2">
+                        <Text className="text-yellow-300 text-[10px] xxs:text-xs xs:text-xs sm:text-sm font-medium">Sri Lanka's Premier Gemstone Marketplace</Text>
                       </div>
-                      <Title level={1} className="!text-white !text-2xl sm:!text-3xl lg:!text-5xl xl:!text-6xl !font-bold !leading-tight">
+                      <Title level={1} className="!text-white !text-lg xxs:!text-xl xs:!text-2xl sm:!text-3xl lg:!text-5xl xl:!text-6xl !font-bold !leading-tight">
                         Discover Authentic
                         <span className="block text-yellow-400">Sri Lankan Gems</span>
                       </Title>
-                      <Paragraph className="!text-blue-100 !text-sm sm:!text-base lg:!text-lg xl:!text-xl !leading-relaxed max-w-xl mx-auto">
+                      <Paragraph className="!text-blue-100 !text-[10px] xxs:!text-xs xs:!text-sm sm:!text-base lg:!text-lg xl:!text-xl !leading-relaxed max-w-xs xxs:max-w-sm xs:max-w-xl mx-auto px-1 xxs:px-2 xs:px-0">
                         Join the most trusted digital marketplace for authentic gemstones. 
                         Connect with verified sellers and discover rare gems with confidence.
                       </Paragraph>
-                      <Space size="middle" className="flex flex-col sm:flex-row w-full sm:w-auto justify-center pt-2 sm:pt-4">
+                      <Space size="small" className="flex flex-col xs:flex-col sm:flex-row w-full justify-center pt-1 xxs:pt-2 xs:pt-3 sm:pt-4 px-1 xxs:px-2 xs:px-0">
                         <Button 
-                          size="large" 
-                          className="bg-yellow-500 border-yellow-500 text-gray-900 hover:bg-yellow-400 font-semibold px-6 sm:px-8 h-10 sm:h-12 w-full sm:w-auto"
+                          size="middle" 
+                          className="bg-yellow-500 border-yellow-500 text-gray-900 hover:bg-yellow-400 font-semibold px-2 xxs:px-3 xs:px-6 sm:px-8 h-8 xxs:h-9 xs:h-10 sm:h-12 w-full text-xs xxs:text-sm xs:text-base"
                           onClick={() => navigate('/marketplace')}
                         >
                           Explore Marketplace
                         </Button>
                         <Button 
-                          size="large" 
+                          size="middle" 
                           ghost 
-                          className="border-white text-white hover:bg-white hover:text-blue-600 font-semibold px-6 sm:px-8 h-10 sm:h-12 w-full sm:w-auto"
+                          className="border-white text-white hover:bg-white hover:text-blue-600 font-semibold px-2 xxs:px-3 xs:px-6 sm:px-8 h-8 xxs:h-9 xs:h-10 sm:h-12 w-full text-xs xxs:text-sm xs:text-base"
                           onClick={() => navigate('/register')}
                         >
                           Join GemNet
@@ -258,31 +258,30 @@ const HomePage: React.FC = () => {
                   </Col>
                 </Row>
               </div>              {/* Slide 2: Price Prediction */}
-              <div className="rounded-lg overflow-hidden">
+              <div className="relative rounded-lg xs:rounded-xl lg:rounded-2xl xl:rounded-3xl overflow-hidden">
                 <div className="absolute inset-0 bg-blue-500/20 backdrop-blur-sm"></div>
-                <Row gutter={[16, 24]} align="middle" className="min-h-[420px] sm:min-h-[480px] lg:min-h-[560px] xl:min-h-[620px] relative z-30 rounded-xl lg:rounded-2xl xl:rounded-3xl bg-gradient-to-br from-blue-600/10 to-blue-800/10 backdrop-blur-sm border border-blue-400/20 px-6 sm:px-8 lg:px-12 py-6 sm:py-8 lg:py-10">
+                <Row gutter={[2, 4]} xxs:gutter={[4, 6]} xs:gutter={[8, 12]} sm:gutter={[16, 16]} align="middle" className="min-h-[280px] xxs:min-h-[290px] xs:min-h-[310px] sm:min-h-[380px] lg:min-h-[480px] xl:min-h-[560px] relative z-30 rounded-lg xs:rounded-xl lg:rounded-2xl xl:rounded-3xl bg-gradient-to-br from-blue-600/10 to-blue-800/10 backdrop-blur-sm border border-blue-400/20 px-1 xxs:px-2 xs:px-4 sm:px-6 lg:px-12 py-2 xxs:py-3 xs:py-4 sm:py-6 lg:py-8">
                   <Col xs={24} lg={12}>
                     <motion.div
                       initial={{ opacity: 0, y: 30 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.8 }}
-                      className="space-y-4 sm:space-y-6 lg:space-y-8 text-center lg:text-left"
-                    >
-                      <div className="inline-block px-3 py-1 bg-blue-500/30 backdrop-blur-sm rounded-full mb-2">
-                        <Text className="text-yellow-300 text-xs sm:text-sm font-medium">AI-Powered Price Estimation</Text>
+                      className="space-y-3 xs:space-y-4 sm:space-y-6 lg:space-y-8 text-center lg:text-left px-2 xs:px-0">
+                      <div className="inline-block px-1 xxs:px-2 xs:px-3 py-1 bg-blue-500/30 backdrop-blur-sm rounded-full mb-1 xs:mb-2">
+                        <Text className="text-yellow-300 text-[10px] xxs:text-xs xs:text-xs sm:text-sm font-medium">AI-Powered Price Estimation</Text>
                       </div>
-                      <Title level={1} className="!text-white !text-2xl sm:!text-3xl lg:!text-5xl xl:!text-6xl !font-bold !leading-tight">
+                      <Title level={1} className="!text-white !text-lg xxs:!text-xl xs:!text-2xl sm:!text-3xl lg:!text-5xl xl:!text-6xl !font-bold !leading-tight">
                         Smart Pricing
                         <span className="block text-yellow-400">For Fair Trading</span>
                       </Title>
-                      <Paragraph className="!text-blue-100 !text-sm sm:!text-base lg:!text-lg xl:!text-xl !leading-relaxed max-w-xl mx-auto lg:mx-0">
+                      <Paragraph className="!text-blue-100 !text-[10px] xxs:!text-xs xs:!text-sm sm:!text-base lg:!text-lg xl:!text-xl !leading-relaxed max-w-xs xxs:max-w-sm xs:max-w-xl mx-auto lg:mx-0">
                         Our machine learning technology analyzes gem attributes to provide estimated price ranges, 
                         helping both buyers and sellers make informed decisions.
                       </Paragraph>
-                      <Space size="middle" className="flex flex-col sm:flex-row w-full sm:w-auto justify-center lg:justify-start pt-2 sm:pt-4">
+                      <Space size="small" className="flex flex-col xs:flex-col sm:flex-row w-full justify-center lg:justify-start pt-1 xs:pt-2 sm:pt-4">
                         <Button 
-                          size="large" 
-                          className="bg-yellow-500 border-yellow-500 text-gray-900 hover:bg-yellow-400 font-semibold px-6 sm:px-8 h-10 sm:h-12 w-full sm:w-auto"
+                          size="middle" 
+                          className="bg-yellow-500 border-yellow-500 text-gray-900 hover:bg-yellow-400 font-semibold px-2 xxs:px-3 xs:px-6 sm:px-8 h-8 xxs:h-9 xs:h-10 sm:h-12 w-full text-xs xxs:text-sm xs:text-base"
                           onClick={() => navigate('/marketplace')}
                         >
                           Explore Marketplace
@@ -297,56 +296,56 @@ const HomePage: React.FC = () => {
                       transition={{ duration: 0.8, delay: 0.2 }}
                       className="relative mx-auto max-w-xs sm:max-w-sm lg:max-w-none mt-6 lg:mt-0"
                     >
-                      <div className="relative z-10 bg-gradient-to-br from-blue-900/80 to-blue-800/80 backdrop-blur-sm rounded-2xl p-4 sm:p-6 shadow-[0_15px_50px_-15px_rgba(0,0,0,0.3)]">
-                        <div className="flex items-start mb-4 sm:mb-6">
-                          <div className="w-1/3 pr-2">
+                      <div className="relative z-10 bg-gradient-to-br from-blue-900/80 to-blue-800/80 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 xs:p-4 sm:p-6 shadow-[0_15px_50px_-15px_rgba(0,0,0,0.3)]">
+                        <div className="flex items-start mb-3 xs:mb-4 sm:mb-6">
+                          <div className="w-1/3 pr-1 xs:pr-2">
                             <img 
                               src="https://images.unsplash.com/photo-1599707367072-cd6ada2bc375?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80"
                               alt="Sapphire"
                               className="w-full h-auto rounded-lg"
                             />
                           </div>
-                          <div className="w-2/3 pl-2">
-                            <Title level={4} className="!text-white !text-sm sm:!text-base lg:!text-lg !mb-1">Blue Sapphire</Title>
-                            <Text className="text-blue-200 text-xs sm:text-sm block mb-2">5.2 Carats, Ceylon Origin</Text>
+                          <div className="w-2/3 pl-1 xs:pl-2">
+                            <Title level={4} className="!text-white !text-xs xs:!text-sm sm:!text-base lg:!text-lg !mb-1">Blue Sapphire</Title>
+                            <Text className="text-blue-200 text-xs sm:text-sm block mb-1 xs:mb-2">5.2 Carats, Ceylon Origin</Text>
                             <div className="space-x-1">
-                              <Tag color="blue" className="text-xs">Corundum</Tag>
-                              <Tag color="green" className="text-xs">Certified</Tag>
+                              <Tag color="blue" className="text-[10px] xs:text-xs">Corundum</Tag>
+                              <Tag color="green" className="text-[10px] xs:text-xs">Certified</Tag>
                             </div>
                           </div>
                         </div>
-                        <div className="bg-blue-950/40 rounded-lg p-3 sm:p-4 mb-3 sm:mb-4">
-                          <Title level={5} className="!text-blue-200 !text-xs sm:!text-sm !mb-2 sm:!mb-3">Price Prediction</Title>                          <Row gutter={16}>
+                        <div className="bg-blue-950/40 rounded-lg p-2 xs:p-3 sm:p-4 mb-2 xs:mb-3 sm:mb-4">
+                          <Title level={5} className="!text-blue-200 !text-xs sm:!text-sm !mb-2 sm:!mb-3">Price Prediction</Title>                          <Row gutter={8}>
                             <Col span={12}>
                               <Statistic 
-                                title={<span className="text-blue-300 text-xs">Minimum</span>}
+                                title={<span className="text-blue-300 text-[10px] xs:text-xs">Minimum</span>}
                                 value="LKR 4,785,000"
-                                valueStyle={{ color: '#7dd3fc', fontSize: '0.8rem' }}
+                                valueStyle={{ color: '#7dd3fc', fontSize: 'clamp(0.65rem, 2vw, 0.8rem)' }}
                                 className="mobile-statistic"
                               />
                             </Col>
                             <Col span={12}>
                               <Statistic 
-                                title={<span className="text-blue-300 text-xs">Maximum</span>}
+                                title={<span className="text-blue-300 text-[10px] xs:text-xs">Maximum</span>}
                                 value="LKR 5,544,000"
-                                valueStyle={{ color: '#7dd3fc', fontSize: '0.8rem' }}
+                                valueStyle={{ color: '#7dd3fc', fontSize: 'clamp(0.65rem, 2vw, 0.8rem)' }}
                                 className="mobile-statistic"
                               />
                             </Col>
                           </Row>
                         </div>
-                        <div className="flex justify-between items-center">
-                          <Badge status="processing" text={<span className="text-yellow-300 text-xs">AI Generated Estimate</span>} />
-                          <Text className="text-blue-200 text-xs">Confidence: High</Text>
+                        <div className="flex flex-wrap justify-between items-center gap-1 xs:gap-0">
+                          <Badge status="processing" text={<span className="text-yellow-300 text-[10px] xs:text-xs">AI Generated Estimate</span>} />
+                          <Text className="text-blue-200 text-[10px] xs:text-xs">Confidence: High</Text>
                         </div>
                       </div>
                     </motion.div>
                   </Col>
                 </Row>
               </div>              {/* Slide 3: Verification Process */}
-              <div className="relative rounded-lg overflow-hidden">
+              <div className="relative rounded-lg xs:rounded-xl lg:rounded-2xl xl:rounded-3xl overflow-hidden">
                 <div className="absolute inset-0 bg-blue-500/20 backdrop-blur-sm"></div>
-                <Row gutter={[16, 24]} align="middle" className="min-h-[420px] sm:min-h-[480px] lg:min-h-[560px] xl:min-h-[620px] relative z-30 rounded-xl lg:rounded-2xl xl:rounded-3xl bg-gradient-to-br from-blue-600/10 to-blue-800/10 backdrop-blur-sm border border-blue-400/20 px-6 sm:px-8 lg:px-12 py-6 sm:py-8 lg:py-10">
+                <Row gutter={[2, 4]} xxs:gutter={[4, 6]} xs:gutter={[8, 12]} sm:gutter={[16, 16]} align="middle" className="min-h-[280px] xxs:min-h-[290px] xs:min-h-[310px] sm:min-h-[380px] lg:min-h-[480px] xl:min-h-[560px] relative z-30 rounded-lg xs:rounded-xl lg:rounded-2xl xl:rounded-3xl bg-gradient-to-br from-blue-600/10 to-blue-800/10 backdrop-blur-sm border border-blue-400/20 px-1 xxs:px-2 xs:px-4 sm:px-6 lg:px-12 py-2 xxs:py-3 xs:py-4 sm:py-6 lg:py-8">
                   <Col xs={24} lg={12}>
                     <motion.div
                       initial={{ opacity: 0, y: 30 }}
@@ -354,21 +353,21 @@ const HomePage: React.FC = () => {
                       transition={{ duration: 0.8 }}
                       className="space-y-4 sm:space-y-6 lg:space-y-8 text-center lg:text-left"
                     >
-                      <div className="inline-block px-3 py-1 bg-blue-500/30 backdrop-blur-sm rounded-full mb-2">
-                        <Text className="text-yellow-300 text-xs sm:text-sm font-medium">Trust & Verification</Text>
+                      <div className="inline-block px-1 xxs:px-2 xs:px-3 py-1 bg-blue-500/30 backdrop-blur-sm rounded-full mb-1 xxs:mb-2">
+                        <Text className="text-yellow-300 text-[10px] xxs:text-xs xs:text-xs sm:text-sm font-medium">Trust & Verification</Text>
                       </div>
-                      <Title level={1} className="!text-white !text-2xl sm:!text-3xl lg:!text-5xl xl:!text-6xl !font-bold !leading-tight">
+                      <Title level={1} className="!text-white !text-lg xxs:!text-xl xs:!text-2xl sm:!text-3xl lg:!text-5xl xl:!text-6xl !font-bold !leading-tight">
                         Safety First
                         <span className="block text-yellow-400">Verified Users Only</span>
                       </Title>
-                      <Paragraph className="!text-blue-100 !text-sm sm:!text-base lg:!text-lg xl:!text-xl !leading-relaxed max-w-xl mx-auto lg:mx-0">
+                      <Paragraph className="!text-blue-100 !text-[10px] xxs:!text-xs xs:!text-sm sm:!text-base lg:!text-lg xl:!text-xl !leading-relaxed max-w-xs xxs:max-w-sm xs:max-w-xl mx-auto lg:mx-0">
                         GemNet verifies all buyers and sellers through identity verification, 
                         creating a secure environment for gemstone trading.
                       </Paragraph>
                       <Space size="middle" className="flex flex-col sm:flex-row w-full sm:w-auto justify-center lg:justify-start pt-2 sm:pt-4">
                         <Button 
-                          size="large" 
-                          className="bg-yellow-500 border-yellow-500 text-gray-900 hover:bg-yellow-400 font-semibold px-6 sm:px-8 h-10 sm:h-12 w-full sm:w-auto"
+                          size="middle" 
+                          className="bg-yellow-500 border-yellow-500 text-gray-900 hover:bg-yellow-400 font-semibold px-2 xxs:px-3 xs:px-6 sm:px-8 h-8 xxs:h-9 xs:h-10 sm:h-12 w-full sm:w-auto text-xs xxs:text-sm xs:text-base"
                           onClick={() => navigate('/register')}
                         >
                           Get Verified Today
@@ -383,34 +382,34 @@ const HomePage: React.FC = () => {
                       transition={{ duration: 0.8, delay: 0.2 }}
                       className="relative mx-auto max-w-xs sm:max-w-sm lg:max-w-none mt-6 lg:mt-0"
                     >
-                      <div className="relative z-10 rounded-2xl overflow-hidden shadow-[0_15px_50px_-15px_rgba(0,0,0,0.3)]">
-                        <div className="bg-gradient-to-br from-blue-900/90 to-blue-800/90 backdrop-blur-sm p-4 sm:p-6">
-                          <div className="flex flex-col space-y-3 sm:space-y-4">
-                            <div className="bg-blue-950/50 rounded-lg p-3 sm:p-4 flex items-center">
-                              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-700 rounded-full flex items-center justify-center mr-3 sm:mr-4">
-                                <CheckCircleOutlined className="text-white text-sm sm:text-lg" />
+                      <div className="relative z-10 rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_15px_50px_-15px_rgba(0,0,0,0.3)]">
+                        <div className="bg-gradient-to-br from-blue-900/90 to-blue-800/90 backdrop-blur-sm p-3 xs:p-4 sm:p-6">
+                          <div className="flex flex-col space-y-2 xs:space-y-3 sm:space-y-4">
+                            <div className="bg-blue-950/50 rounded-lg p-2 xs:p-3 sm:p-4 flex items-center">
+                              <div className="w-6 h-6 xs:w-8 xs:h-8 sm:w-10 sm:h-10 bg-blue-700 rounded-full flex items-center justify-center mr-2 xs:mr-3 sm:mr-4">
+                                <CheckCircleOutlined className="text-white text-xs xs:text-sm sm:text-lg" />
                               </div>
                               <div>
-                                <Text className="text-white font-medium block text-sm sm:text-base">Identity Verification</Text>
-                                <Text className="text-blue-200 text-xs">Government ID validation & facial recognition</Text>
+                                <Text className="text-white font-medium block text-xs xs:text-sm sm:text-base">Identity Verification</Text>
+                                <Text className="text-blue-200 text-[10px] xs:text-xs">Government ID validation & facial recognition</Text>
                               </div>
                             </div>
-                            <div className="bg-blue-950/50 rounded-lg p-4 flex items-center">
-                              <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center mr-4">
-                                <SafetyOutlined className="text-white text-lg" />
+                            <div className="bg-blue-950/50 rounded-lg p-2 xs:p-3 sm:p-4 flex items-center">
+                              <div className="w-6 h-6 xs:w-8 xs:h-8 sm:w-10 sm:h-10 bg-green-600 rounded-full flex items-center justify-center mr-2 xs:mr-3 sm:mr-4">
+                                <SafetyOutlined className="text-white text-xs xs:text-sm sm:text-lg" />
                               </div>
                               <div>
-                                <Text className="text-white font-medium block">Secure Transactions</Text>
-                                <Text className="text-blue-200 text-xs">Escrow service & buyer protection</Text>
+                                <Text className="text-white font-medium block text-xs xs:text-sm sm:text-base">Secure Transactions</Text>
+                                <Text className="text-blue-200 text-[10px] xs:text-xs">Escrow service & buyer protection</Text>
                               </div>
                             </div>
-                            <div className="bg-blue-950/50 rounded-lg p-4 flex items-center">
-                              <div className="w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center mr-4">
-                                <StarFilled className="text-white text-lg" />
+                            <div className="bg-blue-950/50 rounded-lg p-2 xs:p-3 sm:p-4 flex items-center">
+                              <div className="w-6 h-6 xs:w-8 xs:h-8 sm:w-10 sm:h-10 bg-yellow-500 rounded-full flex items-center justify-center mr-2 xs:mr-3 sm:mr-4">
+                                <StarFilled className="text-white text-xs xs:text-sm sm:text-lg" />
                               </div>
                               <div>
-                                <Text className="text-white font-medium block">Seller Ratings</Text>
-                                <Text className="text-blue-200 text-xs">Transparent feedback system</Text>
+                                <Text className="text-white font-medium block text-xs xs:text-sm sm:text-base">Seller Ratings</Text>
+                                <Text className="text-blue-200 text-[10px] xs:text-xs">Transparent feedback system</Text>
                               </div>
                             </div>
                           </div>
@@ -425,9 +424,9 @@ const HomePage: React.FC = () => {
         </section>
 
         {/* Statistics Section */}
-        <section className="py-10 md:py-16 bg-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12">
-            <Row gutter={[16, 16]} align="middle" justify="center">
+        <section className="py-6 xxs:py-8 xs:py-10 md:py-16 bg-white overflow-x-hidden w-full max-w-[100vw]">
+          <div className="max-w-7xl mx-auto px-2 xxs:px-3 xs:px-4 sm:px-6 lg:px-12">
+            <Row gutter={[4, 12]} xxs:gutter={[6, 14]} xs:gutter={[8, 16]} sm:gutter={[16, 16]} align="middle" justify="center">
               {statistics.map((stat, index) => (
                 <Col xs={24} sm={8} key={index}>
                   <motion.div
@@ -457,8 +456,8 @@ const HomePage: React.FC = () => {
             </Row>
           </div>
         </section>        {/* Featured Gemstones */}
-        <section className="py-8 sm:py-12 md:py-16 lg:py-20 bg-gray-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12">
+        <section className="py-4 xxs:py-6 xs:py-8 sm:py-12 md:py-16 lg:py-20 bg-gray-50 overflow-x-hidden w-full max-w-[100vw]">
+          <div className="max-w-7xl mx-auto px-2 xxs:px-3 xs:px-4 sm:px-6 lg:px-12">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -472,7 +471,7 @@ const HomePage: React.FC = () => {
               <Paragraph className="!text-sm sm:!text-base lg:!text-lg !text-gray-600 max-w-2xl mx-auto">
                 Discover our handpicked collection of premium gemstones from verified sellers
               </Paragraph>
-            </motion.div>            <Row gutter={[12, 16]} className="sm:gutter-16 lg:gutter-24">
+            </motion.div>            <Row gutter={[4, 12]} xxs:gutter={[6, 14]} xs:gutter={[8, 16]} className="sm:gutter-16 lg:gutter-24">
               {featuredGemstones.map((gemstone, index) => (
                 <Col xs={24} sm={12} lg={6} key={gemstone.id}>
                   <motion.div
