@@ -33,14 +33,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String jwt = getJwtFromRequest(request);
         
         if (StringUtils.hasText(jwt) && jwtTokenProvider.validateToken(jwt)) {
-            String email = jwtTokenProvider.getEmailFromToken(jwt);
+            String identifier = jwtTokenProvider.getIdentifierFromToken(jwt);
+            System.out.println("🔓 JWT Authentication - Processing token for identifier: " + identifier);
             
-            UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+            UserDetails userDetails = userDetailsService.loadUserByUsername(identifier);
             UsernamePasswordAuthenticationToken authentication = 
                 new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
             authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
             
             SecurityContextHolder.getContext().setAuthentication(authentication);
+            System.out.println("✅ JWT Authentication successful for: " + identifier);
         }
         
         filterChain.doFilter(request, response);

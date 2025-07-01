@@ -32,6 +32,10 @@ public class User {
     @Indexed(unique = true)
     private String email;
     
+    // Username for admin login (optional for regular users)
+    @Indexed(unique = true, sparse = true)
+    private String username;
+    
     @NotBlank(message = "Password is required")
     @Size(min = 8, message = "Password must be at least 8 characters long")
     private String password;
@@ -74,6 +78,12 @@ public class User {
     private Boolean isActive = true;
     private Boolean isLocked = false;
     
+    // Admin-specific fields
+    private String department; // For admin users
+    private String employeeId; // For admin users
+    private String adminNotes; // Internal admin notes
+    private String accessLevel; // FULL, LIMITED, READ_ONLY (for admin users)
+    
     @CreatedDate
     private LocalDateTime createdAt;
     
@@ -109,6 +119,9 @@ public class User {
     
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
+    
+    public String getUsername() { return username; }
+    public void setUsername(String username) { this.username = username; }
     
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
@@ -169,4 +182,17 @@ public class User {
     
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    
+    // Admin-specific getters and setters
+    public String getDepartment() { return department; }
+    public void setDepartment(String department) { this.department = department; }
+    
+    public String getEmployeeId() { return employeeId; }
+    public void setEmployeeId(String employeeId) { this.employeeId = employeeId; }
+    
+    public String getAdminNotes() { return adminNotes; }
+    public void setAdminNotes(String adminNotes) { this.adminNotes = adminNotes; }
+    
+    public String getAccessLevel() { return accessLevel; }
+    public void setAccessLevel(String accessLevel) { this.accessLevel = accessLevel; }
 }

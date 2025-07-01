@@ -27,14 +27,16 @@ public class JwtTokenProvider {
     }
     
     /**
-     * Generate JWT token
+     * Generate JWT token with user identifier (email or username)
      */
-    public String generateToken(String email) {
+    public String generateToken(String identifier) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtExpirationMs);
         
+        System.out.println("🔐 Generating JWT token for identifier: " + identifier);
+        
         return Jwts.builder()
-                .subject(email)
+                .subject(identifier)
                 .issuedAt(now)
                 .expiration(expiryDate)
                 .signWith(secretKey)
@@ -42,16 +44,27 @@ public class JwtTokenProvider {
     }
     
     /**
-     * Extract email from JWT token
+     * Extract user identifier (email or username) from JWT token
      */
-    public String getEmailFromToken(String token) {
+    public String getIdentifierFromToken(String token) {
         Claims claims = Jwts.parser()
                 .verifyWith(secretKey)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
         
-        return claims.getSubject();
+        String identifier = claims.getSubject();
+        System.out.println("🔓 Extracted identifier from token: " + identifier);
+        return identifier;
+    }
+    
+    /**
+     * @deprecated Use getIdentifierFromToken() instead
+     * This method is kept for backward compatibility with existing code
+     */
+    @Deprecated
+    public String getEmailFromToken(String token) {
+        return getIdentifierFromToken(token);
     }
     
     /**

@@ -1,0 +1,172 @@
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { 
+  ShoppingBag, User, LogOut, Search, 
+  TrendingUp, Menu, Bell, Settings, Home, FileText
+} from 'lucide-react';
+
+// Import modular components
+import {
+  Overview,
+  Advertisements,
+  Purchases,
+  Bids,
+  Searches,
+  Profile
+} from './BuyerDashboardComponents';
+
+import { SidebarItem } from './BuyerDashboardComponents/shared';
+
+const BuyerDashboard = () => {
+  const { user, logout, loading } = useAuth();
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('overview');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  // Handle logout
+  const handleLogout = () => {
+    logout();
+  };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  // Sidebar navigation items
+  const sidebarItems: SidebarItem[] = [
+    { id: 'overview', label: 'Overview', icon: <Home size={20} /> },
+    { id: 'advertisements', label: 'Advertisements', icon: <FileText size={20} /> },
+    { id: 'purchases', label: 'Purchases', icon: <ShoppingBag size={20} /> },
+    { id: 'bids', label: 'My Bids', icon: <TrendingUp size={20} /> },
+    { id: 'searches', label: 'Saved Searches', icon: <Search size={20} /> },
+    { id: 'profile', label: 'Profile', icon: <User size={20} /> }
+  ];
+
+  // Render content based on active tab
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'overview':
+        return <Overview user={user} onTabChange={setActiveTab} />;
+      case 'advertisements':
+        return <Advertisements />;
+      case 'purchases':
+        return <Purchases user={user} />;
+      case 'bids':
+        return <Bids user={user} />;
+      case 'searches':
+        return <Searches user={user} />;
+      case 'profile':
+        return <Profile user={user} />;
+      default:
+        return <Overview user={user} onTabChange={setActiveTab} />;
+    }
+  };
+
+  return (
+    <div className="flex h-screen bg-gray-50">
+      {/* Sidebar */}
+      <div className={`bg-white shadow-lg border-r border-gray-200 transition-all duration-300 ${
+        sidebarCollapsed ? 'w-16' : 'w-64'
+      }`}>
+        {/* Logo */}
+        <div className="p-4 border-b border-gray-200">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-sm">G</span>
+            </div>
+            {!sidebarCollapsed && (
+              <span className="text-xl font-bold text-gray-900">GemNet</span>
+            )}
+          </div>
+        </div>
+
+        {/* User Profile */}
+        <div className="p-4 border-b border-gray-200">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+              <User className="w-6 h-6 text-blue-600" />
+            </div>
+            {!sidebarCollapsed && (
+              <div>
+                <p className="text-sm font-medium text-gray-900">
+                  {user?.firstName} {user?.lastName}
+                </p>
+                <p className="text-xs text-green-600">Verified Buyer</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Navigation */}
+        <nav className="p-4 space-y-2">
+          {sidebarItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-colors ${
+                activeTab === item.id
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              {item.icon}
+              {!sidebarCollapsed && <span className="text-sm font-medium">{item.label}</span>}
+            </button>
+          ))}
+        </nav>
+
+        {/* Logout */}
+        <div className="absolute bottom-4 left-4 right-4">
+          <button 
+            onClick={handleLogout}
+            className="w-full flex items-center space-x-3 px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+          >
+            <LogOut size={20} />
+            {!sidebarCollapsed && <span className="text-sm font-medium">Logout</span>}
+          </button>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="bg-white border-b border-gray-200 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="p-2 rounded-lg hover:bg-gray-100"
+              >
+                <Menu size={20} />
+              </button>
+              <h1 className="text-2xl font-semibold text-gray-900">
+                {sidebarItems.find(item => item.id === activeTab)?.label || 'Dashboard'}
+              </h1>
+            </div>
+            <div className="flex items-center space-x-4">
+              <button className="p-2 rounded-lg hover:bg-gray-100">
+                <Bell size={20} />
+              </button>
+              <button className="p-2 rounded-lg hover:bg-gray-100">
+                <Settings size={20} />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-auto p-6">
+          {renderContent()}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default BuyerDashboard;

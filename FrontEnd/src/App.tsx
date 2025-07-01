@@ -11,10 +11,9 @@ import MarketplacePage from '@/pages/MarketplacePage';
 // Dashboard Pages
 import AdminDashboard from '@/pages/dashboard/AdminDashboard.responsive';
 import SellerDashboard from '@/pages/dashboard/SellerDashboard.new';
-import BuyerDashboard from '@/pages/dashboard/BuyerDashboard.simplified';
+import BuyerDashboard from '@/pages/dashboard/BuyerDashboard.new';
 
-// Layout
-import Layout from '@/components/layout/Layout';
+
 import DashboardLayout from '@/components/layout/DashboardLayout.new';
 
 // Auth Context
@@ -23,6 +22,9 @@ import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 // Auth Components
 import RoleProtectedRoute from '@/components/auth/RoleProtectedRoute';
 import DashboardRedirect from '@/components/auth/DashboardRedirect';
+
+// Admin Components
+import { AdminLoginPage, AdminPublicRoute } from '@/Admin';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -83,7 +85,18 @@ const AppRoutes: React.FC = () => {
                 <RegisterPage />
               </PublicRoute>
             }
-          />          {/* Protected Routes - Dashboard Redirect */}
+          />
+          
+          {/* Admin Login Route */}
+          <Route
+            path="/admin/login"
+            element={
+              <AdminPublicRoute>
+                <AdminLoginPage />
+              </AdminPublicRoute>
+            }
+          />
+          {/* Protected Routes - Dashboard Redirect */}
           <Route
             path="/dashboard"
             element={
@@ -98,9 +111,7 @@ const AppRoutes: React.FC = () => {
             path="/buyer/dashboard"
             element={
               <RoleProtectedRoute allowedRoles={['buyer']}>
-                <DashboardLayout>
-                  <BuyerDashboard />
-                </DashboardLayout>
+                <BuyerDashboard />
               </RoleProtectedRoute>
             }
           />

@@ -329,7 +329,7 @@ const AdminDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Statistics Cards */}
+      {/* Statistics  Cards */}
       <Row gutter={[16, 16]} className="mb-6">
         <Col xs={24} sm={12} lg={8}>
           <Card 

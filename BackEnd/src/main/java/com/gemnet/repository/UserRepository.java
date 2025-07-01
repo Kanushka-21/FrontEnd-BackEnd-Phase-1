@@ -14,11 +14,20 @@ public interface UserRepository extends MongoRepository<User, String> {
     // Find user by email
     Optional<User> findByEmail(String email);
     
+    // Find user by username (for admin login)
+    Optional<User> findByUsername(String username);
+    
+    // Find user by username and active status
+    Optional<User> findByUsernameAndIsActive(String username, boolean isActive);
+    
     // Find user by NIC number
     Optional<User> findByNicNumber(String nicNumber);
     
     // Check if email exists
     boolean existsByEmail(String email);
+    
+    // Check if username exists
+    boolean existsByUsername(String username);
     
     // Check if NIC number exists
     boolean existsByNicNumber(String nicNumber);
