@@ -92,6 +92,31 @@ const pendingUsers = [
   }
 ];
 
+const pendingListings = [
+  { 
+    id: '1', 
+    title: 'Ceylon Blue Sapphire', 
+    seller: 'Alice Williams', 
+    price: 15000,
+    category: 'Sapphire',
+    weight: 3.5,
+    status: 'pending', 
+    submitDate: '2025-06-12',
+    image: 'https://images.unsplash.com/photo-1615654771169-65fde4070ade?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'
+  },
+  { 
+    id: '2', 
+    title: 'Pink Padparadscha', 
+    seller: 'David Miller', 
+    price: 25000,
+    category: 'Padparadscha',
+    weight: 2.8,
+    status: 'pending', 
+    submitDate: '2025-06-14',
+    image: 'https://images.unsplash.com/photo-1599707367072-cd6ada2bc375?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'
+  }
+];
+
 const pendingMeetings = [
   { 
     id: '1',

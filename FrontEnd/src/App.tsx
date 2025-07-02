@@ -23,9 +23,6 @@ import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import RoleProtectedRoute from '@/components/auth/RoleProtectedRoute';
 import DashboardRedirect from '@/components/auth/DashboardRedirect';
 
-// Admin Components
-import { AdminLoginPage, AdminPublicRoute } from '@/Admin';
-
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -87,15 +84,50 @@ const AppRoutes: React.FC = () => {
             }
           />
           
-          {/* Admin Login Route */}
-          <Route
-            path="/admin/login"
-            element={
-              <AdminPublicRoute>
-                <AdminLoginPage />
-              </AdminPublicRoute>
-            }
-          />
+          {/* Admin Routes */}
+          <Route path="/admin/*" element={
+            <Routes>
+              <Route index element={<Navigate to="/admin/dashboard" replace />} />
+              <Route path="dashboard" element={
+                <RoleProtectedRoute allowedRoles={['admin']}>
+                  <AdminDashboard />
+                </RoleProtectedRoute>
+              } />
+              <Route path="users" element={
+                <RoleProtectedRoute allowedRoles={['admin']}>
+                  <DashboardLayout>
+                    <div className="p-6">
+                      <h1 className="text-2xl font-bold text-gray-800 mb-4">User Management</h1>
+                      <p className="text-gray-600">User management features coming soon...</p>
+                    </div>
+                  </DashboardLayout>
+                </RoleProtectedRoute>
+              } />
+              <Route path="transactions" element={
+                <RoleProtectedRoute allowedRoles={['admin']}>
+                  <DashboardLayout>
+                    <div className="p-6">
+                      <h1 className="text-2xl font-bold text-gray-800 mb-4">Transaction Management</h1>
+                      <p className="text-gray-600">Transaction management features coming soon...</p>
+                    </div>
+                  </DashboardLayout>
+                </RoleProtectedRoute>
+              } />
+              <Route path="meetings" element={
+                <RoleProtectedRoute allowedRoles={['admin']}>
+                  <DashboardLayout>
+                    <div className="p-6">
+                      <h1 className="text-2xl font-bold text-gray-800 mb-4">Meeting Management</h1>
+                      <p className="text-gray-600">Meeting management features coming soon...</p>
+                    </div>
+                  </DashboardLayout>
+                </RoleProtectedRoute>
+              } />
+            </Routes>
+          } />
+          
+          {/* Admin redirect route */}
+          <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
           {/* Protected Routes - Dashboard Redirect */}
           <Route
             path="/dashboard"
@@ -174,47 +206,7 @@ const AppRoutes: React.FC = () => {
                 </DashboardLayout>
               </ProtectedRoute>
             }
-          />          {/* Admin Protected Routes */}
-          <Route
-            path="/admin/dashboard"
-            element={
-              <RoleProtectedRoute allowedRoles={['admin']}>
-                <DashboardLayout>
-                  <AdminDashboard />
-                </DashboardLayout>
-              </RoleProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/users"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout>
-                  <div>User Management Page - Coming Soon</div>
-                </DashboardLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/transactions"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout>
-                  <div>Transactions Page - Coming Soon</div>
-                </DashboardLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/meetings"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout>
-                  <div>Meeting Management Page - Coming Soon</div>
-                </DashboardLayout>
-              </ProtectedRoute>
-            }
-          />{/* New Routes */}
+          />          {/* New Routes */}
           <Route path="/" element={<HomePage />} />          <Route
             path="/marketplace"
             element={<MarketplacePage />}
