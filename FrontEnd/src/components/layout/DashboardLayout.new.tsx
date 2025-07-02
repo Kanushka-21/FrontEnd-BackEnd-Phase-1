@@ -65,23 +65,28 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   return (
     <div className="min-h-screen bg-secondary-50 flex flex-col overflow-hidden">      {/* Header */}
       <header className="bg-white shadow-md border-b border-secondary-200 sticky top-0 z-30 h-20">
-        <div className="container mx-auto px-4 sm:px-6 py-0 flex items-center justify-between h-full">
-          <div className="flex items-center">            <div className="flex items-center space-x-2">
+        <div className="h-full flex items-center justify-between">
+          {/* Left Section - Aligned to common vertical line */}
+          <div className="flex items-center  ">
+            <div className="flex items-center">
               <button 
                 onClick={() => navigate('/')} 
-                className="flex items-center space-x-2 focus:outline-none hover:opacity-80 transition-opacity"
+                className="flex items-center space-x-1 focus:outline-none hover:opacity-80 transition-opacity"
                 aria-label="Go to homepage"
-              >                <div className="rounded-lg overflow-hidden w-28 h-28 -my-4">
+              >
+                <div className="rounded-lg overflow-hidden w-24 h-29 flex-shrink-0">
                   <img src={logoImage} alt="GemNet Logo" className="w-full h-full object-contain" />
                 </div>
                 <div>
-                  <h1 className="text-2xl sm:text-3xl font-bold text-primary-800">GemNet</h1>
+                  <h1 className="text-2xl sm:text-3xl font-bold text-primary-800 whitespace-nowrap">GemNet</h1>
                 </div>
               </button>
             </div>
           </div>
 
-          <div className="flex items-center space-x-2 sm:space-x-4">
+          {/* Right Section - Aligned to common vertical line */}
+          <div className="flex items-center pr-6">
+            <div className="flex items-center space-x-3 sm:space-x-4 lg:space-x-5">
             {/* Mobile menu toggle */}
             <button
               onClick={() => setShowMobileMenu(!showMobileMenu)}
@@ -91,12 +96,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
             </button>
 
             {/* Quick links - Desktop only */}
-            <div className="hidden md:flex items-center space-x-1">
+            <div className="hidden md:flex items-center space-x-2 lg:space-x-3">
               {quickLinks.map((link, index) => (
                 <button
                   key={index}
                   onClick={link.onClick}
-                  className="p-2 rounded-full hover:bg-secondary-100 text-secondary-600 flex items-center justify-center"
+                  className="p-2 lg:p-3 rounded-full hover:bg-secondary-100 text-secondary-600 flex items-center justify-center transition-colors"
                   title={link.label}
                 >
                   {link.icon}
@@ -111,7 +116,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                   setNotificationsOpen(!notificationsOpen);
                   setUserMenuOpen(false);
                 }}
-                className="relative p-2 rounded-full hover:bg-secondary-100 text-secondary-600"
+                className="relative p-2 lg:p-3 rounded-full hover:bg-secondary-100 text-secondary-600 transition-colors"
               >
                 <Bell className="w-5 h-5" />
                 {notifications.some(n => !n.read) && (
@@ -170,17 +175,18 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                   setUserMenuOpen(!userMenuOpen);
                   setNotificationsOpen(false);
                 }}
-                className="flex items-center space-x-2"
-              >                <div className="bg-primary-100 rounded-full p-2">
+                className="flex items-center space-x-2 lg:space-x-3 hover:bg-secondary-50 rounded-lg p-2 transition-colors"
+              >
+                <div className="bg-primary-100 rounded-full p-2">
                   <User className="w-5 h-5 text-primary-600" />
                 </div>
-                <div className="hidden md:block text-left">
-                  <p className="text-base sm:text-lg font-medium text-secondary-900">
+                <div className="hidden md:block text-left min-w-0">
+                  <p className="text-base sm:text-lg font-medium text-secondary-900 truncate">
                     {user?.firstName} {user?.lastName}
                   </p>
-                  <p className="text-sm text-secondary-500">{user?.role || 'User'}</p>
+                  <p className="text-sm text-secondary-500 truncate">{user?.role || 'User'}</p>
                 </div>
-                <ChevronDown className="w-4 h-4 text-secondary-500" />
+                <ChevronDown className="w-4 h-4 text-secondary-500 flex-shrink-0 ml-1" />
               </button>
 
               <AnimatePresence>
@@ -221,6 +227,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                   </motion.div>
                 )}
               </AnimatePresence>
+            </div>
             </div>
           </div>
         </div>
