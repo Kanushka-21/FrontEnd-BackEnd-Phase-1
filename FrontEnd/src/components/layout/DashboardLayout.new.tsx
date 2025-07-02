@@ -63,7 +63,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   ];
   
   return (
-    <div className="min-h-screen bg-secondary-50 flex flex-col overflow-hidden">      {/* Header */}
+    <div className="min-h-screen bg-secondary-50 flex flex-col">      {/* Header */}
       <header className="bg-white shadow-md border-b border-secondary-200 sticky top-0 z-30 h-20">
         <div className="h-full flex items-center justify-between">
           {/* Left Section - Aligned to common vertical line */}

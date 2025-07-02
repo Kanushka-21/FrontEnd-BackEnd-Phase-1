@@ -8,76 +8,51 @@ import java.time.LocalDateTime;
 import java.util.Map;
 
 /**
- * DTO for gem certificate data extracted from certificate images
+ * DTO for CSL (Colored Stone Laboratory) certificate data extracted from certificate images
  */
 public class GemCertificateDataDto {
     
     // Basic Certificate Information
-    @JsonProperty("reportNumber")
-    private String reportNumber;
+    @JsonProperty("cslMemoNo")
+    private String cslMemoNo; // Changed from reportNumber to match CSL format
     
     @JsonProperty("issueDate")
     private String issueDate;
     
     @JsonProperty("authority")
-    private String authority;
+    private String authority; // CSL (Colored Stone Laboratory)
     
-    // Gem Identification Details
-    @JsonProperty("species")
-    private String species;
+    @JsonProperty("giaAlumniMember")
+    private boolean giaAlumniMember; // New field for GIA Alumni status
     
-    @JsonProperty("variety")
-    private String variety;
-    
-    @JsonProperty("weight")
-    private String weight;
-    
-    @JsonProperty("dimensions")
-    private String dimensions;
-    
-    @JsonProperty("colour")
-    private String colour;
-    
-    @JsonProperty("transparency")
-    private String transparency;
-    
-    @JsonProperty("cut")
-    private String cut;
+    // Gem Identification Details (CSL Format)
+    @JsonProperty("color")
+    private String color;
     
     @JsonProperty("shape")
     private String shape;
     
-    // Test Results
-    @JsonProperty("refractiveIndex")
-    private String refractiveIndex;
+    @JsonProperty("weight")
+    private String weight;
     
-    @JsonProperty("specificGravity")
-    private String specificGravity;
+    @JsonProperty("measurements")
+    private String measurements;
     
-    @JsonProperty("polariscopeTest")
-    private String polariscopeTest;
+    @JsonProperty("variety")
+    private String variety; // Usually highlighted in red on CSL certificates
     
-    @JsonProperty("absorptionSpectrum")
-    private String absorptionSpectrum;
+    @JsonProperty("species")
+    private String species;
     
-    @JsonProperty("microscopeExamination")
-    private String microscopeExamination;
-    
-    @JsonProperty("fluorescenceLongWave")
-    private String fluorescenceLongWave;
-    
-    @JsonProperty("fluorescenceShortWave")
-    private String fluorescenceShortWave;
-    
-    @JsonProperty("pleochroism")
-    private String pleochroism;
+    @JsonProperty("treatment")
+    private String treatment; // New field: "Heated", "Unheated", etc.
     
     // Additional Information
     @JsonProperty("comments")
     private String comments;
     
-    @JsonProperty("gemologists")
-    private String gemologists;
+    @JsonProperty("qrCode")
+    private String qrCode; // CSL certificates have QR codes
     
     // Extraction Metadata
     @JsonProperty("extractedAt")
@@ -100,19 +75,19 @@ public class GemCertificateDataDto {
         this.extractedAt = LocalDateTime.now();
     }
     
-    public GemCertificateDataDto(String reportNumber, String authority) {
+    public GemCertificateDataDto(String cslMemoNo, String authority) {
         this();
-        this.reportNumber = reportNumber;
+        this.cslMemoNo = cslMemoNo;
         this.authority = authority;
     }
     
     // Getters and Setters
-    public String getReportNumber() {
-        return reportNumber;
+    public String getCslMemoNo() {
+        return cslMemoNo;
     }
     
-    public void setReportNumber(String reportNumber) {
-        this.reportNumber = reportNumber;
+    public void setCslMemoNo(String cslMemoNo) {
+        this.cslMemoNo = cslMemoNo;
     }
     
     public String getIssueDate() {
@@ -131,60 +106,20 @@ public class GemCertificateDataDto {
         this.authority = authority;
     }
     
-    public String getSpecies() {
-        return species;
+    public boolean isGiaAlumniMember() {
+        return giaAlumniMember;
     }
     
-    public void setSpecies(String species) {
-        this.species = species;
+    public void setGiaAlumniMember(boolean giaAlumniMember) {
+        this.giaAlumniMember = giaAlumniMember;
     }
     
-    public String getVariety() {
-        return variety;
+    public String getColor() {
+        return color;
     }
     
-    public void setVariety(String variety) {
-        this.variety = variety;
-    }
-    
-    public String getWeight() {
-        return weight;
-    }
-    
-    public void setWeight(String weight) {
-        this.weight = weight;
-    }
-    
-    public String getDimensions() {
-        return dimensions;
-    }
-    
-    public void setDimensions(String dimensions) {
-        this.dimensions = dimensions;
-    }
-    
-    public String getColour() {
-        return colour;
-    }
-    
-    public void setColour(String colour) {
-        this.colour = colour;
-    }
-    
-    public String getTransparency() {
-        return transparency;
-    }
-    
-    public void setTransparency(String transparency) {
-        this.transparency = transparency;
-    }
-    
-    public String getCut() {
-        return cut;
-    }
-    
-    public void setCut(String cut) {
-        this.cut = cut;
+    public void setColor(String color) {
+        this.color = color;
     }
     
     public String getShape() {
@@ -195,68 +130,44 @@ public class GemCertificateDataDto {
         this.shape = shape;
     }
     
-    public String getRefractiveIndex() {
-        return refractiveIndex;
+    public String getWeight() {
+        return weight;
     }
     
-    public void setRefractiveIndex(String refractiveIndex) {
-        this.refractiveIndex = refractiveIndex;
+    public void setWeight(String weight) {
+        this.weight = weight;
     }
     
-    public String getSpecificGravity() {
-        return specificGravity;
+    public String getMeasurements() {
+        return measurements;
     }
     
-    public void setSpecificGravity(String specificGravity) {
-        this.specificGravity = specificGravity;
+    public void setMeasurements(String measurements) {
+        this.measurements = measurements;
     }
     
-    public String getPolariscopeTest() {
-        return polariscopeTest;
+    public String getVariety() {
+        return variety;
     }
     
-    public void setPolariscopeTest(String polariscopeTest) {
-        this.polariscopeTest = polariscopeTest;
+    public void setVariety(String variety) {
+        this.variety = variety;
     }
     
-    public String getAbsorptionSpectrum() {
-        return absorptionSpectrum;
+    public String getSpecies() {
+        return species;
     }
     
-    public void setAbsorptionSpectrum(String absorptionSpectrum) {
-        this.absorptionSpectrum = absorptionSpectrum;
+    public void setSpecies(String species) {
+        this.species = species;
     }
     
-    public String getMicroscopeExamination() {
-        return microscopeExamination;
+    public String getTreatment() {
+        return treatment;
     }
     
-    public void setMicroscopeExamination(String microscopeExamination) {
-        this.microscopeExamination = microscopeExamination;
-    }
-    
-    public String getFluorescenceLongWave() {
-        return fluorescenceLongWave;
-    }
-    
-    public void setFluorescenceLongWave(String fluorescenceLongWave) {
-        this.fluorescenceLongWave = fluorescenceLongWave;
-    }
-    
-    public String getFluorescenceShortWave() {
-        return fluorescenceShortWave;
-    }
-    
-    public void setFluorescenceShortWave(String fluorescenceShortWave) {
-        this.fluorescenceShortWave = fluorescenceShortWave;
-    }
-    
-    public String getPleochroism() {
-        return pleochroism;
-    }
-    
-    public void setPleochroism(String pleochroism) {
-        this.pleochroism = pleochroism;
+    public void setTreatment(String treatment) {
+        this.treatment = treatment;
     }
     
     public String getComments() {
@@ -267,12 +178,12 @@ public class GemCertificateDataDto {
         this.comments = comments;
     }
     
-    public String getGemologists() {
-        return gemologists;
+    public String getQrCode() {
+        return qrCode;
     }
     
-    public void setGemologists(String gemologists) {
-        this.gemologists = gemologists;
+    public void setQrCode(String qrCode) {
+        this.qrCode = qrCode;
     }
     
     public LocalDateTime getExtractedAt() {
@@ -317,9 +228,9 @@ public class GemCertificateDataDto {
     
     // Helper methods
     public boolean hasValidData() {
-        return reportNumber != null && !reportNumber.trim().isEmpty() &&
-               (species != null && !species.trim().isEmpty() || 
-                variety != null && !variety.trim().isEmpty());
+        return cslMemoNo != null && !cslMemoNo.trim().isEmpty() &&
+               (variety != null && !variety.trim().isEmpty() || 
+                species != null && !species.trim().isEmpty());
     }
     
     public void addAdditionalField(String key, String value) {
@@ -329,18 +240,35 @@ public class GemCertificateDataDto {
         additionalFields.put(key, value);
     }
     
+    // CSL-specific helper methods
+    public boolean isHeated() {
+        return treatment != null && treatment.toLowerCase().contains("heated") && 
+               !treatment.toLowerCase().contains("unheated");
+    }
+    
+    public boolean isUnheated() {
+        return treatment != null && treatment.toLowerCase().contains("unheated");
+    }
+    
+    public boolean isNaturalStone() {
+        return (variety != null && variety.toLowerCase().contains("natural")) ||
+               (species != null && species.toLowerCase().contains("natural"));
+    }
+    
     @Override
     public String toString() {
         return "GemCertificateDataDto{" +
-                "reportNumber='" + reportNumber + '\'' +
+                "cslMemoNo='" + cslMemoNo + '\'' +
                 ", issueDate='" + issueDate + '\'' +
                 ", authority='" + authority + '\'' +
-                ", species='" + species + '\'' +
                 ", variety='" + variety + '\'' +
+                ", species='" + species + '\'' +
+                ", color='" + color + '\'' +
                 ", weight='" + weight + '\'' +
-                ", colour='" + colour + '\'' +
+                ", treatment='" + treatment + '\'' +
+                ", giaAlumniMember=" + giaAlumniMember +
+                ", confidence=" + confidence +
                 ", extractedAt=" + extractedAt +
-                ", extractionMethod='" + extractionMethod + '\'' +
                 '}';
     }
 }

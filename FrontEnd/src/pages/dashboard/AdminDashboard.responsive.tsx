@@ -14,7 +14,7 @@ import {
 import dayjs from 'dayjs';
 import { Line, Bar, Pie } from '@ant-design/charts';
 
-const { Header, Content, Sider } = Layout;
+
 const { SubMenu } = Menu;
 const { TabPane } = Tabs;
 const { confirm } = Modal;
@@ -92,64 +92,6 @@ const pendingUsers = [
   }
 ];
 
-const mockListings = [
-  { 
-    id: '1', 
-    name: 'Blue Sapphire', 
-    image: 'https://via.placeholder.com/100', 
-    price: 2500, 
-    seller: 'Mary Johnson',
-    status: 'active', 
-    date: '2025-05-12',
-    submittedAt: '2025-05-12'
-  },
-  { 
-    id: '2', 
-    name: 'Ruby Gemstone', 
-    image: 'https://via.placeholder.com/100', 
-    price: 4200, 
-    seller: 'James Wilson',
-    status: 'active', 
-    date: '2025-05-20',
-    submittedAt: '2025-05-20'
-  }
-];
-
-const pendingListings = [
-  { 
-    id: '3', 
-    name: 'Emerald Crystal', 
-    image: 'https://via.placeholder.com/100', 
-    price: 3150, 
-    seller: 'Alice Williams',
-    status: 'pending', 
-    date: '2025-06-08'
-  }
-];
-
-const mockTransactions = [
-  { 
-    id: '1',
-    gemstone: 'Blue Sapphire',
-    image: 'https://via.placeholder.com/100',
-    seller: 'Mary Johnson',
-    buyer: 'John Smith',
-    amount: 3200,
-    date: '2025-05-25',
-    status: 'completed'
-  },
-  { 
-    id: '2',
-    gemstone: 'Ruby Gemstone',
-    image: 'https://via.placeholder.com/100',
-    seller: 'James Wilson',
-    buyer: 'Sarah Davis',
-    amount: 2800,
-    date: '2025-06-02',
-    status: 'completed'
-  }
-];
-
 const pendingMeetings = [
   { 
     id: '1',
@@ -167,17 +109,8 @@ const pendingMeetings = [
 ];
 
 const recentTransactions = [
-  { 
-    id: '1',
-    gemstone: 'Blue Sapphire',
-    image: 'https://via.placeholder.com/100',
-    seller: 'Mary Johnson',
-    buyer: 'John Smith',
-    amount: 3200,
-    commission: 320,
-    date: '2025-05-25',
-    status: 'completed'
-  },
+  
+
   { 
     id: '2',
     gemstone: 'Ruby Gemstone',

@@ -11,15 +11,7 @@ const Searches: React.FC<SearchesProps> = ({ user }) => {
 
   // Mock saved searches data
   const [savedSearches, setSavedSearches] = useState([
-    {
-      id: 1,
-      query: 'Blue Sapphire',
-      category: 'Gemstones',
-      priceRange: 'LKR 300,000 - 500,000',
-      results: 24,
-      lastUpdated: '2024-01-15',
-      notifications: true
-    },
+    
     {
       id: 2,
       query: 'Ruby Ring',

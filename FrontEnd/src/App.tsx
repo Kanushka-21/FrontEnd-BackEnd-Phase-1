@@ -141,9 +141,7 @@ const AppRoutes: React.FC = () => {
             path="/seller/dashboard"
             element={
               <RoleProtectedRoute allowedRoles={['seller']}>
-                <DashboardLayout>
-                  <SellerDashboard />
-                </DashboardLayout>
+                <SellerDashboard />
               </RoleProtectedRoute>
             }
           />

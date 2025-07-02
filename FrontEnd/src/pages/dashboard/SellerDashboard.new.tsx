@@ -61,9 +61,9 @@ const SellerDashboard = () => {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
-      {/* Sidebar */}
-      <div className={`bg-white shadow-lg border-r border-gray-200 transition-all duration-300 relative h-full ${
+    <div className="flex h-screen bg-gray-50">
+      {/* Sidebar - Fixed */}
+      <div className={`bg-white shadow-lg border-r border-gray-200 transition-all duration-300 relative h-full flex-shrink-0 ${
         sidebarCollapsed ? 'w-16' : 'w-64'
       }`}>
         {/* User Profile with Collapse Button */}
@@ -127,12 +127,10 @@ const SellerDashboard = () => {
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* Main Content - Scrollable */}
       <div className="flex-1 flex flex-col h-full overflow-hidden">
-        <div className="flex-1 p-3 overflow-hidden">
-          <div className="h-full overflow-hidden">
-            {renderContent()}
-          </div>
+        <div className="flex-1 p-3 overflow-y-auto">
+          {renderContent()}
         </div>
       </div>
     </div>
