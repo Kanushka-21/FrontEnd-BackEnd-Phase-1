@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import dayjs from 'dayjs';
 import RoleAwareDashboardLayout from '@/components/layout/RoleAwareDashboardLayout';
+import { useAuth } from '@/contexts/AuthContext';
 
 
 const { TabPane } = Tabs;
@@ -153,12 +154,21 @@ const recentTransactions = [
 ];
 
 const AdminDashboard: React.FC = () => {
+  const { user } = useAuth();
   const [isUserModalVisible, setIsUserModalVisible] = useState(false);
   const [isListingModalVisible, setIsListingModalVisible] = useState(false);
   const [isMeetingModalVisible, setIsMeetingModalVisible] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [selectedListing, setSelectedListing] = useState<any>(null);
   const [selectedMeeting, setSelectedMeeting] = useState<any>(null);
+  
+  // Get admin user display name
+  const getAdminDisplayName = () => {
+    if (user?.firstName && user?.lastName) {
+      return `${user.firstName} ${user.lastName}`;
+    }
+    return user?.firstName || 'Admin User';
+  };
   
   // Sidebar state and navigation
   const [activeTab, setActiveTab] = useState('overview');
@@ -259,19 +269,25 @@ const AdminDashboard: React.FC = () => {
             ? 'w-16 sm:w-20' 
             : 'w-64 sm:w-72 fixed sm:relative z-30 sm:z-auto h-full sm:h-auto'
         }`}>
-          {/* Logo */}
+          {/* User Profile */}
           <div className={`border-b border-gray-200 ${sidebarCollapsed ? 'p-3' : 'p-6'}`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <div className={`bg-red-600 rounded-lg flex items-center justify-center ${
-                  sidebarCollapsed ? 'w-8 h-8' : 'w-10 h-10'
+                <div className={`bg-red-100 rounded-full flex items-center justify-center ${
+                  sidebarCollapsed ? 'w-8 h-8' : 'w-12 h-12'
                 }`}>
-                  <span className={`text-white font-bold ${sidebarCollapsed ? 'text-sm' : 'text-lg'}`}>A</span>
+                  <Shield className={`text-red-600 ${sidebarCollapsed ? 'w-4 h-4' : 'w-7 h-7'}`} />
                 </div>
                 {!sidebarCollapsed && (
-                  <span className="text-2xl font-bold text-gray-900 hidden sm:block">Admin</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-base font-medium text-gray-900 truncate">
+                      {getAdminDisplayName()}
+                    </p>
+                    <p className="text-sm text-red-600 font-medium">Administrator</p>
+                  </div>
                 )}
               </div>
+              {/* Collapse/Expand button */}
               <button
                 onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
                 className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 sm:hidden"
@@ -286,25 +302,6 @@ const AdminDashboard: React.FC = () => {
               >
                 <MenuIcon size={18} />
               </button>
-            </div>
-          </div>
-
-          {/* User Profile */}
-          <div className={`border-b border-gray-200 ${sidebarCollapsed ? 'p-3' : 'p-6'}`}>
-            <div className="flex items-center space-x-3">
-              <div className={`bg-red-100 rounded-full flex items-center justify-center ${
-                sidebarCollapsed ? 'w-8 h-8' : 'w-12 h-12'
-              }`}>
-                <Shield className={`text-red-600 ${sidebarCollapsed ? 'w-4 h-4' : 'w-7 h-7'}`} />
-              </div>
-              {!sidebarCollapsed && (
-                <div className="min-w-0 flex-1">
-                  <p className="text-base font-medium text-gray-900 truncate">
-                    Admin User
-                  </p>
-                  <p className="text-sm text-red-600 font-medium">System Administrator</p>
-                </div>
-              )}
             </div>
           </div>
 
