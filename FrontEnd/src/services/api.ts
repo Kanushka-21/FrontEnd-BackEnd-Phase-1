@@ -759,6 +759,79 @@ const extendedAPI = {
       }
     }
   },
+
+  // Marketplace APIs
+  marketplace: {
+    // Get marketplace listings (approved gemstones)
+    getListings: async (params?: {
+      page?: number,
+      size?: number,
+      sortBy?: string,
+      sortDir?: string,
+      search?: string,
+      category?: string,
+      minPrice?: number,
+      maxPrice?: number,
+      certifiedOnly?: boolean
+    }): Promise<ApiResponse<any>> => {
+      try {
+        const queryParams = new URLSearchParams();
+        
+        if (params?.page !== undefined) queryParams.append('page', params.page.toString());
+        if (params?.size !== undefined) queryParams.append('size', params.size.toString());
+        if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
+        if (params?.sortDir) queryParams.append('sortDir', params.sortDir);
+        if (params?.search) queryParams.append('search', params.search);
+        if (params?.category) queryParams.append('category', params.category);
+        if (params?.minPrice !== undefined) queryParams.append('minPrice', params.minPrice.toString());
+        if (params?.maxPrice !== undefined) queryParams.append('maxPrice', params.maxPrice.toString());
+        if (params?.certifiedOnly) queryParams.append('certifiedOnly', params.certifiedOnly.toString());
+        
+        const response = await api.get(`/api/marketplace/listings?${queryParams.toString()}`);
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching marketplace listings:', error);
+        return { success: false, message: apiUtils.formatErrorMessage(error) };
+      }
+    },
+
+    // Get listing details
+    getListingDetails: async (listingId: string): Promise<ApiResponse<any>> => {
+      try {
+        const response = await api.get(`/api/marketplace/listings/${listingId}`);
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching listing details:', error);
+        return { success: false, message: apiUtils.formatErrorMessage(error) };
+      }
+    },
+
+    // Search gemstones
+    searchGemstones: async (query: string, limit?: number): Promise<ApiResponse<any>> => {
+      try {
+        const params = new URLSearchParams();
+        params.append('q', query);
+        if (limit) params.append('limit', limit.toString());
+        
+        const response = await api.get(`/api/marketplace/search?${params.toString()}`);
+        return response.data;
+      } catch (error) {
+        console.error('Error searching gemstones:', error);
+        return { success: false, message: apiUtils.formatErrorMessage(error) };
+      }
+    },
+
+    // Get marketplace statistics
+    getStats: async (): Promise<ApiResponse<any>> => {
+      try {
+        const response = await api.get('/api/marketplace/stats');
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching marketplace stats:', error);
+        return { success: false, message: apiUtils.formatErrorMessage(error) };
+      }
+    }
+  },
 };
 
 export { extendedAPI as api };

@@ -631,10 +631,10 @@ public class GemCertificateService {
                         // Generate unique image ID
                         String imageId = "IMG_" + System.currentTimeMillis() + "_" + i;
                         
-                        // TODO: Store image using FileStorageService
-                        // For now, simulate image storage
-                        String imageUrl = "/uploads/gems/" + imageId + getFileExtension(image.getOriginalFilename());
-                        String thumbnailUrl = "/uploads/gems/thumbnails/" + imageId + "_thumb" + getFileExtension(image.getOriginalFilename());
+                        // Store image using FileStorageService
+                        String imageUrl = fileStorageService.storeGemImage(image, imageId);
+                        // For now, use the same image as thumbnail
+                        String thumbnailUrl = imageUrl;
                         
                         // Create GemImage entity
                         GemImage gemImage = new GemImage();
@@ -649,7 +649,8 @@ public class GemCertificateService {
                         
                         processedImages.add(gemImage);
                         
-                        System.out.println("✅ Image " + (i + 1) + " processed for database: " + image.getOriginalFilename());
+                        System.out.println("✅ Image " + (i + 1) + " processed and stored: " + image.getOriginalFilename());
+                        System.out.println("   📁 Stored at: " + imageUrl);
                         
                     } catch (Exception e) {
                         System.err.println("❌ Error processing image " + (i + 1) + ": " + e.getMessage());

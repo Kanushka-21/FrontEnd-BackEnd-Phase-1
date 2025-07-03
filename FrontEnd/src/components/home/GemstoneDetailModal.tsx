@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Shield, MessageCircle, TrendingUp, Info } from 'lucide-react';
+import { X, Shield, TrendingUp } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { DetailedGemstone } from '@/types';
 
@@ -34,12 +33,12 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
   const currentHighestBid = gemstone ? gemstone.price : 0;
   const minimumBid = currentHighestBid * 1.05; // 5% higher than current price
   
-  // Mock multiple images for demonstration
-  const images = gemstone 
-    ? [gemstone.image, 
-      'https://images.unsplash.com/photo-1583937443566-6fe1a1c6e400?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1599707367072-cd6ada2bc375?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80']
-    : [];
+  // Use actual uploaded images from the gemstone data
+  const images = gemstone?.images && gemstone.images.length > 0 
+    ? gemstone.images 
+    : gemstone?.image 
+      ? [gemstone.image] 
+      : ['https://via.placeholder.com/400x300?text=No+Image+Available'];
 
   const validateBid = (amount: number): boolean => {
     if (amount <= currentHighestBid) {
@@ -90,20 +89,47 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
                     src={images[currentImageIndex]}
                     alt={gemstone.name}
                     className="w-full h-full object-contain"
+                    onError={(e) => {
+                      console.error('Failed to load image:', images[currentImageIndex]);
+                      e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Image+Not+Found';
+                    }}
                   />
                 </div>
-                <div className="grid grid-cols-3 gap-3 max-w-md mx-auto">
-                  {images.map((img, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setCurrentImageIndex(index)}
-                      className={`aspect-square rounded-xl overflow-hidden border-2 ${
-                        index === currentImageIndex ? 'border-primary-500' : 'border-transparent'
-                      }`}
-                    >
-                      <img src={img} alt={`${gemstone.name} view ${index + 1}`} className="w-full h-full object-cover" />
-                    </button>
-                  ))}
+                
+                {/* Only show thumbnails if there are multiple images */}
+                {images.length > 1 && (
+                  <div className={`grid gap-3 max-w-md mx-auto ${
+                    images.length <= 3 ? 'grid-cols-3' : 
+                    images.length <= 4 ? 'grid-cols-4' : 
+                    'grid-cols-5'
+                  }`}>
+                    {images.map((img, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setCurrentImageIndex(index)}
+                        className={`aspect-square rounded-xl overflow-hidden border-2 transition-all ${
+                          index === currentImageIndex 
+                            ? 'border-primary-500 ring-2 ring-primary-200' 
+                            : 'border-gray-200 hover:border-primary-300'
+                        }`}
+                      >
+                        <img 
+                          src={img} 
+                          alt={`${gemstone.name} view ${index + 1}`} 
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            console.error('Failed to load thumbnail:', img);
+                            e.currentTarget.src = 'https://via.placeholder.com/100x100?text=Error';
+                          }}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Image counter */}
+                <div className="text-center text-sm text-gray-500">
+                  {images.length > 1 ? `${currentImageIndex + 1} of ${images.length} images` : '1 image'}
                 </div>
               </div>
 
@@ -165,23 +191,25 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
                 </div>
 
                 {/* Dimensions */}
-                <div className="space-y-3">
-                  <h3 className="text-xl font-semibold">Dimensions</h3>
-                  <div className="grid grid-cols-3 gap-4 bg-gray-50 p-4 rounded-xl">
-                    <div className="text-center">
-                      <div className="text-base text-secondary-600">Length</div>
-                      <div className="font-medium text-lg">{gemstone.dimensions.length}mm</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-base text-secondary-600">Width</div>
-                      <div className="font-medium text-lg">{gemstone.dimensions.width}mm</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-base text-secondary-600">Height</div>
-                      <div className="font-medium text-lg">{gemstone.dimensions.height}mm</div>
+                {gemstone.dimensions && (
+                  <div className="space-y-3">
+                    <h3 className="text-xl font-semibold">Dimensions</h3>
+                    <div className="grid grid-cols-3 gap-4 bg-gray-50 p-4 rounded-xl">
+                      <div className="text-center">
+                        <div className="text-base text-secondary-600">Length</div>
+                        <div className="font-medium text-lg">{gemstone.dimensions.length}mm</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-base text-secondary-600">Width</div>
+                        <div className="font-medium text-lg">{gemstone.dimensions.width}mm</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-base text-secondary-600">Height</div>
+                        <div className="font-medium text-lg">{gemstone.dimensions.height}mm</div>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
 
                 {/* Certificate Information */}
                 {gemstone.certificate && (

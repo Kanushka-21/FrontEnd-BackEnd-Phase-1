@@ -214,7 +214,8 @@ export interface Gemstone {
   id: string;
   name: string;
   price: number;
-  image: string;
+  image: string; // Primary image for backward compatibility
+  images?: string[]; // Array of all uploaded images
   certified: boolean;
   weight: number;
   color: string;
@@ -298,7 +299,7 @@ export interface GemstoneCardProps {
   onViewDetails?: (id: string) => void;
 }
 
-export interface DetailedGemstone extends GemstoneCardProps['gemstone'] {
+export interface DetailedGemstone extends Gemstone {
   species: string;
   variety: string;
   shape: string;
