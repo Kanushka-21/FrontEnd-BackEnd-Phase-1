@@ -75,6 +75,40 @@ const MarketplacePage: React.FC = () => {
   
   // Helper to convert backend GemListing to frontend DetailedGemstone format
   const convertToDetailedGemstone = (listing: any): DetailedGemstone => {
+    // Extract all images from the backend listing
+    const allImages: string[] = [];
+    
+    // Add primary image if it exists
+    if (listing.primaryImageUrl) {
+      allImages.push(constructImageUrl(listing.primaryImageUrl));
+    }
+    
+    // Add all images from the images array
+    if (listing.images && Array.isArray(listing.images)) {
+      listing.images.forEach((img: any) => {
+        let imageUrl = '';
+        if (typeof img === 'string') {
+          imageUrl = constructImageUrl(img);
+        } else if (img && img.imageUrl) {
+          imageUrl = constructImageUrl(img.imageUrl);
+        } else if (img && img.url) {
+          imageUrl = constructImageUrl(img.url);
+        }
+        
+        if (imageUrl && !allImages.includes(imageUrl)) {
+          allImages.push(imageUrl);
+        }
+      });
+    }
+    
+    // Fallback to single image property if no images found
+    if (allImages.length === 0 && listing.image) {
+      allImages.push(constructImageUrl(listing.image));
+    }
+    
+    // Use first image as primary, or placeholder if no images
+    const primaryImage = allImages.length > 0 ? allImages[0] : 'https://via.placeholder.com/400x300?text=Gemstone';
+    
     return {
       id: listing.id || listing._id,
       name: listing.gemName || 'Unknown Gemstone',
@@ -83,7 +117,8 @@ const MarketplacePage: React.FC = () => {
         min: listing.price ? Math.floor(Number(listing.price) * 0.9) : 0,
         max: listing.price ? Math.floor(Number(listing.price) * 1.2) : 0
       },
-      image: getImageUrl(listing),
+      image: primaryImage,
+      images: allImages, // Include all uploaded images
       certified: listing.isCertified || false,
       weight: listing.weight ? parseFloat(listing.weight) : 0,
       color: listing.color || 'Unknown',
@@ -112,32 +147,6 @@ const MarketplacePage: React.FC = () => {
         date: listing.issueDate || 'Unknown'
       } : undefined
     };
-  };
-
-  // Helper to get image URL (same as admin dashboard)
-  const getImageUrl = (record: any): string => {
-    // Direct image URL
-    if (record.primaryImageUrl) {
-      return constructImageUrl(record.primaryImageUrl);
-    }
-    
-    // Image array with url property
-    if (record.images && record.images.length > 0) {
-      if (typeof record.images[0] === 'string') {
-        return constructImageUrl(record.images[0]);
-      }
-      if (record.images[0].url) {
-        return constructImageUrl(record.images[0].url);
-      }
-    }
-    
-    // Direct image property
-    if (record.image) {
-      return constructImageUrl(record.image);
-    }
-    
-    // Default placeholder
-    return 'https://via.placeholder.com/400x300?text=Gemstone';
   };
 
   // Helper to construct proper image URL
