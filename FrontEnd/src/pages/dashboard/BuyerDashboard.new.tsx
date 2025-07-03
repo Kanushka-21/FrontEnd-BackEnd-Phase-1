@@ -79,19 +79,27 @@ const BuyerDashboard = () => {
             ? 'w-16 sm:w-20' 
             : 'w-64 sm:w-72 fixed sm:relative z-30 sm:z-auto h-full sm:h-auto'
         }`}>
-        {/* Logo */}
+
+
+        {/* User Profile */}
         <div className={`border-b border-gray-200 ${sidebarCollapsed ? 'p-3' : 'p-6'}`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className={`bg-blue-600 rounded-lg flex items-center justify-center ${
-                sidebarCollapsed ? 'w-8 h-8' : 'w-10 h-10'
+              <div className={`bg-blue-100 rounded-full flex items-center justify-center ${
+                sidebarCollapsed ? 'w-8 h-8' : 'w-12 h-12'
               }`}>
-                <span className={`text-white font-bold ${sidebarCollapsed ? 'text-sm' : 'text-lg'}`}>G</span>
+                <User className={`text-blue-600 ${sidebarCollapsed ? 'w-4 h-4' : 'w-7 h-7'}`} />
               </div>
               {!sidebarCollapsed && (
-                <span className="text-2xl font-bold text-gray-900 hidden sm:block">GemNet</span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-base font-medium text-gray-900 truncate">
+                    {user?.firstName || 'Pasindu'} {user?.lastName || 'Perera'}
+                  </p>
+                  <p className="text-sm text-blue-600 font-medium">Verified Buyer</p>
+                </div>
               )}
             </div>
+            {/* Collapse/Expand button */}
             <button
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
               className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 sm:hidden"
@@ -106,25 +114,6 @@ const BuyerDashboard = () => {
             >
               <Menu size={18} />
             </button>
-          </div>
-        </div>
-
-        {/* User Profile */}
-        <div className={`border-b border-gray-200 ${sidebarCollapsed ? 'p-3' : 'p-6'}`}>
-          <div className="flex items-center space-x-3">
-            <div className={`bg-blue-100 rounded-full flex items-center justify-center ${
-              sidebarCollapsed ? 'w-8 h-8' : 'w-12 h-12'
-            }`}>
-              <User className={`text-blue-600 ${sidebarCollapsed ? 'w-4 h-4' : 'w-7 h-7'}`} />
-            </div>
-            {!sidebarCollapsed && (
-              <div className="min-w-0 flex-1">
-                <p className="text-base font-medium text-gray-900 truncate">
-                  {user?.firstName || 'Pasindu'} {user?.lastName || 'Perera'}
-                </p>
-                <p className="text-sm text-green-600 font-medium">Verified Buyer</p>
-              </div>
-            )}
           </div>
         </div>
 

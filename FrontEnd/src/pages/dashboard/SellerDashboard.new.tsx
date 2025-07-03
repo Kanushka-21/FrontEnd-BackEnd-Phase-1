@@ -4,6 +4,7 @@ import {
   Home, Trophy, Calendar, Gem
 } from 'lucide-react';
 import RoleAwareDashboardLayout from '@/components/layout/RoleAwareDashboardLayout';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Import modular components
 import {
@@ -17,15 +18,9 @@ import {
 import { SidebarItem } from './SellerDashbaordComponents/shared';
 
 const SellerDashboard = () => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
-
-  // Mock user data - replace with actual auth context
-  const user = {
-    firstName: 'John',
-    lastName: 'Seller',
-    email: 'john.seller@example.com'
-  };
 
   // Sidebar navigation items
   const sidebarItems: SidebarItem[] = [
@@ -73,8 +68,8 @@ const SellerDashboard = () => {
         {/* User Profile with Collapse Button */}
         <div className={`border-b border-gray-200 ${sidebarCollapsed ? 'p-3' : 'p-6'}`}>
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3 min-w-0 flex-1">
-              <div className={`bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0 ${
+            <div className="flex items-center space-x-3">
+              <div className={`bg-purple-100 rounded-full flex items-center justify-center ${
                 sidebarCollapsed ? 'w-8 h-8' : 'w-12 h-12'
               }`}>
                 <User className={`text-purple-600 ${sidebarCollapsed ? 'w-4 h-4' : 'w-7 h-7'}`} />
@@ -82,23 +77,23 @@ const SellerDashboard = () => {
               {!sidebarCollapsed && (
                 <div className="min-w-0 flex-1">
                   <p className="text-base font-medium text-gray-900 truncate">
-                    {user?.firstName || 'Kamal'} {user?.lastName || 'Silva'}
+                    {user?.firstName ? `${user.firstName} ${user.lastName || ''}` : 'Kamal Silva'}
                   </p>
                   <p className="text-sm text-purple-600 font-medium">Verified Seller</p>
                 </div>
               )}
             </div>
-            {/* Collapse Button */}
+            {/* Collapse/Expand button */}
             <button
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors flex-shrink-0 sm:hidden"
+              className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 sm:hidden"
               title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
               <Menu size={18} />
             </button>
             <button
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors flex-shrink-0 hidden sm:block"
+              className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 hidden sm:block"
               title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
               <Menu size={18} />
