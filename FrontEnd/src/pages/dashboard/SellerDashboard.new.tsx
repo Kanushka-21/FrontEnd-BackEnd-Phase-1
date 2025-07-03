@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  ShoppingBag, User, LogOut, Menu, Bell, Settings, 
-  Home, FileText, Trophy, Calendar, Gem
+  User, LogOut, Menu, 
+  Home, Trophy, Calendar, Gem
 } from 'lucide-react';
+import RoleAwareDashboardLayout from '@/components/layout/RoleAwareDashboardLayout';
 
 // Import modular components
 import {
@@ -61,11 +62,12 @@ const SellerDashboard = () => {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Sidebar - Fixed */}
-      <div className={`bg-white shadow-lg border-r border-gray-200 transition-all duration-300 relative h-full flex-shrink-0 ${
-        sidebarCollapsed ? 'w-16' : 'w-64'
-      }`}>
+    <RoleAwareDashboardLayout>
+      <div className="flex bg-gray-50 min-h-full">
+        {/* Sidebar - Fixed */}
+        <div className={`bg-white shadow-lg border-r border-gray-200 transition-all duration-300 relative flex-shrink-0 ${
+          sidebarCollapsed ? 'w-16' : 'w-64'
+        }`}>
         {/* User Profile with Collapse Button */}
         <div className="p-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
@@ -128,12 +130,13 @@ const SellerDashboard = () => {
       </div>
 
       {/* Main Content - Scrollable */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden">
         <div className="flex-1 p-3 overflow-y-auto">
           {renderContent()}
         </div>
       </div>
-    </div>
+      </div>
+    </RoleAwareDashboardLayout>
   );
 };
 

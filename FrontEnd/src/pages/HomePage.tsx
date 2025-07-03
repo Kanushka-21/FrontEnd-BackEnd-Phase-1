@@ -13,7 +13,7 @@ import {
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { DetailedGemstone } from '@/types';
-import Header from '@/components/layout/Header';
+import RoleAwareHeader from '@/components/layout/RoleAwareHeader';
 import GemstoneCard from '@/components/ui/GemstoneCard';
 import GemstoneDetailModal from '@/components/home/GemstoneDetailModal';
 
@@ -175,7 +175,7 @@ const HomePage: React.FC = () => {
   return (
     <AntLayout className="min-h-screen bg-gray-50 overflow-x-hidden w-full max-w-[100vw]">
       {/* Modern Header */}
-      <Header transparent={false} />
+      <RoleAwareHeader transparent={false} />
       <Content className="overflow-x-hidden w-full max-w-[100vw]">        {/* Enhanced Hero Section with Carousel */}
         <section className="relative text-white overflow-hidden overflow-x-hidden min-h-[320px] xxs:min-h-[330px] xs:min-h-[360px] sm:min-h-[450px] lg:min-h-[600px] xl:min-h-[700px] w-full max-w-[100vw]">
           {/* Blurred background image */}

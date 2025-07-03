@@ -13,6 +13,7 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { Line, Bar, Pie } from '@ant-design/charts';
+import RoleAwareDashboardLayout from '@/components/layout/RoleAwareDashboardLayout';
 
 
 const { SubMenu } = Menu;
@@ -250,7 +251,8 @@ const AdminDashboard: React.FC = () => {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <RoleAwareDashboardLayout>
+      <div className="p-6 space-y-6">
       {/* Welcome Header */}
       <div className="mb-8 bg-gradient-to-r from-gray-50 to-blue-50 p-6 rounded-xl shadow-md relative overflow-hidden">
         {/* Background Pattern */}
@@ -883,7 +885,8 @@ const AdminDashboard: React.FC = () => {
           </div>
         )}
       </Modal>
-    </div>
+      </div>
+    </RoleAwareDashboardLayout>
   );
 };
 

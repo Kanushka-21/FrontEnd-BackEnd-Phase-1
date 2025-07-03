@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
   ShoppingBag, User, LogOut, Search, 
-  TrendingUp, Menu, Bell, Settings, Home, FileText
+  TrendingUp, Menu, Home, FileText
 } from 'lucide-react';
+import RoleAwareDashboardLayout from '@/components/layout/RoleAwareDashboardLayout';
 
 // Import modular components
 import {
@@ -20,7 +20,6 @@ import { SidebarItem } from './BuyerDashboardComponents/shared';
 
 const BuyerDashboard = () => {
   const { user, logout, loading } = useAuth();
-  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
@@ -69,20 +68,30 @@ const BuyerDashboard = () => {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
-      <div className={`bg-white shadow-lg border-r border-gray-200 transition-all duration-300 ${
-        sidebarCollapsed ? 'w-16' : 'w-64'
-      }`}>
+    <RoleAwareDashboardLayout>
+      <div className="flex bg-gray-50 min-h-full">
+        {/* Sidebar */}
+        <div className={`bg-white shadow-lg border-r border-gray-200 transition-all duration-300 ${
+          sidebarCollapsed ? 'w-16' : 'w-64'
+        }`}>
         {/* Logo */}
         <div className="p-4 border-b border-gray-200">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">G</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">G</span>
+              </div>
+              {!sidebarCollapsed && (
+                <span className="text-xl font-bold text-gray-900">GemNet</span>
+              )}
             </div>
-            {!sidebarCollapsed && (
-              <span className="text-xl font-bold text-gray-900">GemNet</span>
-            )}
+            <button
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="p-2 rounded-lg hover:bg-gray-100 text-gray-600"
+              title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              <Menu size={18} />
+            </button>
           </div>
         </div>
 
@@ -135,37 +144,13 @@ const BuyerDashboard = () => {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="bg-white border-b border-gray-200 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className="p-2 rounded-lg hover:bg-gray-100"
-              >
-                <Menu size={20} />
-              </button>
-              <h1 className="text-2xl font-semibold text-gray-900">
-                {sidebarItems.find(item => item.id === activeTab)?.label || 'Dashboard'}
-              </h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <button className="p-2 rounded-lg hover:bg-gray-100">
-                <Bell size={20} />
-              </button>
-              <button className="p-2 rounded-lg hover:bg-gray-100">
-                <Settings size={20} />
-              </button>
-            </div>
-          </div>
-        </div>
-
         {/* Content */}
         <div className="flex-1 overflow-auto p-6">
           {renderContent()}
         </div>
       </div>
-    </div>
+      </div>
+    </RoleAwareDashboardLayout>
   );
 };
 
