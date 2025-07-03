@@ -25,6 +25,7 @@ public class FileStorageService {
     private Path faceImagesPath;
     private Path nicImagesPath;
     private Path extractedPhotosPath;
+    private Path gemImagesPath;
     
     @PostConstruct
     public void init() {
@@ -34,11 +35,13 @@ public class FileStorageService {
             faceImagesPath = basePath.resolve("face-images");
             nicImagesPath = basePath.resolve("nic-images");
             extractedPhotosPath = basePath.resolve("extracted-photos");
+            gemImagesPath = basePath.resolve("gems");
             
             // Create directories if they don't exist
             Files.createDirectories(faceImagesPath);
             Files.createDirectories(nicImagesPath);
             Files.createDirectories(extractedPhotosPath);
+            Files.createDirectories(gemImagesPath);
             
         } catch (IOException e) {
             throw new RuntimeException("Could not initialize file storage directories", e);
@@ -84,6 +87,21 @@ public class FileStorageService {
         Imgcodecs.imwrite(targetPath.toString(), photoMat);
         
         return targetPath.toString();
+    }
+    
+    /**
+     * Store gemstone image
+     */
+    public String storeGemImage(MultipartFile file, String imageId) throws IOException {
+        validateImageFile(file);
+        
+        String filename = imageId + "." + getFileExtension(file.getOriginalFilename());
+        Path targetPath = gemImagesPath.resolve(filename);
+        
+        Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
+        
+        // Return relative URL path for database storage
+        return "/uploads/gems/" + filename;
     }
     
     /**
