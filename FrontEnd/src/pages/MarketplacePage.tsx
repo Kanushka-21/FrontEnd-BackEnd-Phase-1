@@ -11,7 +11,9 @@ import {
   Checkbox, 
   Pagination,
   Drawer,
-  Modal
+  Modal,
+  message,
+  Spin
 } from 'antd';
 import { 
   SearchOutlined, 
@@ -25,6 +27,7 @@ import { DetailedGemstone } from '@/types';
 import Header from '@/components/layout/Header';
 import GemstoneCard from '@/components/ui/GemstoneCard';
 import GemstoneDetailModal from '@/components/home/GemstoneDetailModal';
+import { api } from '@/services/api';
 
 const { Content } = AntLayout;
 const { Title, Text, Paragraph } = Typography;
@@ -37,13 +40,18 @@ const MarketplacePage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
-  const [bidAmount, setBidAmount] = useState<number>(0);
   const [drawerWidth, setDrawerWidth] = useState(320);
   const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
   const [pendingBidAmount, setPendingBidAmount] = useState<number>(0);
   
+  // Real data states
+  const [gemstones, setGemstones] = useState<DetailedGemstone[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [totalItems, setTotalItems] = useState<number>(0);
+  
   // Filter states
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 50000]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 500000]);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [certifiedOnly, setCertifiedOnly] = useState(false);
@@ -65,46 +73,177 @@ const MarketplacePage: React.FC = () => {
   
   const itemsPerPage = 12;
   
-  // Mock gemstone data
-  const [gemstones, setGemstones] = useState<DetailedGemstone[]>([]);
-  
-  useEffect(() => {
-    // Simulate loading gemstones from an API
-    const mockGemstones: DetailedGemstone[] = Array(24).fill(null).map((_, i) => {
-      const basePrice = Math.floor(Math.random() * 20000) + 1000;
-      return {
-        id: `${i + 1}`,
-        name: ['Blue Sapphire', 'Ruby', 'Emerald', 'Star Sapphire', 'Yellow Sapphire', 'Padparadscha'][i % 6],
-        price: basePrice,
-        predictedPriceRange: {
-          min: Math.floor(basePrice * 0.9),
-          max: Math.floor(basePrice * 1.2)
-        },
-        image: `https://images.unsplash.com/photo-${1500000000 + i * 1000}?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80`,
-        certified: i % 3 === 0,
-        weight: parseFloat((Math.random() * 5 + 0.5).toFixed(2)),
-        color: ['Blue', 'Red', 'Green', 'Pink', 'Yellow', 'Purple', 'Orange'][i % 7],
-        species: ['Corundum', 'Beryl', 'Quartz', 'Topaz'][i % 4],
-        variety: ['Sapphire', 'Ruby', 'Emerald', 'Aquamarine', 'Topaz'][i % 5],
-        shape: ['Oval', 'Round', 'Cushion', 'Emerald Cut', 'Pear'][i % 5],
-        cut: ['Brilliant', 'Step Cut', 'Mixed', 'Cabochon'][i % 4],
-        clarity: ['VS', 'VVS', 'SI', 'I'][i % 4],
-        dimensions: {
-          length: parseFloat((Math.random() * 5 + 5).toFixed(1)),
-          width: parseFloat((Math.random() * 4 + 4).toFixed(1)),
-          height: parseFloat((Math.random() * 3 + 3).toFixed(1))
-        },
-        transparency: ['transparent', 'translucent'][i % 2] as 'transparent' | 'translucent',
-        certificate: i % 3 === 0 ? {
-          issuingAuthority: ['GIA', 'GRS', 'SSEF', 'Gubelin'][i % 4],
-          reportNumber: `${['GIA', 'GRS', 'SSEF', 'GUB'][i % 4]}${Math.floor(Math.random() * 10000000)}`,
-          date: `2024-0${(i % 9) + 1}-${(i % 28) + 1}`
-        } : undefined
-      };
-    });
+  // Helper to convert backend GemListing to frontend DetailedGemstone format
+  const convertToDetailedGemstone = (listing: any): DetailedGemstone => {
+    return {
+      id: listing.id || listing._id,
+      name: listing.gemName || 'Unknown Gemstone',
+      price: listing.price ? Number(listing.price) : 0,
+      predictedPriceRange: {
+        min: listing.price ? Math.floor(Number(listing.price) * 0.9) : 0,
+        max: listing.price ? Math.floor(Number(listing.price) * 1.2) : 0
+      },
+      image: getImageUrl(listing),
+      certified: listing.isCertified || false,
+      weight: listing.weight ? parseFloat(listing.weight) : 0,
+      color: listing.color || 'Unknown',
+      species: listing.species || 'Unknown',
+      variety: listing.variety || 'Unknown', 
+      shape: listing.shape || 'Unknown',
+      cut: listing.cut || 'Unknown',
+      clarity: listing.clarity || 'Unknown',
+      dimensions: {
+        length: parseFloat(listing.measurements?.split('x')[0] || '0') || 0,
+        width: parseFloat(listing.measurements?.split('x')[1] || '0') || 0,
+        height: parseFloat(listing.measurements?.split('x')[2] || '0') || 0
+      },
+      transparency: 'transparent' as const,
+      specifications: {
+        species: listing.species || 'Unknown',
+        variety: listing.variety || 'Unknown',
+        transparency: listing.transparency || 'transparent',
+        treatment: listing.treatment || listing.treatments || 'Unknown',
+        refractiveIndex: listing.refractiveIndex || undefined,
+        specificGravity: listing.specificGravity || undefined
+      },
+      certificate: listing.isCertified ? {
+        issuingAuthority: listing.certifyingAuthority || 'Unknown',
+        reportNumber: listing.certificateNumber || 'N/A',
+        date: listing.issueDate || 'Unknown'
+      } : undefined
+    };
+  };
+
+  // Helper to get image URL (same as admin dashboard)
+  const getImageUrl = (record: any): string => {
+    // Direct image URL
+    if (record.primaryImageUrl) {
+      return constructImageUrl(record.primaryImageUrl);
+    }
     
-    setGemstones(mockGemstones);
-  }, []);
+    // Image array with url property
+    if (record.images && record.images.length > 0) {
+      if (typeof record.images[0] === 'string') {
+        return constructImageUrl(record.images[0]);
+      }
+      if (record.images[0].url) {
+        return constructImageUrl(record.images[0].url);
+      }
+    }
+    
+    // Direct image property
+    if (record.image) {
+      return constructImageUrl(record.image);
+    }
+    
+    // Default placeholder
+    return 'https://via.placeholder.com/400x300?text=Gemstone';
+  };
+
+  // Helper to construct proper image URL
+  const constructImageUrl = (imagePath: string): string => {
+    if (!imagePath) return 'https://via.placeholder.com/400x300?text=Gemstone';
+    
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      return imagePath;
+    }
+    
+    const baseUrl = 'http://localhost:9092';
+    if (imagePath.startsWith('/')) {
+      return `${baseUrl}${imagePath}`;
+    }
+    
+    return `${baseUrl}/${imagePath}`;
+  };
+
+  // Function to fetch marketplace listings from real database
+  const fetchMarketplaceListings = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const params = {
+        page: currentPage - 1, // API is 0-indexed
+        size: itemsPerPage,
+        sortBy: getSortField(),
+        sortDir: getSortDirection(),
+        search: searchTerm || undefined,
+        minPrice: priceRange[0] > 0 ? priceRange[0] : undefined,
+        maxPrice: priceRange[1] < 500000 ? priceRange[1] : undefined,
+        certifiedOnly: certifiedOnly || undefined
+      };
+
+      console.log('🔍 Fetching real approved listings from gemnet_db.gem_listings with params:', params);
+      const response = await api.marketplace.getListings(params);
+      
+      if (response.success && response.data) {
+        console.log('✅ Successfully fetched real marketplace listings:', response.data);
+        const listings = response.data.listings || [];
+        
+        if (listings.length === 0) {
+          console.log('📋 No approved listings found in database');
+          setGemstones([]);
+          setTotalItems(0);
+          setError(null);
+          message.info('No approved gemstone listings found in the database');
+        } else {
+          const convertedGemstones = listings.map(convertToDetailedGemstone);
+          setGemstones(convertedGemstones);
+          setTotalItems(response.data.totalElements || listings.length);
+          setError(null);
+          console.log(`✅ Displaying ${listings.length} real approved listings from database`);
+          message.success(`Loaded ${listings.length} approved listings from database`);
+        }
+      } else {
+        console.error('❌ Backend API error:', response.message || 'Unknown error');
+        setError(`Backend error: ${response.message || 'Failed to fetch approved listings'}`);
+        setGemstones([]);
+        setTotalItems(0);
+      }
+    } catch (error) {
+      console.error('❌ Failed to connect to backend database:', error);
+      setError('Unable to connect to backend. Please ensure the backend server is running on localhost:9092 and connected to MongoDB (localhost:27017).');
+      setGemstones([]);
+      setTotalItems(0);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Helper functions to convert sortBy to API format
+  const getSortField = () => {
+    switch (sortBy) {
+      case 'price_asc':
+      case 'price_desc':
+        return 'price';
+      case 'weight_asc':
+      case 'weight_desc':
+        return 'weight';
+      case 'name_asc':
+      case 'name_desc':
+        return 'gemName';
+      default:
+        return 'createdAt';
+    }
+  };
+
+  const getSortDirection = () => {
+    return sortBy.includes('_desc') ? 'desc' : 'asc';
+  };
+
+  // Load data on component mount and when filters change
+  useEffect(() => {
+    fetchMarketplaceListings();
+  }, [currentPage, sortBy, searchTerm, priceRange, selectedTypes, selectedColors, certifiedOnly]);
+
+  // Remove the old mock data loading effect
+  // useEffect(() => {
+  //   // Simulate loading gemstones from an API
+  //   const mockGemstones: DetailedGemstone[] = Array(24).fill(null).map((_, i) => {
+  //     ...
+  //   });
+  //   setGemstones(mockGemstones);
+  // }, []);
   
   const handleViewDetails = (gemstoneId: string) => {
     console.log('View details clicked for gemstone:', gemstoneId);
@@ -113,7 +252,6 @@ const MarketplacePage: React.FC = () => {
       console.log('Setting selected gemstone:', gemstone);
       setSelectedGemstone(gemstone);
       setIsModalOpen(true);
-      setBidAmount(gemstone.price);
     }
   };
 
@@ -138,42 +276,6 @@ const MarketplacePage: React.FC = () => {
       maximumFractionDigits: 0,
     }).format(price);
   };
-
-  // Filter and sort gemstones
-  const filteredGemstones = React.useMemo(() => {
-    let filtered = gemstones.filter(gem => {
-      const matchesSearch = gem.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           gem.color.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           (gem.species?.toLowerCase().includes(searchTerm.toLowerCase()) || false) ||
-                           gem.variety.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const matchesPrice = gem.price >= priceRange[0] && gem.price <= priceRange[1];
-      const matchesType = selectedTypes.length === 0 || selectedTypes.includes(gem.variety);
-      const matchesColor = selectedColors.length === 0 || selectedColors.includes(gem.color);
-      const matchesCertified = !certifiedOnly || gem.certified;
-      
-      return matchesSearch && matchesPrice && matchesType && matchesColor && matchesCertified;
-    });
-    
-    // Sort
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case 'price_asc': return a.price - b.price;
-        case 'price_desc': return b.price - a.price;
-        case 'weight_asc': return a.weight - b.weight;
-        case 'weight_desc': return b.weight - a.weight;
-        case 'name_asc': return a.name.localeCompare(b.name);
-        case 'name_desc': return b.name.localeCompare(a.name);
-        default: return 0;
-      }
-    });
-    
-    return filtered;
-  }, [gemstones, searchTerm, priceRange, selectedTypes, selectedColors, certifiedOnly, sortBy]);
-  
-  // Pagination
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedGemstones = filteredGemstones.slice(startIndex, startIndex + itemsPerPage);
   
   // Filter Panel Component
   const FilterPanel = () => (
@@ -185,15 +287,15 @@ const MarketplacePage: React.FC = () => {
         <Slider
           range
           min={0}
-          max={50000}
+          max={500000}
           value={priceRange}
           onChange={(value) => setPriceRange(value as [number, number])}
-          tooltip={{ formatter: (value) => `$${value?.toLocaleString()}` }}
+          tooltip={{ formatter: (value) => `LKR ${value?.toLocaleString()}` }}
           style={{ marginTop: 16 }}
         />
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
-          <Text type="secondary">${priceRange[0].toLocaleString()}</Text>
-          <Text type="secondary">${priceRange[1].toLocaleString()}</Text>
+          <Text type="secondary">LKR {priceRange[0].toLocaleString()}</Text>
+          <Text type="secondary">LKR {priceRange[1].toLocaleString()}</Text>
         </div>
       </div>
 
@@ -228,7 +330,7 @@ const MarketplacePage: React.FC = () => {
 
       <Button        block 
         onClick={() => {
-          setPriceRange([0, 50000]);
+          setPriceRange([0, 500000]);
           setSelectedTypes([]);
           setSelectedColors([]);
           setCertifiedOnly(false);
@@ -312,15 +414,39 @@ const MarketplacePage: React.FC = () => {
             <div className="mb-3 sm:mb-4 lg:mb-6">
               <Title level={3} className="!mb-1 !text-base sm:!text-lg lg:!text-xl xl:!text-2xl">Gemstone Marketplace</Title>
               <Text type="secondary" className="text-xs sm:text-sm lg:text-base">
-                Showing {Math.min(filteredGemstones.length, startIndex + 1)}-{Math.min(startIndex + itemsPerPage, filteredGemstones.length)} of {filteredGemstones.length} results
+                {loading ? 'Loading from gemnet_db.gem_listings...' : `Showing ${totalItems > 0 ? Math.min(totalItems, (currentPage - 1) * itemsPerPage + 1) : 0}-${Math.min(currentPage * itemsPerPage, totalItems)} of ${totalItems} approved listings from database`}
               </Text>
             </div>
             
             {/* Gemstones Grid */}
-            {paginatedGemstones.length > 0 ? (
+            {loading ? (
+              <div className="flex justify-center items-center py-20">
+                <Spin size="large" />
+                <span className="ml-3">Loading gemstones...</span>
+              </div>
+            ) : error ? (
+              <div className="text-center py-20">
+                <Title level={3} type="danger">Cannot Connect to Database</Title>
+                <Paragraph type="secondary" className="mb-4">
+                  {error}
+                </Paragraph>
+                <div className="mb-4 p-4 bg-red-50 rounded-lg text-left max-w-2xl mx-auto">
+                  <Text strong className="block mb-2">To see real approved gemstone listings:</Text>
+                  <ol className="list-decimal list-inside space-y-1 text-sm">
+                    <li>Start MongoDB: <code>mongod --port 27017</code></li>
+                    <li>Start Backend Server: Navigate to BackEnd folder and run <code>start-windows.bat</code></li>
+                    <li>Ensure gemnet_db.gem_listings collection has approved entries</li>
+                    <li>Backend should be running on <code>localhost:9092</code></li>
+                  </ol>
+                </div>
+                <Button type="primary" onClick={() => fetchMarketplaceListings()}>
+                  Retry Connection
+                </Button>
+              </div>
+            ) : gemstones.length > 0 ? (
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-5 xl:gap-6">
-                  {paginatedGemstones.map((gemstone) => (
+                  {gemstones.map((gemstone) => (
                     <GemstoneCard
                       key={gemstone.id}
                       gemstone={gemstone}
@@ -339,7 +465,7 @@ const MarketplacePage: React.FC = () => {
                 <div className="flex justify-center mt-6 sm:mt-8 lg:mt-10">
                   <Pagination
                     current={currentPage}
-                    total={filteredGemstones.length}
+                    total={totalItems}
                     pageSize={itemsPerPage}
                     onChange={setCurrentPage}
                     showSizeChanger={false}
@@ -354,9 +480,20 @@ const MarketplacePage: React.FC = () => {
               </>
             ) : (
               <div style={{ textAlign: 'center', padding: '40px 0 60px' }}>
-                <Title level={3} type="secondary" className="!text-lg sm:!text-xl lg:!text-2xl">No gemstones found</Title>
+                <Title level={3} type="secondary" className="!text-lg sm:!text-xl lg:!text-2xl">No Approved Listings in Database</Title>
                 <Paragraph type="secondary" className="!text-sm sm:!text-base">
-                  Try adjusting your search criteria or filters                </Paragraph>
+                  No approved gemstone listings found in gemnet_db.gem_listings collection. 
+                  <br />Add some approved listings to the database or check your search filters.
+                </Paragraph>
+                <div className="mb-4 p-4 bg-blue-50 rounded-lg text-left max-w-2xl mx-auto">
+                  <Text strong className="block mb-2">Database Query:</Text>
+                  <Text code className="text-sm">
+                    gemnet_db.gem_listings.find({"{listingStatus: 'APPROVED', isActive: true}"})
+                  </Text>
+                </div>
+                <Button type="primary" onClick={() => fetchMarketplaceListings()}>
+                  Refresh from Database
+                </Button>
               </div>
             )}
           </div>

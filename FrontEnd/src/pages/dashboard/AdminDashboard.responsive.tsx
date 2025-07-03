@@ -34,6 +34,80 @@ const formatLKR = (price: number) => {
   }).format(price);
 };
 
+// Helper to get image URL from different possible data structures
+const getImageUrl = (record: any): string => {
+  console.log('Getting image URL for record:', record);
+  
+  // Direct image URL
+  if (record.primaryImageUrl) {
+    console.log('Using primaryImageUrl:', record.primaryImageUrl);
+    return constructImageUrl(record.primaryImageUrl);
+  }
+  
+  // Image array with url property
+  if (record.images && record.images.length > 0) {
+    // Handle case where image is a string URL directly
+    if (typeof record.images[0] === 'string') {
+      console.log('Using image array with string URL:', record.images[0]);
+      return constructImageUrl(record.images[0]);
+    }
+    // Handle case where image is an object with url property
+    if (record.images[0].url) {
+      console.log('Using image array with object.url:', record.images[0].url);
+      return constructImageUrl(record.images[0].url);
+    }
+  }
+  
+  // Legacy gemPhotos format
+  if (record.gemPhotos && record.gemPhotos.length > 0) {
+    if (typeof record.gemPhotos[0] === 'string') {
+      console.log('Using gemPhotos array with string URL:', record.gemPhotos[0]);
+      return constructImageUrl(record.gemPhotos[0]);
+    }
+    if (record.gemPhotos[0].url) {
+      console.log('Using gemPhotos array with object.url:', record.gemPhotos[0].url);
+      return constructImageUrl(record.gemPhotos[0].url);
+    }
+  }
+  
+  // Direct image property
+  if (record.image) {
+    console.log('Using direct image property:', record.image);
+    return constructImageUrl(record.image);
+  }
+  
+  // Default placeholder
+  console.log('No image found, using placeholder');
+  return 'https://via.placeholder.com/100?text=No+Image';
+};
+
+// Helper to get additional images from different data structures
+const getAdditionalImages = (record: any): string[] => {
+  if (!record) return [];
+  
+  console.log('Getting additional images for record:', record);
+  
+  // Try to get from images array
+  if (record.images && Array.isArray(record.images) && record.images.length > 1) {
+    // Handle both string arrays and object arrays
+    return record.images.slice(1).map((img: any) => {
+      if (typeof img === 'string') return img;
+      return img.url || '';
+    }).filter(Boolean);
+  }
+  
+  // Try to get from gemPhotos array
+  if (record.gemPhotos && Array.isArray(record.gemPhotos) && record.gemPhotos.length > 1) {
+    // Handle both string arrays and object arrays
+    return record.gemPhotos.slice(1).map((img: any) => {
+      if (typeof img === 'string') return img;
+      return img.url || '';
+    }).filter(Boolean);
+  }
+  
+  return [];
+};
+
 // Mock data for admin dashboard
 const mockUsers = [
   { 
@@ -219,6 +293,27 @@ const AdminDashboard: React.FC = () => {
       
       if (response.success) {
         console.log('Fetched pending listings:', response.data);
+        // Debug image structure in the first listing
+        if (response.data.listings && response.data.listings.length > 0) {
+          const firstListing = response.data.listings[0];
+          console.log('First listing image data:', {
+            primaryImageUrl: firstListing.primaryImageUrl,
+            images: firstListing.images,
+            gemPhotos: firstListing.gemPhotos,
+            image: firstListing.image,
+            completeStructure: firstListing
+          });
+          
+          // Try to extract the image URL and log it
+          const imageUrl = getImageUrl(firstListing);
+          console.log('Image URL extracted:', imageUrl);
+          
+          // Check if we're dealing with a nested structure
+          if (firstListing.images && firstListing.images.length > 0) {
+            console.log('First image in array:', firstListing.images[0]);
+          }
+        }
+        
         setRealPendingListings(response.data.listings || []);
         setCurrentPage(response.data.currentPage);
         setTotalPages(response.data.totalPages);
@@ -299,6 +394,15 @@ const AdminDashboard: React.FC = () => {
       const response = await api.admin.getListingDetails(listingId);
       
       if (response.success && response.data) {
+        // Log the full data structure to help debug image issues
+        console.log('Listing details response:', response.data);
+        console.log('Image data in listing details:', {
+          primaryImageUrl: response.data.primaryImageUrl,
+          images: response.data.images,
+          mainImageUrl: getImageUrl(response.data),
+          additionalImages: getAdditionalImages(response.data)
+        });
+        
         setSelectedListing(response.data);
       }
     } catch (error) {
@@ -828,9 +932,14 @@ const AdminDashboard: React.FC = () => {
                         <div className="flex items-center">
                           <div className="h-10 w-10 rounded-md bg-purple-100 mr-3 overflow-hidden">
                             <img 
-                              src={record.gemPhotos?.[0]?.url || 'https://via.placeholder.com/100'} 
+                              src={getImageUrl(record)} 
                               alt={gemName}
                               className="h-full w-full object-cover"
+                              onError={(e) => {
+                                console.error('Image failed to load:', getImageUrl(record));
+                                console.error('Record data:', record);
+                                (e.target as HTMLImageElement).src = 'https://via.placeholder.com/100?text=No+Image';
+                              }}
                             />
                           </div>
                           <span className="font-medium">{gemName}</span>
@@ -1164,24 +1273,28 @@ const AdminDashboard: React.FC = () => {
               <Col span={8}>
                 <div className="bg-purple-50 rounded-lg overflow-hidden" style={{ height: '200px' }}>
                   <img
-                    src={selectedListing.gemPhotos?.[0]?.url || selectedListing.image || 'https://via.placeholder.com/300x200'}
+                    src={getImageUrl(selectedListing)}
                     alt={selectedListing.gemName || selectedListing.title}
                     className="w-full h-full object-cover"
+                    onError={(e) => {
+                      console.error('Modal image failed to load:', getImageUrl(selectedListing));
+                      console.error('Selected listing data:', selectedListing);
+                      (e.target as HTMLImageElement).src = 'https://via.placeholder.com/300x200?text=No+Image';
+                    }}
                   />
-                </div>
-                <div className="mt-4">
+                </div>                  <div className="mt-4">
                   <h4 className="font-medium mb-2">Additional Photos:</h4>
                   <div className="flex space-x-2 overflow-x-auto pb-2">
-                    {(selectedListing.gemPhotos || []).slice(1).map((photo: any, index: number) => (
+                    {getAdditionalImages(selectedListing).map((imageUrl, index) => (
                       <div key={index} className="w-16 h-16 rounded overflow-hidden flex-shrink-0">
                         <img 
-                          src={photo.url} 
+                          src={imageUrl} 
                           alt={`Additional photo ${index+1}`} 
                           className="w-full h-full object-cover"
                         />
                       </div>
                     ))}
-                    {(!selectedListing.gemPhotos || selectedListing.gemPhotos.length <= 1) && (
+                    {getAdditionalImages(selectedListing).length === 0 && (
                       <div className="text-gray-400">No additional photos</div>
                     )}
                   </div>
@@ -1346,3 +1459,24 @@ const AdminDashboard: React.FC = () => {
 };
 
 export default AdminDashboard;
+
+// Helper to construct proper image URL (handle relative paths)
+const constructImageUrl = (imagePath: string): string => {
+  if (!imagePath) return 'https://via.placeholder.com/100?text=No+Image';
+  
+  // If it's already a complete URL, return as is
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    return imagePath;
+  }
+  
+  // If it's a relative path, construct the full URL
+  const baseUrl = 'http://localhost:9092'; // Backend server URL
+  
+  // Handle paths that start with /
+  if (imagePath.startsWith('/')) {
+    return `${baseUrl}${imagePath}`;
+  }
+  
+  // Handle paths that don't start with /
+  return `${baseUrl}/${imagePath}`;
+};
