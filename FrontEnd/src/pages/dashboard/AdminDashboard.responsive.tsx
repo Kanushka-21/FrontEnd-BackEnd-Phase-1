@@ -18,6 +18,7 @@ import {
 import dayjs from 'dayjs';
 import RoleAwareDashboardLayout from '@/components/layout/RoleAwareDashboardLayout';
 import { useAuth } from '@/contexts/AuthContext';
+import { api } from '@/services/api'; // Import the API functions
 
 
 const { TabPane } = Tabs;
@@ -167,6 +168,16 @@ const AdminDashboard: React.FC = () => {
   const meetingSectionRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   
+  // Real data states
+  const [realPendingListings, setRealPendingListings] = useState<any[]>([]);
+  const [loadingListings, setLoadingListings] = useState<boolean>(true);
+  const [listingError, setListingError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState<number>(0);
+  const [pageSize, setPageSize] = useState<number>(10);
+  const [totalPages, setTotalPages] = useState<number>(0);
+  const [totalListings, setTotalListings] = useState<number>(0);
+  const [dashboardStats, setDashboardStats] = useState<any>(null);
+  
   // Get admin user display name
   const getAdminDisplayName = () => {
     if (user?.firstName && user?.lastName) {
@@ -196,7 +207,65 @@ const AdminDashboard: React.FC = () => {
     totalRevenue: 48750,
     commissionRate: 10,
     totalCommission: 4875
-  };    // Function to toggle user status (block/unblock)
+  };
+  
+  // Function to fetch pending listings from API
+  const fetchPendingListings = async (page = 0, size = 10) => {
+    setLoadingListings(true);
+    setListingError(null);
+    
+    try {
+      const response = await api.admin.getPendingListings(page, size);
+      
+      if (response.success) {
+        console.log('Fetched pending listings:', response.data);
+        setRealPendingListings(response.data.listings || []);
+        setCurrentPage(response.data.currentPage);
+        setTotalPages(response.data.totalPages);
+        setTotalListings(response.data.totalElements);
+      } else {
+        setListingError(response.message || 'Failed to fetch pending listings');
+        message.error('Failed to fetch pending listings');
+      }
+    } catch (error) {
+      console.error('Error fetching pending listings:', error);
+      setListingError('An error occurred while fetching pending listings');
+      message.error('An error occurred while fetching pending listings');
+    } finally {
+      setLoadingListings(false);
+    }
+  };
+  
+  // Function to fetch dashboard stats
+  const fetchDashboardStats = async () => {
+    try {
+      const response = await api.admin.getDashboardStats();
+      
+      if (response.success) {
+        console.log('Fetched dashboard stats:', response.data);
+        setDashboardStats(response.data);
+      } else {
+        message.error('Failed to fetch dashboard statistics');
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard stats:', error);
+      message.error('An error occurred while fetching dashboard statistics');
+    }
+  };
+  
+  // Load data on component mount
+  useEffect(() => {
+    fetchPendingListings();
+    fetchDashboardStats();
+  }, []);
+  
+  // Function to handle page change
+  const handleListingPageChange = (page: number, pageSize?: number) => {
+    // API pages are 0-indexed, but Ant Design Table is 1-indexed
+    fetchPendingListings(page - 1, pageSize);
+  };
+
+  // Function to toggle user status (block/unblock)
   const handleToggleUserStatus = (user: any, active: boolean) => {
     const action = active ? 'unblock' : 'block';
     
@@ -220,10 +289,22 @@ const AdminDashboard: React.FC = () => {
     setIsUserModalVisible(true);
   };
   
-  // Function to view listing details
-  const handleViewListing = (listing: any) => {
+  // Function to view a listing's details
+  const handleViewListing = async (listing: any) => {
     setSelectedListing(listing);
     setIsListingModalVisible(true);
+    
+    try {
+      const listingId = listing.id || listing._id;
+      const response = await api.admin.getListingDetails(listingId);
+      
+      if (response.success && response.data) {
+        setSelectedListing(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching listing details:', error);
+      message.error('Could not fetch complete listing details');
+    }
   };
   
   // Function to view meeting details
@@ -237,9 +318,84 @@ const AdminDashboard: React.FC = () => {
     confirm({
       title: 'Approve Listing',
       icon: <CheckCircleOutlined style={{ color: 'green' }} />,
-      content: `Are you sure you want to approve "${listing.title}" listing by ${listing.seller}?`,
-      onOk() {
-        console.log('Listing approved:', listing);
+      content: (
+        <div>
+          <p>Are you sure you want to approve "{listing.gemName || listing.title}" listing by {listing.userName || listing.seller}?</p>
+          <Input.TextArea 
+            placeholder="Optional comment for the seller"
+            rows={3}
+            id="admin-approval-comment"
+          />
+        </div>
+      ),
+      onOk: async () => {
+        const commentEl = document.getElementById('admin-approval-comment') as HTMLTextAreaElement;
+        const adminComment = commentEl?.value || '';
+        
+        try {
+          const listingId = listing.id || listing._id;
+          const response = await api.admin.updateListingStatus(listingId, 'APPROVED', adminComment);
+          
+          if (response.success) {
+            message.success('Listing approved successfully');
+            // Refresh the pending listings
+            fetchPendingListings(currentPage);
+            // Also refresh stats as the counts have changed
+            fetchDashboardStats();
+          } else {
+            message.error(response.message || 'Failed to approve listing');
+          }
+        } catch (error) {
+          console.error('Error approving listing:', error);
+          message.error('An error occurred while approving the listing');
+        }
+      }
+    });
+  };
+  
+  // Function to reject a listing
+  const handleRejectListing = (listing: any) => {
+    confirm({
+      title: 'Reject Listing',
+      icon: <CloseOutlined style={{ color: 'red' }} />,
+      content: (
+        <div>
+          <p>Are you sure you want to reject "{listing.gemName || listing.title}" listing by {listing.userName || listing.seller}?</p>
+          <p>Please provide a reason for rejection:</p>
+          <Input.TextArea 
+            placeholder="Reason for rejection (will be visible to the seller)"
+            rows={3}
+            id="admin-rejection-comment"
+            required
+          />
+        </div>
+      ),
+      onOk: async () => {
+        const commentEl = document.getElementById('admin-rejection-comment') as HTMLTextAreaElement;
+        const adminComment = commentEl?.value || '';
+        
+        if (!adminComment.trim()) {
+          message.error('Please provide a reason for rejection');
+          return Promise.reject('No rejection reason provided');
+        }
+        
+        try {
+          const listingId = listing.id || listing._id;
+          const response = await api.admin.updateListingStatus(listingId, 'REJECTED', adminComment);
+          
+          if (response.success) {
+            message.success('Listing rejected successfully');
+            // Refresh the pending listings
+            fetchPendingListings(currentPage);
+            // Also refresh stats as the counts have changed
+            fetchDashboardStats();
+          } else {
+            message.error(response.message || 'Failed to reject listing');
+          }
+        } catch (error) {
+          console.error('Error rejecting listing:', error);
+          message.error('An error occurred while rejecting the listing');
+        }
       }
     });
   };
@@ -400,17 +556,16 @@ const AdminDashboard: React.FC = () => {
             </p>
           </div>
           
-          {stats.pendingApprovals > 0 && (
-            <Alert
-              message={`${stats.pendingApprovals} pending approvals require your attention`}
-              type="warning"
-              showIcon
-              action={                <Button size="small" type="default">
-                  View All
+          <div className="flex items-center space-x-4">
+              <Badge count={dashboardStats?.pendingListings || 0} overflowCount={99}>
+                <Button icon={<Clock size={16} />} onClick={() => setActiveTab('listings')}>
+                  Pending Approvals
                 </Button>
-              }
-            />
-          )}
+              </Badge>
+              <span className="text-gray-400">|</span>
+              <span>Hello, {getAdminDisplayName()}</span>
+              <Shield className="text-purple-500" size={20} />
+            </div>
         </div>
       </div>
 
@@ -492,6 +647,84 @@ const AdminDashboard: React.FC = () => {
           </Card>
         </Col>
       </Row>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        {/* Pending Approvals */}
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-medium text-gray-700">Pending</h3>
+            <div className="bg-orange-100 p-2 rounded-lg">
+              <Clock size={20} className="text-orange-500" />
+            </div>
+          </div>
+          <div className="mt-4">
+            <p className="text-3xl font-bold">{dashboardStats?.pendingListings || '...'}</p>
+            <p className="text-gray-500 text-sm mt-1">Listings awaiting review</p>
+          </div>
+          <div className="mt-4">
+            <Progress 
+              percent={dashboardStats?.pendingPercentage || 0} 
+              showInfo={false}
+              strokeColor="#f59e0b"
+              trailColor="#fef3c7"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              {dashboardStats?.pendingPercentage || 0}% of all listings
+            </p>
+          </div>
+        </div>
+        
+        {/* Approved */}
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-medium text-gray-700">Approved</h3>
+            <div className="bg-green-100 p-2 rounded-lg">
+              <CheckOutlined style={{ fontSize: '20px', color: '#10b981' }} />
+            </div>
+          </div>
+          <div className="mt-4">
+            <p className="text-3xl font-bold">{dashboardStats?.approvedListings || '...'}</p>
+            <p className="text-gray-500 text-sm mt-1">Listings approved by admin</p>
+          </div>
+          <div className="mt-4">
+            <Progress 
+              percent={dashboardStats?.approvedPercentage || 0} 
+              showInfo={false} 
+              strokeColor="#10b981"
+              trailColor="#d1fae5"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              {dashboardStats?.approvedPercentage || 0}% of all listings
+            </p>
+          </div>
+        </div>
+        
+        {/* Rejected */}
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-medium text-gray-700">Rejected</h3>
+            <div className="bg-red-100 p-2 rounded-lg">
+              <CloseOutlined style={{ fontSize: '20px', color: '#ef4444' }} />
+            </div>
+          </div>
+          <div className="mt-4">
+            <p className="text-3xl font-bold">{dashboardStats?.rejectedListings || '...'}</p>
+            <p className="text-gray-500 text-sm mt-1">Listings rejected by admin</p>
+          </div>
+          <div className="mt-4">
+            <Progress 
+              percent={dashboardStats?.rejectedPercentage || 0} 
+              showInfo={false} 
+              strokeColor="#ef4444"
+              trailColor="#fee2e2"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              {dashboardStats?.rejectedPercentage || 0}% of all listings
+            </p>
+          </div>
+        </div>
+      </div>
 
       {/* Main Content - Tabbed Interface */}
       <Card className="mb-6 shadow-md rounded-xl overflow-hidden">
@@ -582,20 +815,25 @@ const AdminDashboard: React.FC = () => {
               
               <div ref={listingSectionRef}>
                 <h3 className="text-lg font-medium mb-4">Pending Gemstone Listings</h3>                <Table 
-                  dataSource={pendingListings}
-                  scroll={{ x: 'max-content' }}
+                  size="middle"
+                  dataSource={realPendingListings}
+                  loading={loadingListings}
+                  rowKey="_id"
                   columns={[
                     {
                       title: 'Gemstone',
-                      key: 'gemstone',
-                      render: (_, record) => (
-                        <div className="flex items-center space-x-3">
-                          <img 
-                            src={record.image} 
-                            alt={record.title}
-                            className="w-12 h-12 object-cover rounded-lg"
-                          />
-                          <span className="font-medium">{record.title}</span>
+                      dataIndex: 'gemName',
+                      key: 'gemName',
+                      render: (gemName, record: any) => (
+                        <div className="flex items-center">
+                          <div className="h-10 w-10 rounded-md bg-purple-100 mr-3 overflow-hidden">
+                            <img 
+                              src={record.gemPhotos?.[0]?.url || 'https://via.placeholder.com/100'} 
+                              alt={gemName}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+                          <span className="font-medium">{gemName}</span>
                         </div>
                       ),
                     },
@@ -607,13 +845,13 @@ const AdminDashboard: React.FC = () => {
                     },
                     {
                       title: 'Seller',
-                      dataIndex: 'seller',
-                      key: 'seller',
+                      dataIndex: 'userName',
+                      key: 'userName',
                     },
                     {
                       title: 'Submitted On',
-                      dataIndex: 'submittedAt',
-                      key: 'submittedAt',
+                      dataIndex: 'createdAt',
+                      key: 'createdAt',
                       render: date => dayjs(date).format('MMM DD, YYYY')
                     },
                     {
@@ -640,6 +878,7 @@ const AdminDashboard: React.FC = () => {
                             size="small" 
                             icon={<CloseOutlined />}
                             danger
+                            onClick={() => handleRejectListing(record)}
                           >
                             Reject
                           </Button>
@@ -647,7 +886,19 @@ const AdminDashboard: React.FC = () => {
                       )
                     }
                   ]}
-                  pagination={false}
+                  pagination={{
+                    current: currentPage + 1, // API is 0-indexed, Ant Design Table is 1-indexed
+                    pageSize: pageSize,
+                    total: totalListings,
+                    onChange: handleListingPageChange,
+                    showSizeChanger: true,
+                    showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} listings`
+                  }}
+                  locale={{
+                    emptyText: listingError ? 
+                      <Alert message="Error" description={listingError} type="error" showIcon /> :
+                      'No pending listings found'
+                  }}
                 />
               </div>
               
@@ -880,67 +1131,144 @@ const AdminDashboard: React.FC = () => {
 
       {/* Listing Details Modal */}
       <Modal
+        title={
+          <div className="flex items-center">
+            <Package className="mr-2" size={20} />
+            <span>Gemstone Listing Details</span>
+          </div>
+        }
         visible={isListingModalVisible}
-        title="Gemstone Listing Details"
         onCancel={() => setIsListingModalVisible(false)}
+        width={700}
         footer={[
-          <Button key="reject" danger>
+          <Button key="back" onClick={() => setIsListingModalVisible(false)}>
+            Close
+          </Button>,
+          <Button key="reject" danger onClick={() => {
+            setIsListingModalVisible(false);
+            handleRejectListing(selectedListing);
+          }}>
             Reject
           </Button>,
-          <Button key="approve" type="primary" onClick={() => handleApproveListing(selectedListing)}>
+          <Button key="approve" type="primary" onClick={() => {
+            setIsListingModalVisible(false);
+            handleApproveListing(selectedListing);
+          }}>
             Approve
           </Button>
         ]}
-        width={700}
       >
         {selectedListing && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <img 
-                src={selectedListing.image} 
-                alt={selectedListing.name}
-                className="w-full h-auto rounded-lg"
-              />
-              <div className="grid grid-cols-3 gap-2">
-                <img src="https://via.placeholder.com/100" alt="thumbnail" className="rounded" />
-                <img src="https://via.placeholder.com/100" alt="thumbnail" className="rounded" />
-                <img src="https://via.placeholder.com/100" alt="thumbnail" className="rounded" />
-              </div>
-            </div>
-            <div>              <h2 className="text-2xl font-bold mb-2">{selectedListing.name}</h2>
-              <p className="text-xl text-green-600 font-medium mb-4">{formatLKR(selectedListing.price)}</p>
-              
-              <div className="space-y-3">
-                <div>
-                  <p className="font-medium">Seller</p>
-                  <p>{selectedListing.seller}</p>
+          <div>
+            <Row gutter={24}>
+              <Col span={8}>
+                <div className="bg-purple-50 rounded-lg overflow-hidden" style={{ height: '200px' }}>
+                  <img
+                    src={selectedListing.gemPhotos?.[0]?.url || selectedListing.image || 'https://via.placeholder.com/300x200'}
+                    alt={selectedListing.gemName || selectedListing.title}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
-                <div>
-                  <p className="font-medium">Submitted On</p>
-                  <p>{dayjs(selectedListing.submittedAt).format('MMMM D, YYYY')}</p>
+                <div className="mt-4">
+                  <h4 className="font-medium mb-2">Additional Photos:</h4>
+                  <div className="flex space-x-2 overflow-x-auto pb-2">
+                    {(selectedListing.gemPhotos || []).slice(1).map((photo: any, index: number) => (
+                      <div key={index} className="w-16 h-16 rounded overflow-hidden flex-shrink-0">
+                        <img 
+                          src={photo.url} 
+                          alt={`Additional photo ${index+1}`} 
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ))}
+                    {(!selectedListing.gemPhotos || selectedListing.gemPhotos.length <= 1) && (
+                      <div className="text-gray-400">No additional photos</div>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <p className="font-medium">Description</p>
-                  <p className="text-gray-600">
-                    This is a beautiful natural gemstone with excellent clarity and color. 
-                    The gemstone has been certified by the Gemological Institute.
-                  </p>
+              </Col>
+              <Col span={16}>
+                <h2 className="text-xl font-semibold">
+                  {selectedListing.gemName || selectedListing.title}
+                </h2>
+                <div className="flex items-center mt-1 mb-4">
+                  <Tag color="blue">{selectedListing.category || selectedListing.gemType || 'Gemstone'}</Tag>
+                  <Tag color="purple">
+                    Weight: {selectedListing.weight || selectedListing.caratWeight || 'N/A'} carats
+                  </Tag>
+                  <Tag color="cyan">
+                    {selectedListing.shape || selectedListing.gemShape || 'Shape N/A'}
+                  </Tag>
                 </div>
-                <div>
-                  <p className="font-medium">Specifications</p>
-                  <ul className="list-disc pl-5 text-gray-600">
-                    <li>Weight: 2.5 carats</li>
-                    <li>Cut: Oval</li>
-                    <li>Clarity: VS</li>
-                    <li>Origin: Sri Lanka</li>
-                  </ul>
-                </div>
-                <div>
-                  <p className="font-medium">Certification</p>
-                  <Badge status="success" text="Certificate Attached" />
-                </div>
-              </div>
-            </div>
+                
+                <Divider orientation="left">Details</Divider>
+                <Row gutter={[16, 8]}>
+                  <Col span={12}>
+                    <div className="text-gray-500">Price:</div>
+                    <div className="font-medium">{formatLKR(selectedListing.price)}</div>
+                  </Col>
+                  <Col span={12}>
+                    <div className="text-gray-500">Seller:</div>
+                    <div className="font-medium">{selectedListing.userName || selectedListing.seller}</div>
+                  </Col>
+                  <Col span={12}>
+                    <div className="text-gray-500">Submitted On:</div>
+                    <div>{dayjs(selectedListing.createdAt || selectedListing.submitDate).format('MMMM DD, YYYY')}</div>
+                  </Col>
+                  <Col span={12}>
+                    <div className="text-gray-500">Status:</div>
+                    <Tag color={
+                      selectedListing.listingStatus === 'PENDING' || selectedListing.status === 'pending' ? 'orange' :
+                      selectedListing.listingStatus === 'APPROVED' || selectedListing.status === 'approved' ? 'green' :
+                      'red'
+                    }>
+                      {selectedListing.listingStatus || selectedListing.status}
+                    </Tag>
+                  </Col>
+                </Row>
+                
+                <Divider orientation="left">Gemstone Attributes</Divider>
+                <Row gutter={[16, 8]}>
+                  {selectedListing.color && (
+                    <Col span={12}>
+                      <div className="text-gray-500">Color:</div>
+                      <div>{selectedListing.color}</div>
+                    </Col>
+                  )}
+                  {selectedListing.clarity && (
+                    <Col span={12}>
+                      <div className="text-gray-500">Clarity:</div>
+                      <div>{selectedListing.clarity}</div>
+                    </Col>
+                  )}
+                  {selectedListing.cut && (
+                    <Col span={12}>
+                      <div className="text-gray-500">Cut:</div>
+                      <div>{selectedListing.cut}</div>
+                    </Col>
+                  )}
+                  {selectedListing.treatment && (
+                    <Col span={12}>
+                      <div className="text-gray-500">Treatment:</div>
+                      <div>{selectedListing.treatment}</div>
+                    </Col>
+                  )}
+                  {selectedListing.origin && (
+                    <Col span={12}>
+                      <div className="text-gray-500">Origin:</div>
+                      <div>{selectedListing.origin}</div>
+                    </Col>
+                  )}
+                </Row>
+                
+                {selectedListing.description && (
+                  <>
+                    <Divider orientation="left">Description</Divider>
+                    <p>{selectedListing.description}</p>
+                  </>
+                )}
+              </Col>
+            </Row>
           </div>
         )}
       </Modal>
