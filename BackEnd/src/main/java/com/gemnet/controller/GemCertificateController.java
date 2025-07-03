@@ -303,20 +303,8 @@ public class GemCertificateController {
                     .body(ApiResponse.error("Only sellers can create gem listings"));
             }
             
-            // Additional validation for non-certified stones
-            if (gemListingData.isNonCertifiedStone()) {
-                if (gemListingData.getCslMemoNo() == null || gemListingData.getCslMemoNo().trim().isEmpty()) {
-                    System.err.println("❌ CSL Memo Number required for non-certified stones");
-                    return ResponseEntity.badRequest()
-                        .body(ApiResponse.error("CSL Memo Number is required for non-certified stones"));
-                }
-                
-                if (gemListingData.getAuthority() == null || gemListingData.getAuthority().trim().isEmpty()) {
-                    System.err.println("❌ Authority required for non-certified stones");
-                    return ResponseEntity.badRequest()
-                        .body(ApiResponse.error("Certifying authority is required for non-certified stones"));
-                }
-            }
+            // No additional validation for non-certified stones
+            // Non-certified stones don't require any certificate information
             
             // Additional validation for certified stones
             if (gemListingData.isCertifiedStone()) {
