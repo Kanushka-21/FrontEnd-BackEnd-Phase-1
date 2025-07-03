@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Card, Row, Col, Table, 
   Button, Tag, Tabs, Modal,
@@ -13,8 +13,7 @@ import {
 } from '@ant-design/icons';
 import {
   BarChart3, Users, Shield, Settings, 
-  TrendingUp, Menu as MenuIcon,
-  Package, Clock
+  Menu as MenuIcon, Package, Clock
 } from 'lucide-react';
 import dayjs from 'dayjs';
 import RoleAwareDashboardLayout from '@/components/layout/RoleAwareDashboardLayout';
@@ -162,6 +161,12 @@ const AdminDashboard: React.FC = () => {
   const [selectedListing, setSelectedListing] = useState<any>(null);
   const [selectedMeeting, setSelectedMeeting] = useState<any>(null);
   
+  // Create refs for sections we want to navigate to
+  const userSectionRef = useRef<HTMLDivElement>(null);
+  const listingSectionRef = useRef<HTMLDivElement>(null);
+  const meetingSectionRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  
   // Get admin user display name
   const getAdminDisplayName = () => {
     if (user?.firstName && user?.lastName) {
@@ -180,7 +185,6 @@ const AdminDashboard: React.FC = () => {
     { id: 'users', label: 'User Management', icon: <Users size={24} /> },
     { id: 'listings', label: 'Listing Management', icon: <Package size={24} /> },
     { id: 'meetings', label: 'Meeting Approvals', icon: <Clock size={24} /> },
-    { id: 'reports', label: 'Reports & Analytics', icon: <TrendingUp size={24} /> },
     { id: 'settings', label: 'System Settings', icon: <Settings size={24} /> }
   ];
   
@@ -251,6 +255,31 @@ const AdminDashboard: React.FC = () => {
       }
     });
   };
+  
+  // Function to handle sidebar item click and scroll to appropriate section
+  const handleSidebarItemClick = (itemId: string) => {
+    setActiveTab(itemId);
+    
+    // Wait for any state updates to be applied before scrolling
+    setTimeout(() => {
+      if (itemId === 'users' && userSectionRef.current && contentRef.current) {
+        contentRef.current.scrollTo({
+          top: userSectionRef.current.offsetTop - 20,
+          behavior: 'smooth'
+        });
+      } else if (itemId === 'listings' && listingSectionRef.current && contentRef.current) {
+        contentRef.current.scrollTo({
+          top: listingSectionRef.current.offsetTop - 20,
+          behavior: 'smooth'
+        });
+      } else if (itemId === 'meetings' && meetingSectionRef.current && contentRef.current) {
+        contentRef.current.scrollTo({
+          top: meetingSectionRef.current.offsetTop - 20,
+          behavior: 'smooth'
+        });
+      }
+    }, 100);
+  };
 
   return (
     <RoleAwareDashboardLayout>
@@ -310,7 +339,7 @@ const AdminDashboard: React.FC = () => {
             {sidebarItems.map((item) => (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => handleSidebarItemClick(item.id)}
                 className={`w-full flex items-center rounded-lg text-left transition-colors ${
                   activeTab === item.id
                     ? 'bg-red-100 text-red-700'
@@ -348,7 +377,7 @@ const AdminDashboard: React.FC = () => {
           </div>
           
           {/* Content */}
-          <div className="flex-1 overflow-auto p-6 space-y-6">
+          <div ref={contentRef} className="flex-1 overflow-auto p-6 space-y-6">
       {/* Welcome Header */}
       <div className="mb-8 bg-gradient-to-r from-gray-50 to-blue-50 p-6 rounded-xl shadow-md relative overflow-hidden">
         {/* Background Pattern */}
@@ -478,7 +507,7 @@ const AdminDashboard: React.FC = () => {
             key="users"
           >
             <div className="space-y-6">
-              <div>
+              <div ref={userSectionRef}>
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-medium">User Accounts</h3>
                   <Input.Search
@@ -551,7 +580,7 @@ const AdminDashboard: React.FC = () => {
               
               <Divider />
               
-              <div>
+              <div ref={listingSectionRef}>
                 <h3 className="text-lg font-medium mb-4">Pending Gemstone Listings</h3>                <Table 
                   dataSource={pendingListings}
                   scroll={{ x: 'max-content' }}
@@ -624,7 +653,7 @@ const AdminDashboard: React.FC = () => {
               
               <Divider />
               
-              <div>
+              <div ref={meetingSectionRef}>
                 <h3 className="text-lg font-medium mb-4">Meeting Requests</h3>                <Table 
                   dataSource={pendingMeetings}
                   scroll={{ x: 'max-content' }}
