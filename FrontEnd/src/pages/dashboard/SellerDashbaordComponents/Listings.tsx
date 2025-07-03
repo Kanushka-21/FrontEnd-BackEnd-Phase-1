@@ -364,12 +364,14 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
         description: wizardData.basicInfo.description || '',
         comments: wizardData.basicInfo.comments || '',
         
-        // For non-certified stones (CSL format)
+        // For non-certified stones - explicitly set certificate fields to null
         ...(wizardData.certificationType === 'non-certified' && {
-          cslMemoNo: wizardData.basicInfo.cslMemoNo,
-          issueDate: wizardData.basicInfo.issueDate,
-          authority: wizardData.basicInfo.authority,
-          giaAlumniMember: wizardData.basicInfo.giaAlumniMember || false,
+          cslMemoNo: null,
+          issueDate: null,
+          authority: null,
+          giaAlumniMember: null,
+          certificateNumber: null,
+          certifyingAuthority: null,
         }),
         
         // For certified stones
@@ -601,65 +603,9 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
           onFinish={handleBasicInfoSubmit}
           initialValues={wizardData.basicInfo}
         >
-        {/* Non-Certified (CSL Format) Form */}
+        {/* Non-Certified Form */}
         {isNonCertified ? (
           <div className="space-y-6">
-            {/* CSL Certificate Information */}
-            <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-              <Title level={4} className="text-red-600 mb-6 mt-0">
-                <SafetyCertificateOutlined className="mr-2" />
-                CSL Certificate Information
-              </Title>
-              <Row gutter={[24, 16]}>
-                <Col xs={24} md={12}>
-                  <Form.Item
-                    label="CSL Memo Number"
-                    name="cslMemoNo"
-                    rules={[{ required: true, message: 'Please enter CSL memo number' }]}
-                  >
-                    <Input placeholder="e.g. CSL-2024-001234" size="large" />
-                  </Form.Item>
-                </Col>
-                
-                <Col xs={24} md={12}>
-                  <Form.Item
-                    label="Issue Date"
-                    name="issueDate"
-                    rules={[{ required: true, message: 'Please enter issue date' }]}
-                  >
-                    <Input placeholder="e.g. 2024-01-15" size="large" />
-                  </Form.Item>
-                </Col>
-              </Row>
-
-              <Row gutter={[24, 16]}>
-                <Col xs={24} md={12}>
-                  <Form.Item
-                    label="Authority"
-                    name="authority"
-                    rules={[{ required: true, message: 'Please select authority' }]}
-                  >
-                    <Select placeholder="Select certifying authority" size="large">
-                      <Select.Option value="CSL">CSL (Colored Stone Laboratory)</Select.Option>
-                      <Select.Option value="Other">Other</Select.Option>
-                    </Select>
-                  </Form.Item>
-                </Col>
-                
-                <Col xs={24} md={12}>
-                  <Form.Item
-                    label="GIA Alumni Member"
-                    name="giaAlumniMember"
-                    initialValue={false}
-                  >
-                    <Radio.Group size="large">
-                      <Radio value={true}>Yes</Radio>
-                      <Radio value={false}>No</Radio>
-                    </Radio.Group>
-                  </Form.Item>
-                </Col>
-              </Row>
-            </div>
 
             {/* Gem Identification Details */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">

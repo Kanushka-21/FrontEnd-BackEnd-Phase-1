@@ -244,11 +244,42 @@ const NewGemListingForm: React.FC<GemListingFormProps> = ({
     }
 
     try {
+      // Remove any certificate fields from the form values if this is a non-certified gemstone
+      let formValues = { ...values };
+      
+      // For non-certified gemstones, explicitly remove any certificate-related fields
+      if (!isCertified) {
+        // Delete any certificate-related fields that might be in the form values
+        if (formValues.attributes && formValues.attributes.certification) {
+          delete formValues.attributes.certification;
+        }
+      }
+      
       const formData = {
-        ...values,
+        ...formValues,
         images: fileList,
-        certificateFile: certificateFile[0],
+        // Only include certificate file for certified gemstones
+        ...(isCertified ? { certificateFile: certificateFile[0] } : {}),
         isCertified,
+        // For non-certified gemstones, explicitly set ALL certificate-related fields to null/empty
+        ...(isCertified ? {} : {
+          // CSL certificate fields
+          cslMemoNo: null,
+          issueDate: null,
+          authority: null,
+          giaAlumniMember: null,
+          
+          // Other certificate fields
+          certificateNumber: null,
+          certifyingAuthority: null,
+          certificateIssueDate: null,
+          certificateAuthority: null,
+          
+          // Any other certificate-related fields that might exist
+          certificateUrl: null,
+          certificateType: null,
+          certificateDetails: null
+        })
       };
       await onSubmit(formData);
     } catch (error) {

@@ -601,12 +601,11 @@ public class GemCertificateService {
         saveResult.put("saveStartTime", System.currentTimeMillis());
         
         try {
-            // Check for duplicate CSL memo number (for non-certified stones)
-            if (gemListingData.isNonCertifiedStone() && gemListingData.getCslMemoNo() != null) {
-                if (gemListingRepository.existsByCslMemoNo(gemListingData.getCslMemoNo())) {
-                    System.err.println("❌ Duplicate CSL memo number: " + gemListingData.getCslMemoNo());
-                    return ApiResponse.error("A listing with this CSL memo number already exists");
-                }
+            // For non-certified stones, we don't need to check for duplicate CSL memo numbers
+            // as they shouldn't have CSL memo numbers
+            if (gemListingData.isNonCertifiedStone()) {
+                // Skip CSL memo number validation for non-certified stones
+                System.out.println("ℹ️ Non-certified gemstone: Skipping certificate validation");
             }
             
             // Check for duplicate certificate number (for certified stones)
@@ -695,18 +694,21 @@ public class GemCertificateService {
             
             // Add specific data based on certification type
             if (savedListing.isNonCertifiedStone()) {
-                saveResult.put("cslMemoNo", savedListing.getCslMemoNo());
-                saveResult.put("authority", savedListing.getAuthority());
-                saveResult.put("giaAlumniMember", savedListing.getGiaAlumniMember());
+                // For non-certified stones, only include non-certificate properties
                 saveResult.put("treatment", savedListing.getTreatment());
                 saveResult.put("isHeated", savedListing.isHeated());
                 saveResult.put("isUnheated", savedListing.isUnheated());
             } else {
+                // For certified stones, include certificate properties
                 saveResult.put("certificateNumber", savedListing.getCertificateNumber());
                 saveResult.put("certifyingAuthority", savedListing.getCertifyingAuthority());
                 saveResult.put("clarity", savedListing.getClarity());
                 saveResult.put("cut", savedListing.getCut());
                 saveResult.put("origin", savedListing.getOrigin());
+                // Include CSL certificate info only for certified stones
+                saveResult.put("cslMemoNo", savedListing.getCslMemoNo());
+                saveResult.put("authority", savedListing.getAuthority());
+                saveResult.put("giaAlumniMember", savedListing.getGiaAlumniMember());
             }
             
             // Gem details
@@ -755,11 +757,20 @@ public class GemCertificateService {
         // Certification status
         entity.setIsCertified(dto.getIsCertified());
         
-        // CSL Certificate Information (for non-certified stones)
-        entity.setCslMemoNo(dto.getCslMemoNo());
-        entity.setIssueDate(dto.getIssueDate());
-        entity.setAuthority(dto.getAuthority());
-        entity.setGiaAlumniMember(dto.getGiaAlumniMember());
+        // Certificate information only for certified stones
+        if (dto.getIsCertified()) {
+            // CSL Certificate Information (only for certified stones)
+            entity.setCslMemoNo(dto.getCslMemoNo());
+            entity.setIssueDate(dto.getIssueDate());
+            entity.setAuthority(dto.getAuthority());
+            entity.setGiaAlumniMember(dto.getGiaAlumniMember());
+        } else {
+            // For non-certified stones, explicitly set these fields to null
+            entity.setCslMemoNo(null);
+            entity.setIssueDate(null);
+            entity.setAuthority(null);
+            entity.setGiaAlumniMember(null);
+        }
         
         // Gem identification details
         entity.setColor(dto.getColor());
