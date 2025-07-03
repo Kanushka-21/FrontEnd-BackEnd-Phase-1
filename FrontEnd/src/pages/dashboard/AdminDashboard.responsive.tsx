@@ -1,25 +1,27 @@
 import React, { useState } from 'react';
 import { 
-  Layout, Menu, Card, Row, Col, Statistic, Table, 
-  Button, Tag, Tabs, List, Rate, Modal,
-  Form, Input, Timeline, message, Alert, Space, Badge, Avatar,
+  Card, Row, Col, Table, 
+  Button, Tag, Tabs, Modal,
+  Input, message, Alert, Space, Badge,
   Switch, Progress, Divider
 } from 'antd';
 import {
-  UserOutlined, AppstoreOutlined, ShopOutlined, DollarOutlined,
-  BellOutlined, MenuOutlined, CloseOutlined, CheckOutlined, 
-  StarOutlined, ExclamationCircleOutlined, EyeOutlined,
+  UserOutlined, DollarOutlined,
+  CloseOutlined, CheckOutlined, 
+  EyeOutlined,
   FileTextOutlined, LockOutlined, UnlockOutlined, CheckCircleOutlined
 } from '@ant-design/icons';
+import {
+  BarChart3, Users, Shield, Settings, 
+  TrendingUp, Menu as MenuIcon,
+  Package, Clock
+} from 'lucide-react';
 import dayjs from 'dayjs';
-import { Line, Bar, Pie } from '@ant-design/charts';
 import RoleAwareDashboardLayout from '@/components/layout/RoleAwareDashboardLayout';
 
 
-const { SubMenu } = Menu;
 const { TabPane } = Tabs;
 const { confirm } = Modal;
-const { TextArea } = Input;
 
 // Helper function to format price in LKR
 const formatLKR = (price: number) => {
@@ -158,6 +160,20 @@ const AdminDashboard: React.FC = () => {
   const [selectedListing, setSelectedListing] = useState<any>(null);
   const [selectedMeeting, setSelectedMeeting] = useState<any>(null);
   
+  // Sidebar state and navigation
+  const [activeTab, setActiveTab] = useState('overview');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  
+  // Admin sidebar navigation items
+  const sidebarItems = [
+    { id: 'overview', label: 'Overview', icon: <BarChart3 size={24} /> },
+    { id: 'users', label: 'User Management', icon: <Users size={24} /> },
+    { id: 'listings', label: 'Listing Management', icon: <Package size={24} /> },
+    { id: 'meetings', label: 'Meeting Approvals', icon: <Clock size={24} /> },
+    { id: 'reports', label: 'Reports & Analytics', icon: <TrendingUp size={24} /> },
+    { id: 'settings', label: 'System Settings', icon: <Settings size={24} /> }
+  ];
+  
   // Statistics
   const stats = {
     pendingApprovals: pendingUsers.length + pendingListings.length + pendingMeetings.length,
@@ -202,36 +218,12 @@ const AdminDashboard: React.FC = () => {
     setIsMeetingModalVisible(true);
   };
   
-  // Function to approve a user
-  const handleApproveUser = (user: any) => {
-    confirm({
-      title: 'Approve User',
-      icon: <CheckCircleOutlined style={{ color: 'green' }} />,
-      content: `Are you sure you want to approve ${user.name} as a ${user.role}?`,
-      onOk() {
-        console.log('User approved:', user);
-      }
-    });
-  };
-  
-  // Function to reject a user
-  const handleRejectUser = (user: any) => {
-    confirm({
-      title: 'Reject User',
-      icon: <ExclamationCircleOutlined style={{ color: 'red' }} />,
-      content: `Are you sure you want to reject ${user.name}'s ${user.role} application?`,
-      onOk() {
-        console.log('User rejected:', user);
-      }
-    });
-  };
-  
   // Function to approve a listing
   const handleApproveListing = (listing: any) => {
     confirm({
       title: 'Approve Listing',
       icon: <CheckCircleOutlined style={{ color: 'green' }} />,
-      content: `Are you sure you want to approve "${listing.name}" listing by ${listing.seller}?`,
+      content: `Are you sure you want to approve "${listing.title}" listing by ${listing.seller}?`,
       onOk() {
         console.log('Listing approved:', listing);
       }
@@ -252,7 +244,114 @@ const AdminDashboard: React.FC = () => {
 
   return (
     <RoleAwareDashboardLayout>
-      <div className="p-6 space-y-6">
+      <div className="flex bg-gray-50 min-h-full relative">
+        {/* Mobile Sidebar Overlay */}
+        {!sidebarCollapsed && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-20 sm:hidden"
+            onClick={() => setSidebarCollapsed(true)}
+          />
+        )}
+        
+        {/* Sidebar */}
+        <div className={`bg-white shadow-lg border-r border-gray-200 transition-all duration-300 ${
+          sidebarCollapsed 
+            ? 'w-16 sm:w-20' 
+            : 'w-64 sm:w-72 fixed sm:relative z-30 sm:z-auto h-full sm:h-auto'
+        }`}>
+          {/* Logo */}
+          <div className={`border-b border-gray-200 ${sidebarCollapsed ? 'p-3' : 'p-6'}`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className={`bg-red-600 rounded-lg flex items-center justify-center ${
+                  sidebarCollapsed ? 'w-8 h-8' : 'w-10 h-10'
+                }`}>
+                  <span className={`text-white font-bold ${sidebarCollapsed ? 'text-sm' : 'text-lg'}`}>A</span>
+                </div>
+                {!sidebarCollapsed && (
+                  <span className="text-2xl font-bold text-gray-900 hidden sm:block">Admin</span>
+                )}
+              </div>
+              <button
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 sm:hidden"
+                title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              >
+                <MenuIcon size={18} />
+              </button>
+              <button
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 hidden sm:block"
+                title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              >
+                <MenuIcon size={18} />
+              </button>
+            </div>
+          </div>
+
+          {/* User Profile */}
+          <div className={`border-b border-gray-200 ${sidebarCollapsed ? 'p-3' : 'p-6'}`}>
+            <div className="flex items-center space-x-3">
+              <div className={`bg-red-100 rounded-full flex items-center justify-center ${
+                sidebarCollapsed ? 'w-8 h-8' : 'w-12 h-12'
+              }`}>
+                <Shield className={`text-red-600 ${sidebarCollapsed ? 'w-4 h-4' : 'w-7 h-7'}`} />
+              </div>
+              {!sidebarCollapsed && (
+                <div className="min-w-0 flex-1">
+                  <p className="text-base font-medium text-gray-900 truncate">
+                    Admin User
+                  </p>
+                  <p className="text-sm text-red-600 font-medium">System Administrator</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Navigation */}
+          <nav className={`space-y-2 ${sidebarCollapsed ? 'p-2' : 'p-6'}`}>
+            {sidebarItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`w-full flex items-center rounded-lg text-left transition-colors ${
+                  activeTab === item.id
+                    ? 'bg-red-100 text-red-700'
+                    : 'text-gray-600 hover:bg-gray-100'
+                } ${
+                  sidebarCollapsed 
+                    ? 'justify-center p-3' 
+                    : 'space-x-4 px-4 py-3'
+                }`}
+                title={sidebarCollapsed ? item.label : undefined}
+              >
+                <div className="flex-shrink-0">
+                  {item.icon}
+                </div>
+                {!sidebarCollapsed && (
+                  <span className="text-base font-medium truncate">{item.label}</span>
+                )}
+              </button>
+            ))}
+          </nav>
+        </div>
+
+        {/* Main Content */}
+        <div className={`flex-1 flex flex-col overflow-hidden ${
+          !sidebarCollapsed ? 'sm:ml-0' : ''
+        }`}>
+          {/* Mobile menu button */}
+          <div className="sm:hidden bg-white border-b border-gray-200 p-4">
+            <button
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="p-2 rounded-lg hover:bg-gray-100 text-gray-600"
+            >
+              <MenuIcon size={20} />
+            </button>
+          </div>
+          
+          {/* Content */}
+          <div className="flex-1 overflow-auto p-6 space-y-6">
       {/* Welcome Header */}
       <div className="mb-8 bg-gradient-to-r from-gray-50 to-blue-50 p-6 rounded-xl shadow-md relative overflow-hidden">
         {/* Background Pattern */}
@@ -467,10 +566,10 @@ const AdminDashboard: React.FC = () => {
                         <div className="flex items-center space-x-3">
                           <img 
                             src={record.image} 
-                            alt={record.name}
+                            alt={record.title}
                             className="w-12 h-12 object-cover rounded-lg"
                           />
-                          <span className="font-medium">{record.name}</span>
+                          <span className="font-medium">{record.title}</span>
                         </div>
                       ),
                     },
@@ -885,6 +984,8 @@ const AdminDashboard: React.FC = () => {
           </div>
         )}
       </Modal>
+          </div>
+        </div>
       </div>
     </RoleAwareDashboardLayout>
   );

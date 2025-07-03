@@ -12,7 +12,6 @@ import {
   Settings,
   Shield,
   Gem,
-  Trophy,
   FileText,
   TrendingUp,
   Database,
@@ -58,6 +57,44 @@ const RoleAwareHeader: React.FC<RoleAwareHeaderProps> = ({ transparent = false }
     return [];
   };
 
+  // Get user display name with fallbacks based on role
+  const getUserDisplayInfo = () => {
+    const firstName = user?.firstName;
+    const lastName = user?.lastName;
+    
+    if (firstName && lastName) {
+      return {
+        name: `${firstName} ${lastName}`,
+        email: user?.email || ''
+      };
+    }
+    
+    // Fallbacks based on role
+    switch (user?.role) {
+      case 'admin':
+        return {
+          name: 'Admin User',
+          email: user?.email || 'admin@gemnet.lk'
+        };
+      case 'seller':
+        return {
+          name: 'Kamal Silva',
+          email: user?.email || 'kamal.silva@example.com'
+        };
+      case 'buyer':
+        return {
+          name: 'Pasindu Perera',
+          email: user?.email || 'pasindu.perera@example.com'
+        };
+      default:
+        return {
+          name: 'User',
+          email: user?.email || ''
+        };
+    }
+  };
+
+  const userDisplayInfo = getUserDisplayInfo();
   const notifications = getNotifications();
   
   const handleLogout = () => {
@@ -103,14 +140,9 @@ const RoleAwareHeader: React.FC<RoleAwareHeaderProps> = ({ transparent = false }
           onClick: () => navigate('/marketplace') 
         },
         { 
-          label: 'My Listings', 
-          icon: <Gem className="w-5 h-5" />, 
+          label: 'Dashboard', 
+          icon: <BarChart3 className="w-5 h-5" />, 
           onClick: () => navigate('/seller/dashboard') 
-        },
-        { 
-          label: 'Bids', 
-          icon: <Trophy className="w-5 h-5" />, 
-          onClick: () => navigate('/seller/bids') 
         }
       ];
     } else if (user?.role === 'buyer') {
@@ -315,11 +347,11 @@ const RoleAwareHeader: React.FC<RoleAwareHeaderProps> = ({ transparent = false }
                     <div className="hidden sm:block text-left">
                       <div className="flex items-center">
                         <p className="text-base sm:text-lg font-medium text-secondary-900 line-clamp-1">
-                          {user?.firstName} {user?.lastName}
+                          {userDisplayInfo.name}
                         </p>
                         {getRoleBadge()}
                       </div>
-                      <p className="text-sm text-secondary-500 line-clamp-1">{user?.email}</p>
+                      <p className="text-sm text-secondary-500 line-clamp-1">{userDisplayInfo.email}</p>
                     </div>
                   </button>
                   
@@ -328,10 +360,10 @@ const RoleAwareHeader: React.FC<RoleAwareHeaderProps> = ({ transparent = false }
                     <div className="absolute right-0 mt-2 w-48 bg-white shadow-lg rounded-lg py-2 z-50 border border-secondary-200">
                       <div className="px-4 py-2 border-b border-secondary-200 sm:hidden">
                         <div className="flex items-center">
-                          <p className="text-base font-medium text-secondary-900">{user?.firstName} {user?.lastName}</p>
+                          <p className="text-base font-medium text-secondary-900">{userDisplayInfo.name}</p>
                           {getRoleBadge()}
                         </div>
-                        <p className="text-sm text-secondary-500">{user?.email}</p>
+                        <p className="text-sm text-secondary-500">{userDisplayInfo.email}</p>
                       </div>
                       
                       {userMenuItems.map((item, index) => (

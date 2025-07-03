@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { 
-  User, LogOut, Menu, 
+  User, Menu, 
   Home, Trophy, Calendar, Gem
 } from 'lucide-react';
 import RoleAwareDashboardLayout from '@/components/layout/RoleAwareDashboardLayout';
@@ -18,9 +17,8 @@ import {
 import { SidebarItem } from './SellerDashbaordComponents/shared';
 
 const SellerDashboard = () => {
-  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
 
   // Mock user data - replace with actual auth context
   const user = {
@@ -29,19 +27,13 @@ const SellerDashboard = () => {
     email: 'john.seller@example.com'
   };
 
-  // Handle logout
-  const handleLogout = () => {
-    // Implement logout logic
-    navigate('/login');
-  };
-
   // Sidebar navigation items
   const sidebarItems: SidebarItem[] = [
-    { id: 'overview', label: 'Overview', icon: <Home size={20} /> },
-    { id: 'listings', label: 'List Items', icon: <Gem size={20} /> },
-    { id: 'bids', label: 'Bids', icon: <Trophy size={20} /> },
-    { id: 'meetings', label: 'Meetings', icon: <Calendar size={20} /> },
-    { id: 'profile', label: 'Profile', icon: <User size={20} /> }
+    { id: 'overview', label: 'Overview', icon: <Home size={24} /> },
+    { id: 'listings', label: 'List Items', icon: <Gem size={24} /> },
+    { id: 'bids', label: 'Bids', icon: <Trophy size={24} /> },
+    { id: 'meetings', label: 'Meetings', icon: <Calendar size={24} /> },
+    { id: 'profile', label: 'Profile', icon: <User size={24} /> }
   ];
   // Render content based on active tab
   const renderContent = () => {
@@ -63,74 +55,98 @@ const SellerDashboard = () => {
 
   return (
     <RoleAwareDashboardLayout>
-      <div className="flex bg-gray-50 min-h-full">
+      <div className="flex bg-gray-50 min-h-full relative">
+        {/* Mobile Sidebar Overlay */}
+        {!sidebarCollapsed && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-20 sm:hidden"
+            onClick={() => setSidebarCollapsed(true)}
+          />
+        )}
+        
         {/* Sidebar - Fixed */}
         <div className={`bg-white shadow-lg border-r border-gray-200 transition-all duration-300 relative flex-shrink-0 ${
-          sidebarCollapsed ? 'w-16' : 'w-64'
+          sidebarCollapsed 
+            ? 'w-16 sm:w-20' 
+            : 'w-64 sm:w-72 fixed sm:relative z-30 sm:z-auto h-full sm:h-auto'
         }`}>
         {/* User Profile with Collapse Button */}
-        <div className="p-4 border-b border-gray-200">
+        <div className={`border-b border-gray-200 ${sidebarCollapsed ? 'p-3' : 'p-6'}`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3 min-w-0 flex-1">
-              <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <User className="w-6 h-6 text-purple-600" />
+              <div className={`bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0 ${
+                sidebarCollapsed ? 'w-8 h-8' : 'w-12 h-12'
+              }`}>
+                <User className={`text-purple-600 ${sidebarCollapsed ? 'w-4 h-4' : 'w-7 h-7'}`} />
               </div>
               {!sidebarCollapsed && (
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-gray-900 truncate">
-                    {user?.firstName} {user?.lastName}
+                  <p className="text-base font-medium text-gray-900 truncate">
+                    {user?.firstName || 'Kamal'} {user?.lastName || 'Silva'}
                   </p>
-                  <p className="text-xs text-purple-600">Verified Seller</p>
+                  <p className="text-sm text-purple-600 font-medium">Verified Seller</p>
                 </div>
               )}
             </div>
             {/* Collapse Button */}
             <button
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors flex-shrink-0"
+              className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors flex-shrink-0 sm:hidden"
+              title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              <Menu size={18} />
+            </button>
+            <button
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors flex-shrink-0 hidden sm:block"
               title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             >
               <Menu size={18} />
             </button>
           </div>
         </div>
-      
         {/* Navigation */}
-        <nav className="p-4 space-y-2">
+        <nav className={`space-y-2 ${sidebarCollapsed ? 'p-2' : 'p-6'}`}>
           {sidebarItems.map((item) => (
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`w-full flex items-center px-3 py-2 rounded-lg text-left transition-colors ${
+              className={`w-full flex items-center rounded-lg text-left transition-colors ${
                 activeTab === item.id
                   ? 'bg-purple-100 text-purple-700'
                   : 'text-gray-600 hover:bg-gray-100'
-              } ${sidebarCollapsed ? 'justify-center' : 'space-x-3'}`}
+              } ${
+                sidebarCollapsed 
+                  ? 'justify-center p-3' 
+                  : 'space-x-4 px-4 py-3'
+              }`}
               title={sidebarCollapsed ? item.label : undefined}
             >
-              {item.icon}
-              {!sidebarCollapsed && <span className="text-sm font-medium">{item.label}</span>}
+              <div className="flex-shrink-0">
+                {item.icon}
+              </div>
+              {!sidebarCollapsed && (
+                <span className="text-base font-medium truncate">{item.label}</span>
+              )}
             </button>
           ))}
         </nav>
-
-        {/* Logout */}
-        <div className="absolute bottom-4 left-4 right-4">
-          <button 
-            onClick={handleLogout}
-            className={`w-full flex items-center px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors ${
-              sidebarCollapsed ? 'justify-center' : 'space-x-3'
-            }`}
-            title="Logout"
-          >
-            <LogOut size={20} />
-            {!sidebarCollapsed && <span className="text-sm font-medium">Logout</span>}
-          </button>
-        </div>
       </div>
 
       {/* Main Content - Scrollable */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className={`flex-1 flex flex-col overflow-hidden ${
+        !sidebarCollapsed ? 'sm:ml-0' : ''
+      }`}>
+        {/* Mobile menu button */}
+        <div className="sm:hidden bg-white border-b border-gray-200 p-4">
+          <button
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className="p-2 rounded-lg hover:bg-gray-100 text-gray-600"
+          >
+            <Menu size={20} />
+          </button>
+        </div>
+        
         <div className="flex-1 p-3 overflow-y-auto">
           {renderContent()}
         </div>
