@@ -311,7 +311,10 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
         color: extractedData.color,
         clarity: extractedData.clarity,
         cut: extractedData.cut,
-        origin: extractedData.origin
+        origin: extractedData.origin,
+        // Add certificate fields for the manual form
+        certificateNumber: extractedData.certificateNumber,
+        authority: extractedData.authority
       });
 
       message.success('Certificate data extracted successfully!');
@@ -326,11 +329,52 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
     }
   };
 
+  // Validate the form data before final submission
+  const validateBeforeSubmit = () => {
+    // For certified stones, verify certificate number is present
+    if (wizardData.certificationType === 'certified') {
+      const certificateNumber = 
+        wizardData.basicInfo.certificateNumber || 
+        wizardData.certificationDetails?.certificateNumber;
+      
+      if (!certificateNumber) {
+        message.error('Certificate number is required for certified gemstones. Please fill in the certificate information.');
+        
+        // Highlight the certificate fields tab to guide the user
+        const certFieldsElement = document.querySelector('#certificate-fields');
+        if (certFieldsElement) {
+          certFieldsElement.scrollIntoView({ behavior: 'smooth' });
+          // Add a temporary highlight effect
+          certFieldsElement.classList.add('bg-red-100');
+          setTimeout(() => {
+            certFieldsElement.classList.remove('bg-red-100');
+          }, 2000);
+        }
+        
+        return false;
+      }
+    }
+    
+    // If images are missing
+    if (!wizardData.images || wizardData.images.length === 0) {
+      message.error('Please upload at least one image of your gemstone.');
+      return false;
+    }
+    
+    return true;
+  };
+
   // Handle final submission
   const handleFinalSubmission = async () => {
     console.log('🚀 handleFinalSubmission called!');
     console.log('📋 Current wizardData:', wizardData);
     console.log('📸 Images count:', wizardData.images?.length || 0);
+    
+    // Validate form data before proceeding
+    const isValid = validateBeforeSubmit();
+    if (!isValid) {
+      return;
+    }
     
     setLoading(true);
     try {
@@ -376,8 +420,10 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
         
         // For certified stones
         ...(wizardData.certificationType === 'certified' && {
-          certificateNumber: wizardData.certificationDetails?.certificateNumber,
-          certifyingAuthority: wizardData.certificationDetails?.authority,
+          // Use manually entered certificate number first, fall back to extracted data
+          certificateNumber: wizardData.basicInfo.certificateNumber || wizardData.certificationDetails?.certificateNumber,
+          // Use manually entered authority first, fall back to extracted data
+          certifyingAuthority: wizardData.basicInfo.authority || wizardData.certificationDetails?.authority,
           clarity: wizardData.basicInfo.clarity,
           cut: wizardData.basicInfo.cut,
           origin: wizardData.basicInfo.origin,
@@ -594,6 +640,11 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
             <Text type="secondary">
               The following details have been automatically filled from your certificate. Please review and edit if needed.
             </Text>
+            {(!wizardData.certificationDetails?.certificateNumber) && (
+              <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-red-600 font-medium">
+                ⚠️ Certificate number could not be extracted. Please manually enter it in the Certificate Information section below.
+              </div>
+            )}
           </div>
         )}
 
@@ -858,32 +909,28 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
                 </Col>
               </Row>
 
-              {/* Additional fields for certified gemstones */}
+              {/* Certificate Number and Authority Fields */}
               {wizardData.certificationType === 'certified' && (
-                <Row gutter={[24, 16]}>
+                <Row id="certificate-fields" gutter={[24, 16]} className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6 transition-all duration-300">
+                  <Col span={24}>
+                    <div className="text-green-700 font-medium mb-2">Certificate Information</div>
+                    <div className="text-green-600 text-sm mb-4">Please ensure this information matches your certificate exactly</div>
+                  </Col>
                   <Col xs={24} md={12}>
-                    <Form.Item label="Color" name="color">
-                      <Input placeholder="e.g. Royal Blue" size="large" />
+                    <Form.Item 
+                      label="Certificate Number" 
+                      name="certificateNumber"
+                      rules={[{ required: true, message: 'Certificate number is required for certified stones' }]}
+                    >
+                      <Input placeholder="e.g. GIA 1234567890" size="large" />
                     </Form.Item>
                   </Col>
                   <Col xs={24} md={12}>
-                    <Form.Item label="Clarity" name="clarity">
-                      <Input placeholder="e.g. VVS" size="large" />
-                    </Form.Item>
-                  </Col>
-                </Row>
-              )}
-
-              {wizardData.certificationType === 'certified' && (
-                <Row gutter={[24, 16]}>
-                  <Col xs={24} md={12}>
-                    <Form.Item label="Cut" name="cut">
-                      <Input placeholder="e.g. Oval" size="large" />
-                    </Form.Item>
-                  </Col>
-                  <Col xs={24} md={12}>
-                    <Form.Item label="Origin" name="origin">
-                      <Input placeholder="e.g. Sri Lanka" size="large" />
+                    <Form.Item 
+                      label="Certifying Authority" 
+                      name="authority"
+                    >
+                      <Input placeholder="e.g. GIA, IGI" size="large" />
                     </Form.Item>
                   </Col>
                 </Row>
