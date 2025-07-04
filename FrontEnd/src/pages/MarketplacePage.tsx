@@ -28,12 +28,15 @@ import Header from '@/components/layout/Header';
 import GemstoneCard from '@/components/ui/GemstoneCard';
 import GemstoneDetailModal from '@/components/home/GemstoneDetailModal';
 import { api } from '@/services/api';
+import extendedAPI from '@/services/api';
+import { useAuth } from '@/contexts/AuthContext';
 
 const { Content } = AntLayout;
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
 
 const MarketplacePage: React.FC = () => {
+  const { user, isAuthenticated } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedGemstone, setSelectedGemstone] = useState<DetailedGemstone | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -278,21 +281,19 @@ const MarketplacePage: React.FC = () => {
       return;
     }
 
+    if (!isAuthenticated || !user) {
+      message.error('Please log in to place a bid');
+      return;
+    }
+
     try {
       setLoading(true);
       
-      // For now, using mock user data - replace with actual authenticated user
-      const mockUser = {
-        id: '123', // This should come from actual auth context
-        name: 'John Doe',
-        email: 'john.doe@example.com'
-      };
-
       const bidRequest = {
         listingId: selectedGemstone.id,
-        bidderId: mockUser.id,
-        bidderName: mockUser.name,
-        bidderEmail: mockUser.email,
+        bidderId: user.userId,
+        bidderName: `${user.firstName} ${user.lastName}`,
+        bidderEmail: user.email,
         bidAmount: pendingBidAmount,
         currency: 'LKR',
         message: `Bid placed for ${selectedGemstone.name}`
@@ -300,15 +301,7 @@ const MarketplacePage: React.FC = () => {
 
       console.log('Sending bid request:', bidRequest);
 
-      const response = await fetch('/api/bidding/place-bid', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(bidRequest),
-      });
-
-      const result = await response.json();
+      const result = await extendedAPI.bidding.placeBid(bidRequest);
 
       if (result.success) {
         message.success('Bid placed successfully!');
