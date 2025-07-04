@@ -312,4 +312,82 @@ public class BiddingService {
         formatter.setMinimumFractionDigits(0);
         return formatter.format(amount);
     }
+
+    /**
+     * Get all bids placed by a specific user
+     */
+    public ApiResponse<Map<String, Object>> getUserBids(String userId, int page, int size) {
+        try {
+            // Get all bids for the user
+            List<Bid> userBids = bidRepository.findByBidderIdOrderByBidTimeDesc(userId);
+            
+            // Apply pagination
+            int start = page * size;
+            int end = Math.min(start + size, userBids.size());
+            List<Bid> paginatedBids = userBids.subList(start, end);
+            
+            // Get enhanced bid information with listing details
+            List<Map<String, Object>> enhancedBids = new ArrayList<>();
+            
+            for (Bid bid : paginatedBids) {
+                Map<String, Object> bidInfo = new HashMap<>();
+                bidInfo.put("bidId", bid.getId());
+                bidInfo.put("listingId", bid.getListingId());
+                bidInfo.put("bidAmount", bid.getBidAmount());
+                bidInfo.put("currency", bid.getCurrency());
+                bidInfo.put("bidTime", bid.getBidTime());
+                bidInfo.put("status", bid.getStatus());
+                bidInfo.put("message", bid.getMessage());
+                
+                // Get listing details
+                Optional<GemListing> listingOpt = gemListingRepository.findById(bid.getListingId());
+                if (listingOpt.isPresent()) {
+                    GemListing listing = listingOpt.get();
+                    bidInfo.put("gemName", listing.getGemName());
+                    bidInfo.put("gemSpecies", listing.getSpecies());
+                    bidInfo.put("listingPrice", listing.getPrice());
+                    bidInfo.put("sellerName", listing.getUserId()); // This should be username, but we only have userId
+                    bidInfo.put("images", listing.getImages());
+                    
+                    // Get current highest bid for this listing
+                    Optional<Bid> currentHighest = bidRepository
+                        .findTopByListingIdAndStatusOrderByBidAmountDesc(bid.getListingId(), "ACTIVE");
+                    
+                    if (currentHighest.isPresent()) {
+                        bidInfo.put("currentHighestBid", currentHighest.get().getBidAmount());
+                        bidInfo.put("isCurrentlyWinning", currentHighest.get().getId().equals(bid.getId()));
+                    } else {
+                        bidInfo.put("currentHighestBid", listing.getPrice());
+                        bidInfo.put("isCurrentlyWinning", false);
+                    }
+                }
+                
+                enhancedBids.add(bidInfo);
+            }
+            
+            // Prepare response
+            Map<String, Object> response = new HashMap<>();
+            response.put("bids", enhancedBids);
+            response.put("totalElements", userBids.size());
+            response.put("totalPages", (int) Math.ceil((double) userBids.size() / size));
+            response.put("currentPage", page);
+            response.put("pageSize", size);
+            
+            // Calculate statistics
+            long activeBids = userBids.stream().filter(bid -> "ACTIVE".equals(bid.getStatus())).count();
+            long winningBids = enhancedBids.stream()
+                .filter(bid -> Boolean.TRUE.equals(bid.get("isCurrentlyWinning")))
+                .count();
+            
+            response.put("activeBids", activeBids);
+            response.put("winningBids", winningBids);
+            
+            return new ApiResponse<>(true, "User bids retrieved successfully", response);
+            
+        } catch (Exception e) {
+            System.err.println("Error getting user bids: " + e.getMessage());
+            e.printStackTrace();
+            return new ApiResponse<>(false, "Failed to get user bids: " + e.getMessage(), null);
+        }
+    }
 }

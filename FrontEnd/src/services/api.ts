@@ -894,6 +894,17 @@ const extendedAPI = {
         console.error('Error marking notification as read:', error);
         return { success: false, message: apiUtils.formatErrorMessage(error) };
       }
+    },
+
+    // Get user's bids
+    getUserBids: async (userId: string, page: number = 0, size: number = 10): Promise<ApiResponse<any>> => {
+      try {
+        const response = await api.get(`/api/bidding/user/${userId}/bids?page=${page}&size=${size}`);
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching user bids:', error);
+        return { success: false, message: apiUtils.formatErrorMessage(error) };
+      }
     }
   },
 };

@@ -189,4 +189,35 @@ public class BiddingController {
                 .body(new ApiResponse<>(false, "Failed to get unread count: " + e.getMessage(), 0L));
         }
     }
+    
+    /**
+     * Get all bids placed by a specific user
+     */
+    @GetMapping("/user/{userId}/bids")
+    @Operation(summary = "Get user bids", description = "Get all bids placed by a specific user")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getUserBids(
+            @PathVariable String userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        
+        System.out.println("👤 Get user bids request for user: " + userId);
+        
+        try {
+            ApiResponse<Map<String, Object>> response = biddingService.getUserBids(userId, page, size);
+            
+            if (response.isSuccess()) {
+                System.out.println("✅ User bids retrieved successfully");
+                return ResponseEntity.ok(response);
+            } else {
+                System.err.println("❌ Failed to get user bids: " + response.getMessage());
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("❌ Error in get user bids endpoint: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError()
+                .body(new ApiResponse<>(false, "Failed to get user bids: " + e.getMessage(), null));
+        }
+    }
 }
