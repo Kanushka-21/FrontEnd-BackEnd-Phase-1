@@ -5,7 +5,6 @@ import {
   LogOut,
   Menu,
   User,
-  Bell,
   Home,
   Search,
   ShoppingBag,
@@ -13,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/hooks';
 import Button from '@/components/ui/Button';
+import NotificationComponent from '@/components/ui/NotificationComponent';
 import logoImage from '@/logo-new.gif';
 
 interface HeaderProps {
@@ -22,16 +22,8 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ transparent = false }) => {
   const { user, logout, isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-  
-  // Mock notifications data
-  const notifications = [
-    { id: 1, text: 'Your bid was accepted', time: '5 minutes ago', read: false },
-    { id: 2, text: 'New gemstone listing available', time: '2 hours ago', read: false },
-    { id: 3, text: 'Meeting confirmed for tomorrow', time: '1 day ago', read: true }
-  ];
   
   const handleLogout = () => {
     console.log('🚪 Header: Logout button clicked');
@@ -98,41 +90,9 @@ const Header: React.FC<HeaderProps> = ({ transparent = false }) => {
             <div className="relative">
               <div className="flex items-center space-x-2">
                 {/* Notifications */}
-                <div className="relative">
-                  <button
-                    onClick={() => setNotificationsOpen(!notificationsOpen)}
-                    className="p-2 rounded-full hover:bg-secondary-100"
-                  >
-                    <Bell className="w-5 h-5 text-secondary-700" />
-                    <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                      2
-                    </span>
-                  </button>
-                  
-                  {/* Notifications dropdown */}
-                  {notificationsOpen && (
-                    <div className="absolute right-0 mt-2 w-72 bg-white shadow-lg rounded-lg py-2 z-50 border border-secondary-200">
-                      <div className="px-4 py-2 border-b border-secondary-200">
-                        <h3 className="text-lg font-semibold text-secondary-900">Notifications</h3>
-                      </div>
-                      <div className="max-h-80 overflow-y-auto">
-                        {notifications.map(notification => (
-                          <div 
-                            key={notification.id} 
-                            className={`px-4 py-2 hover:bg-secondary-50 ${!notification.read ? 'bg-blue-50' : ''}`}
-                          >
-                            <p className="text-base text-secondary-900">{notification.text}</p>
-                            <p className="text-sm text-secondary-500">{notification.time}</p>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="px-4 py-2 border-t border-secondary-200">                        <button className="text-base text-primary-600 hover:text-primary-800 font-medium">
-                          View all notifications
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                {isAuthenticated && user?.userId && (
+                  <NotificationComponent userId={user.userId} />
+                )}
                 
                 {/* User menu button */}
                 <div className="relative">

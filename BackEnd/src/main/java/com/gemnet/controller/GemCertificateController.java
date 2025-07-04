@@ -398,7 +398,7 @@ public class GemCertificateController {
                 response.put("updatedListingId", listingId);
                 
                 System.out.println("✅ Listing updated successfully: " + listingId);
-                return ResponseEntity.ok(ApiResponse.success(response));
+                return ResponseEntity.ok(ApiResponse.success("Listing updated successfully", response));
             } else {
                 System.err.println("❌ Failed to update listing: " + updateResult.getMessage());
                 return ResponseEntity.badRequest()

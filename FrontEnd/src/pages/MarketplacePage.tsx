@@ -270,10 +270,74 @@ const MarketplacePage: React.FC = () => {
     setIsTermsModalOpen(true);
   };
 
-  const handleConfirmBid = () => {
+  const handleConfirmBid = async () => {
     console.log('Confirming bid:', pendingBidAmount);
-    setIsTermsModalOpen(false);
-    setIsModalOpen(false);
+    
+    if (!selectedGemstone) {
+      message.error('No gemstone selected');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // For now, using mock user data - replace with actual authenticated user
+      const mockUser = {
+        id: '123', // This should come from actual auth context
+        name: 'John Doe',
+        email: 'john.doe@example.com'
+      };
+
+      const bidRequest = {
+        listingId: selectedGemstone.id,
+        bidderId: mockUser.id,
+        bidderName: mockUser.name,
+        bidderEmail: mockUser.email,
+        bidAmount: pendingBidAmount,
+        currency: 'LKR',
+        message: `Bid placed for ${selectedGemstone.name}`
+      };
+
+      console.log('Sending bid request:', bidRequest);
+
+      const response = await fetch('/api/bidding/place-bid', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(bidRequest),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        message.success('Bid placed successfully!');
+        
+        // Update the gemstone with new bid information
+        if (selectedGemstone) {
+          const updatedGemstone = {
+            ...selectedGemstone,
+            currentBid: pendingBidAmount,
+            totalBids: (selectedGemstone.totalBids || 0) + 1
+          };
+          setSelectedGemstone(updatedGemstone);
+        }
+        
+        // Refresh the listings to show updated bid counts
+        fetchMarketplaceListings();
+        
+        setIsTermsModalOpen(false);
+        setIsModalOpen(false);
+        setPendingBidAmount(0);
+      } else {
+        message.error(result.message || 'Failed to place bid');
+      }
+    } catch (error) {
+      console.error('Error placing bid:', error);
+      message.error('Failed to place bid. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Format helper function

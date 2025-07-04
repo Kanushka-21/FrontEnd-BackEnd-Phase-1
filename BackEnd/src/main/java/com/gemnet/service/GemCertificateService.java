@@ -20,6 +20,7 @@ import jakarta.annotation.PostConstruct;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -1060,4 +1061,98 @@ public class GemCertificateService {
             );
         }
     }
+    
+    /**
+     * Update an existing gem listing
+     */
+    public ApiResponse<String> updateGemListing(String listingId, Map<String, Object> updateData) {
+        try {
+            System.out.println("🔄 Updating gem listing with ID: " + listingId);
+            
+            Optional<GemListing> existingListingOpt = gemListingRepository.findById(listingId);
+            if (!existingListingOpt.isPresent()) {
+                return ApiResponse.error("Gem listing not found with ID: " + listingId);
+            }
+            
+            GemListing existingListing = existingListingOpt.get();
+            
+            // Update fields from the updateData map
+            updateData.forEach((key, value) -> {
+                switch (key) {
+                    case "gemName":
+                        existingListing.setGemName((String) value);
+                        break;
+                    case "description":
+                        existingListing.setDescription((String) value);
+                        break;
+                    case "price":
+                        if (value instanceof Number) {
+                            existingListing.setPrice(BigDecimal.valueOf(((Number) value).doubleValue()));
+                        }
+                        break;
+                    case "category":
+                        existingListing.setCategory((String) value);
+                        break;
+                    case "listingStatus":
+                        existingListing.setListingStatus((String) value);
+                        break;
+                    case "weight":
+                        existingListing.setWeight((String) value);
+                        break;
+                    case "color":
+                        existingListing.setColor((String) value);
+                        break;
+                    case "clarity":
+                        existingListing.setClarity((String) value);
+                        break;
+                    case "cut":
+                        existingListing.setCut((String) value);
+                        break;
+                    case "origin":
+                        existingListing.setOrigin((String) value);
+                        break;
+                    case "treatment":
+                        existingListing.setTreatment((String) value);
+                        break;
+                    case "certificateNumber":
+                        existingListing.setCertificateNumber((String) value);
+                        break;
+                    case "certifyingAuthority":
+                        existingListing.setCertifyingAuthority((String) value);
+                        break;
+                    case "shape":
+                        existingListing.setShape((String) value);
+                        break;
+                    case "measurements":
+                        existingListing.setMeasurements((String) value);
+                        break;
+                    case "variety":
+                        existingListing.setVariety((String) value);
+                        break;
+                    case "species":
+                        existingListing.setSpecies((String) value);
+                        break;
+                    case "comments":
+                        existingListing.setComments((String) value);
+                        break;
+                    default:
+                        System.out.println("⚠️ Unknown field to update: " + key);
+                        break;
+                }
+            });
+            
+            // Save the updated listing
+            GemListing updatedListing = gemListingRepository.save(existingListing);
+            System.out.println("✅ Gem listing updated successfully: " + updatedListing.getId());
+            
+            return ApiResponse.success("Gem listing updated successfully", updatedListing.getId());
+            
+        } catch (Exception e) {
+            System.err.println("❌ Error updating gem listing: " + e.getMessage());
+            e.printStackTrace();
+            return ApiResponse.error("Failed to update gem listing: " + e.getMessage());
+        }
+    }
+
+    // ...existing code...
 }

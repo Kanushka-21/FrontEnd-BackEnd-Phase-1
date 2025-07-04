@@ -293,6 +293,34 @@ export interface GemPriceRange {
   max: number;
 }
 
+// Bidding related types
+export interface BidInfo {
+  id: string;
+  bidderId: string;
+  bidderName: string;
+  bidAmount: number;
+  bidTime: string;
+  status: 'ACTIVE' | 'OUTBID' | 'WITHDRAWN' | 'ACCEPTED' | 'REJECTED';
+  message?: string;
+}
+
+export interface NotificationInfo {
+  id: string;
+  userId: string;
+  listingId: string;
+  bidId?: string;
+  type: 'NEW_BID' | 'BID_OUTBID' | 'BID_ACCEPTED' | 'BID_REJECTED';
+  title: string;
+  message: string;
+  isRead: boolean;
+  createdAt: string;
+  readAt?: string;
+  triggerUserId?: string;
+  triggerUserName?: string;
+  bidAmount?: string;
+  gemName?: string;
+}
+
 // Gemstone Card Props
 export interface GemstoneCardProps {
   gemstone: Gemstone;
@@ -320,6 +348,11 @@ export interface DetailedGemstone extends Gemstone {
     date: string;
     link?: string;
   };
+  // Bidding properties
+  totalBids?: number;
+  currentBid?: number;
+  highestBidder?: string;
+  bids?: BidInfo[];
 }
 
 // Gemstone Listing Form
