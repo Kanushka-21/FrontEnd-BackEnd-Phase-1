@@ -39,7 +39,7 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
 
   // Get current highest bid from props or fetched data
   const currentHighestBid = gemstone?.currentBid || bidStats.highestBid || (gemstone ? gemstone.price : 0);
-  const minimumBid = currentHighestBid * 1.05; // 5% higher than current price
+  const minimumBid = currentHighestBid * 1.02; // 2% higher than current price
   
   // Use actual uploaded images from the gemstone data
   const images = gemstone?.images && gemstone.images.length > 0 
@@ -92,7 +92,7 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
       return false;
     }
     if (amount < minimumBid) {
-      setBidError(`Minimum bid is ${formatLKR(minimumBid)} (5% higher than current highest bid)`);
+      setBidError(`Minimum bid is ${formatLKR(minimumBid)} (2% higher than current highest bid)`);
       return false;
     }
     setBidError('');
@@ -378,7 +378,7 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
                       Minimum bid: <span className="font-semibold text-primary-600">{formatLKR(minimumBid)}</span>
                       {currentHighestBid > gemstone.price && (
                         <span className="ml-2">
-                          (5% above current highest: <span className="font-semibold">{formatLKR(currentHighestBid)}</span>)
+                          (2% above current highest: <span className="font-semibold">{formatLKR(currentHighestBid)}</span>)
                         </span>
                       )}
                     </div>
@@ -394,7 +394,7 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
                         }}
                         className="block w-full px-4 py-3 text-lg border border-secondary-300 rounded-xl shadow-sm focus:ring-primary-500 focus:border-primary-500"
                         min={minimumBid}
-                        step="100"
+                        step="any"
                         required
                       />
                     </div>
