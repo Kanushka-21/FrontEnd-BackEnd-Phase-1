@@ -251,14 +251,14 @@ export const gemstonesAPI = {
     }
 
     const response: AxiosResponse<ApiResponse<DetailedGemstone[]>> = await api.get(
-      `/api/gemstones${params.toString() ? `?${params.toString()}` : ''}`
+      `/api/marketplace/listings${params.toString() ? `?${params.toString()}` : ''}`
     );
     return response.data;
   },
 
   // Get a single gemstone by ID
   getById: async (id: string): Promise<ApiResponse<DetailedGemstone>> => {
-    const response: AxiosResponse<ApiResponse<DetailedGemstone>> = await api.get(`/api/gemstones/${id}`);
+    const response: AxiosResponse<ApiResponse<DetailedGemstone>> = await api.get(`/api/marketplace/listings/${id}`);
     return response.data;
   },
 
@@ -828,6 +828,81 @@ const extendedAPI = {
         return response.data;
       } catch (error) {
         console.error('Error fetching marketplace stats:', error);
+        return { success: false, message: apiUtils.formatErrorMessage(error) };
+      }
+    }
+  },
+
+  // Bidding API endpoints
+  bidding: {
+    // Place a bid
+    placeBid: async (bidRequest: {
+      listingId: string;
+      bidderId: string;
+      bidderName: string;
+      bidAmount: number;
+      bidType?: string;
+    }): Promise<ApiResponse<any>> => {
+      try {
+        const response = await api.post('/api/bidding/place-bid', bidRequest);
+        return response.data;
+      } catch (error) {
+        console.error('Error placing bid:', error);
+        return { success: false, message: apiUtils.formatErrorMessage(error) };
+      }
+    },
+
+    // Get bid statistics for a listing
+    getBidStats: async (listingId: string): Promise<ApiResponse<any>> => {
+      try {
+        const response = await api.get(`/api/bidding/stats/${listingId}`);
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching bid stats:', error);
+        return { success: false, message: apiUtils.formatErrorMessage(error) };
+      }
+    },
+
+    // Get bid history for a listing
+    getBidHistory: async (listingId: string): Promise<ApiResponse<any>> => {
+      try {
+        const response = await api.get(`/api/bidding/history/${listingId}`);
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching bid history:', error);
+        return { success: false, message: apiUtils.formatErrorMessage(error) };
+      }
+    },
+
+    // Get user's notifications
+    getNotifications: async (userId: string): Promise<ApiResponse<any>> => {
+      try {
+        const response = await api.get(`/api/bidding/notifications/${userId}`);
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching notifications:', error);
+        return { success: false, message: apiUtils.formatErrorMessage(error) };
+      }
+    },
+
+    // Mark notification as read
+    markNotificationRead: async (notificationId: string): Promise<ApiResponse<any>> => {
+      try {
+        const response = await api.put(`/api/bidding/notifications/${notificationId}/read`);
+        return response.data;
+      } catch (error) {
+        console.error('Error marking notification as read:', error);
+        return { success: false, message: apiUtils.formatErrorMessage(error) };
+      }
+    },
+
+    // Get user's bids
+    getUserBids: async (userId: string, page: number = 0, size: number = 10): Promise<ApiResponse<any>> => {
+      try {
+        const response = await api.get(`/api/bidding/user/${userId}/bids?page=${page}&size=${size}`);
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching user bids:', error);
         return { success: false, message: apiUtils.formatErrorMessage(error) };
       }
     }

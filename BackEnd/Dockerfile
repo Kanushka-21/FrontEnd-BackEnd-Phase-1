@@ -4,28 +4,29 @@ FROM openjdk:17-jdk-slim
 # Set maintainer
 LABEL maintainer="GemNet Team <support@gemnet.com>"
 
-# Install system dependencies
+# Install system dependencies including Maven
 RUN apt-get update && apt-get install -y \
     tesseract-ocr \
     tesseract-ocr-eng \
     libopencv-dev \
+    maven \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app
 
-# Copy Maven wrapper and pom.xml
-COPY .mvn/ .mvn/
-COPY mvnw pom.xml ./
+# Copy pom.xml first for better layer caching
+COPY pom.xml ./
 
 # Download dependencies (for better caching)
-RUN ./mvnw dependency:go-offline -B
+RUN mvn dependency:go-offline -B
 
 # Copy source code
 COPY src/ ./src/
 
 # Build the application
-RUN ./mvnw clean package -DskipTests
+RUN mvn clean package -DskipTests
 
 # Create uploads directory
 RUN mkdir -p /app/uploads

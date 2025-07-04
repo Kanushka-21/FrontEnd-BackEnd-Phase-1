@@ -9,6 +9,7 @@ import org.springframework.boot.web.server.WebServerFactoryCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.Environment;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Query;
 
 import jakarta.annotation.PostConstruct;
 import java.net.InetAddress;
@@ -23,6 +24,9 @@ public class GemNetApplication {
     
     @Autowired
     private Environment environment;
+    
+    @Autowired
+    private MongoTemplate mongoTemplate;
     
     @PostConstruct
     public void init() {
@@ -60,6 +64,21 @@ public class GemNetApplication {
             }
         } catch (Exception e) {
             System.out.println("⚠️ Error retrieving network information: " + e.getMessage());
+        }
+        
+        // Test MongoDB connection
+        try {
+            System.out.println("\n📊 Testing MongoDB Connection:");
+            String dbName = mongoTemplate.getDb().getName();
+            // Simple test query to verify connection
+            mongoTemplate.count(new Query(), "test");
+            System.out.println("✅ MongoDB connection successful!");
+            System.out.println("📦 Connected to database: " + dbName);
+            System.out.println("🗄️ Database initialization completed successfully!");
+        } catch (Exception e) {
+            System.err.println("❌ MongoDB connection failed: " + e.getMessage());
+            System.err.println("🔧 Please check MongoDB configuration and ensure MongoDB is running");
+            System.err.println("   MongoDB should be running on localhost:27017");
         }
     }
     

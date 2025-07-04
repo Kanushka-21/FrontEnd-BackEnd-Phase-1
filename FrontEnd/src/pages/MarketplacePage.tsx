@@ -28,12 +28,15 @@ import Header from '@/components/layout/Header';
 import GemstoneCard from '@/components/ui/GemstoneCard';
 import GemstoneDetailModal from '@/components/home/GemstoneDetailModal';
 import { api } from '@/services/api';
+import extendedAPI from '@/services/api';
+import { useAuth } from '@/contexts/AuthContext';
 
 const { Content } = AntLayout;
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
 
 const MarketplacePage: React.FC = () => {
+  const { user, isAuthenticated } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedGemstone, setSelectedGemstone] = useState<DetailedGemstone | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -270,10 +273,64 @@ const MarketplacePage: React.FC = () => {
     setIsTermsModalOpen(true);
   };
 
-  const handleConfirmBid = () => {
+  const handleConfirmBid = async () => {
     console.log('Confirming bid:', pendingBidAmount);
-    setIsTermsModalOpen(false);
-    setIsModalOpen(false);
+    
+    if (!selectedGemstone) {
+      message.error('No gemstone selected');
+      return;
+    }
+
+    if (!isAuthenticated || !user) {
+      message.error('Please log in to place a bid');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      const bidRequest = {
+        listingId: selectedGemstone.id,
+        bidderId: user.userId,
+        bidderName: `${user.firstName} ${user.lastName}`,
+        bidderEmail: user.email,
+        bidAmount: pendingBidAmount,
+        currency: 'LKR',
+        message: `Bid placed for ${selectedGemstone.name}`
+      };
+
+      console.log('Sending bid request:', bidRequest);
+
+      const result = await extendedAPI.bidding.placeBid(bidRequest);
+
+      if (result.success) {
+        message.success('Bid placed successfully!');
+        
+        // Update the gemstone with new bid information
+        if (selectedGemstone) {
+          const updatedGemstone = {
+            ...selectedGemstone,
+            currentBid: pendingBidAmount,
+            totalBids: (selectedGemstone.totalBids || 0) + 1
+          };
+          setSelectedGemstone(updatedGemstone);
+        }
+        
+        // Refresh the listings to show updated bid counts
+        fetchMarketplaceListings();
+        
+        setIsTermsModalOpen(false);
+        setIsModalOpen(false);
+        setPendingBidAmount(0);
+      } else {
+        message.error(result.message || 'Failed to place bid');
+      }
+    } catch (error) {
+      console.error('Error placing bid:', error);
+      message.error('Failed to place bid. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Format helper function
