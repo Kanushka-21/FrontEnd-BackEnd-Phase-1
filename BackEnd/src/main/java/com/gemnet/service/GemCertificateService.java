@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.imageio.ImageIO;
@@ -1005,5 +1006,58 @@ public class GemCertificateService {
             return "";
         }
         return filename.substring(filename.lastIndexOf("."));
+    }
+    
+    /**
+     * Delete a gem listing by ID
+     * @param listingId The ID of the listing to delete
+     * @return ApiResponse indicating success or failure
+     */
+    public ApiResponse<Map<String, Object>> deleteGemListing(String listingId) {
+        try {
+            // Check if listing exists
+            Optional<GemListing> existingListing = gemListingRepository.findById(listingId);
+            
+            if (existingListing.isEmpty()) {
+                Map<String, Object> errorData = new HashMap<>();
+                errorData.put("listingId", listingId);
+                errorData.put("error", "Listing not found");
+                
+                return new ApiResponse<>(
+                    false,
+                    "Listing with ID " + listingId + " not found",
+                    errorData
+                );
+            }
+            
+            // Delete the listing
+            gemListingRepository.deleteById(listingId);
+            
+            // Prepare success response
+            Map<String, Object> responseData = new HashMap<>();
+            responseData.put("listingId", listingId);
+            responseData.put("deletedAt", java.time.LocalDateTime.now());
+            
+            return new ApiResponse<>(
+                true,
+                "Gem listing deleted successfully",
+                responseData
+            );
+            
+        } catch (Exception e) {
+            // Log the error (you might want to use a proper logger)
+            System.err.println("Error deleting gem listing: " + e.getMessage());
+            e.printStackTrace();
+            
+            Map<String, Object> errorData = new HashMap<>();
+            errorData.put("listingId", listingId);
+            errorData.put("error", e.getMessage());
+            
+            return new ApiResponse<>(
+                false,
+                "Failed to delete gem listing: " + e.getMessage(),
+                errorData
+            );
+        }
     }
 }

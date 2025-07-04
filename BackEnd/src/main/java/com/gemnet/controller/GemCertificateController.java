@@ -342,6 +342,78 @@ public class GemCertificateController {
     }
     
     /**
+     * Delete a gem listing by ID
+     */
+    @DeleteMapping("/delete-listing/{listingId}")
+    @Operation(summary = "Delete gem listing", 
+               description = "Delete a gem listing from the database by its ID")
+    @CrossOrigin(origins = "*", allowedHeaders = "*", methods = {RequestMethod.DELETE})
+    public ResponseEntity<ApiResponse<Map<String, Object>>> deleteGemListing(
+            @PathVariable String listingId) {
+        
+        System.out.println("🗑️ Delete gem listing request received for ID: " + listingId);
+        
+        try {
+            // Call service to delete the listing
+            ApiResponse<Map<String, Object>> deleteResult = gemCertificateService.deleteGemListing(listingId);
+            
+            if (deleteResult.isSuccess()) {
+                System.out.println("✅ Listing deleted successfully: " + listingId);
+                return ResponseEntity.ok(deleteResult);
+            } else {
+                System.err.println("❌ Failed to delete listing: " + deleteResult.getMessage());
+                return ResponseEntity.badRequest()
+                    .body(deleteResult);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("❌ Error deleting listing: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError()
+                .body(ApiResponse.error("Failed to delete listing: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Update a gem listing by ID
+     */
+    @PutMapping("/update-listing/{listingId}")
+    @Operation(summary = "Update gem listing", 
+               description = "Update an existing gem listing in the database")
+    @CrossOrigin(origins = "*", allowedHeaders = "*", methods = {RequestMethod.PUT})
+    public ResponseEntity<ApiResponse<Map<String, Object>>> updateGemListing(
+            @PathVariable String listingId,
+            @RequestBody Map<String, Object> updateData) {
+        
+        System.out.println("✏️ Update gem listing request received for ID: " + listingId);
+        System.out.println("📝 Update data: " + updateData);
+        
+        try {
+            // Call service to update the listing
+            ApiResponse<String> updateResult = gemCertificateService.updateGemListing(listingId, updateData);
+            
+            if (updateResult.isSuccess()) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("message", "Listing updated successfully");
+                response.put("updatedListingId", listingId);
+                
+                System.out.println("✅ Listing updated successfully: " + listingId);
+                return ResponseEntity.ok(ApiResponse.success(response));
+            } else {
+                System.err.println("❌ Failed to update listing: " + updateResult.getMessage());
+                return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(updateResult.getMessage()));
+            }
+            
+        } catch (Exception e) {
+            System.err.println("❌ Error updating listing: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError()
+                .body(ApiResponse.error("Failed to update listing: " + e.getMessage()));
+        }
+    }
+    
+    /**
      * Helper method to get file extension
      */
     private String getFileExtension(String filename) {
