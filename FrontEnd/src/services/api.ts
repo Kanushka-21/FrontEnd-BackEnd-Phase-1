@@ -251,14 +251,14 @@ export const gemstonesAPI = {
     }
 
     const response: AxiosResponse<ApiResponse<DetailedGemstone[]>> = await api.get(
-      `/api/gemstones${params.toString() ? `?${params.toString()}` : ''}`
+      `/api/marketplace/listings${params.toString() ? `?${params.toString()}` : ''}`
     );
     return response.data;
   },
 
   // Get a single gemstone by ID
   getById: async (id: string): Promise<ApiResponse<DetailedGemstone>> => {
-    const response: AxiosResponse<ApiResponse<DetailedGemstone>> = await api.get(`/api/gemstones/${id}`);
+    const response: AxiosResponse<ApiResponse<DetailedGemstone>> = await api.get(`/api/marketplace/listings/${id}`);
     return response.data;
   },
 
