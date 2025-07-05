@@ -248,6 +248,25 @@ const MarketplacePage: React.FC = () => {
     fetchMarketplaceListings();
   }, [currentPage, sortBy, searchTerm, priceRange, selectedTypes, selectedColors, certifiedOnly]);
 
+  // Handle URL parameters for direct navigation to specific items
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const itemId = urlParams.get('item');
+    
+    if (itemId && gemstones.length > 0) {
+      // Find the specific gemstone and open its modal
+      const targetGemstone = gemstones.find(g => g.id === itemId);
+      if (targetGemstone) {
+        setSelectedGemstone(targetGemstone);
+        setIsModalOpen(true);
+        
+        // Remove the item parameter from URL to clean it up
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, '', newUrl);
+      }
+    }
+  }, [gemstones]); // Trigger when gemstones are loaded
+
   // Remove the old mock data loading effect
   // useEffect(() => {
   //   // Simulate loading gemstones from an API

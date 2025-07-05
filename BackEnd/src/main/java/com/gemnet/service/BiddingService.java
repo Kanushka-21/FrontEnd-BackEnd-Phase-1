@@ -237,6 +237,28 @@ public class BiddingService {
     }
     
     /**
+     * Mark all notifications as read for a user
+     */
+    public ApiResponse<String> markAllNotificationsAsRead(String userId) {
+        try {
+            List<Notification> unreadNotifications = notificationRepository.findByUserIdAndIsReadFalse(userId);
+            
+            for (Notification notification : unreadNotifications) {
+                notification.markAsRead();
+            }
+            
+            notificationRepository.saveAll(unreadNotifications);
+            
+            return new ApiResponse<>(true, "All notifications marked as read", "success");
+            
+        } catch (Exception e) {
+            System.err.println("Error marking all notifications as read: " + e.getMessage());
+            e.printStackTrace();
+            return new ApiResponse<>(false, "Failed to mark all notifications as read: " + e.getMessage(), null);
+        }
+    }
+    
+    /**
      * Get unread notification count for a user
      */
     public ApiResponse<Long> getUnreadNotificationCount(String userId) {

@@ -19,17 +19,24 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({ userId, c
       loadNotifications();
       loadUnreadCount();
       
-      // Set up polling for new notifications every 30 seconds
+      // Set up more frequent polling for real-time updates (every 10 seconds)
       const interval = setInterval(() => {
         loadUnreadCount();
         if (isOpen) {
           loadNotifications();
         }
-      }, 30000);
+      }, 10000);
       
       return () => clearInterval(interval);
     }
   }, [userId, isOpen]);
+
+  // Also reload when dropdown opens
+  useEffect(() => {
+    if (isOpen && userId) {
+      loadNotifications();
+    }
+  }, [isOpen]);
 
   const loadNotifications = async () => {
     setLoading(true);
@@ -78,6 +85,49 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({ userId, c
       }
     } catch (error) {
       console.error('Error marking notification as read:', error);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      setLoading(true);
+      
+      // Use the new backend endpoint for better performance
+      const response = await fetch(`/api/bidding/notifications/${userId}/read-all`, {
+        method: 'PUT',
+      });
+      
+      if (response.ok) {
+        // Update local state
+        setNotifications(prev => 
+          prev.map(n => ({ ...n, isRead: true, readAt: new Date().toISOString() }))
+        );
+        setUnreadCount(0);
+      } else {
+        throw new Error('Failed to mark all as read');
+      }
+      
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleNotificationClick = (notification: NotificationInfo) => {
+    // Mark as read if unread
+    if (!notification.isRead) {
+      markAsRead(notification.id);
+    }
+    
+    // Navigate to the marketplace item
+    if (notification.listingId) {
+      // Close notification dropdown
+      setIsOpen(false);
+      
+      // Navigate to marketplace with specific item
+      const marketplaceUrl = `/marketplace?item=${notification.listingId}`;
+      window.location.href = marketplaceUrl;
     }
   };
 
@@ -161,13 +211,31 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({ userId, c
         <div className="absolute right-0 top-full mt-2 w-96 bg-white rounded-xl shadow-xl border border-gray-200 z-50 max-h-96 overflow-hidden">
           {/* Header */}
           <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-800">Notifications</h3>
-            <button
-              onClick={() => setIsOpen(false)}
-              className="p-1 hover:bg-gray-100 rounded-full transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            <h3 className="text-lg font-semibold text-gray-800">
+              Notifications 
+              {unreadCount > 0 && (
+                <span className="ml-2 bg-red-500 text-white text-xs rounded-full px-2 py-1">
+                  {unreadCount}
+                </span>
+              )}
+            </h3>
+            <div className="flex items-center space-x-2">
+              {unreadCount > 0 && (
+                <button
+                  onClick={markAllAsRead}
+                  disabled={loading}
+                  className="text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50 px-2 py-1 rounded hover:bg-blue-50 transition-colors"
+                >
+                  {loading ? 'Marking...' : 'Read All'}
+                </button>
+              )}
+              <button
+                onClick={() => setIsOpen(false)}
+                className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           {/* Notifications List */}
@@ -188,11 +256,7 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({ userId, c
                   <div
                     key={notification.id}
                     className={getNotificationStyle(notification.type, notification.isRead)}
-                    onClick={() => {
-                      if (!notification.isRead) {
-                        markAsRead(notification.id);
-                      }
-                    }}
+                    onClick={() => handleNotificationClick(notification)}
                   >
                     <div className="flex items-start space-x-3">
                       <div className="flex-shrink-0 mt-1">
