@@ -97,42 +97,8 @@ public class BiddingService {
             // Save the bid
             Bid savedBid = bidRepository.save(newBid);
             
-            // Mark previous highest bid as OUTBID and notify that bidder
-            if (currentHighestBid.isPresent()) {
-                Bid previousHighest = currentHighestBid.get();
-                previousHighest.setStatus("OUTBID");
-                bidRepository.save(previousHighest);
-                
-                // Notify previous highest bidder that they've been outbid
-                createNotification(
-                    previousHighest.getBidderId(),
-                    bidRequest.getListingId(),
-                    savedBid.getId(),
-                    "BID_OUTBID",
-                    "Your bid has been outbid",
-                    "Your bid of LKR " + formatAmount(previousHighest.getBidAmount()) + 
-                    " on " + listing.getGemName() + " has been outbid by LKR " + formatAmount(bidRequest.getBidAmount()),
-                    bidRequest.getBidderId(),
-                    bidRequest.getBidderName(),
-                    formatAmount(bidRequest.getBidAmount()),
-                    listing.getGemName()
-                );
-            }
-            
-            // Notify seller about the new bid
-            createNotification(
-                listing.getUserId(),
-                bidRequest.getListingId(),
-                savedBid.getId(),
-                "NEW_BID",
-                "New bid received",
-                bidRequest.getBidderName() + " placed a bid of LKR " + formatAmount(bidRequest.getBidAmount()) + 
-                " on your " + listing.getGemName(),
-                bidRequest.getBidderId(),
-                bidRequest.getBidderName(),
-                formatAmount(bidRequest.getBidAmount()),
-                listing.getGemName()
-            );
+            // Handle notifications for all affected users
+            handleBidNotifications(savedBid, listing, currentHighestBid.orElse(null));
             
             // Prepare response
             Map<String, Object> response = new HashMap<>();
@@ -388,6 +354,113 @@ public class BiddingService {
             System.err.println("Error getting user bids: " + e.getMessage());
             e.printStackTrace();
             return new ApiResponse<>(false, "Failed to get user bids: " + e.getMessage(), null);
+        }
+    }
+    
+    /**
+     * Handle all notifications for a new bid - covers all user scenarios
+     */
+    private void handleBidNotifications(Bid newBid, GemListing listing, Bid previousHighestBid) {
+        try {
+            String listingId = newBid.getListingId();
+            String newBidderId = newBid.getBidderId();
+            String newBidderName = newBid.getBidderName();
+            String newBidAmount = formatAmount(newBid.getBidAmount());
+            String gemName = listing.getGemName();
+            String sellerId = listing.getUserId();
+            
+            // 1. Notify the new bidder about their successful bid
+            createNotification(
+                newBidderId,
+                listingId,
+                newBid.getId(),
+                "BID_PLACED",
+                "Bid placed successfully",
+                "You have successfully bid LKR " + newBidAmount + " on " + gemName,
+                newBidderId,
+                newBidderName,
+                newBidAmount,
+                gemName
+            );
+            
+            // 2. Handle previous highest bidder (if exists)
+            if (previousHighestBid != null) {
+                // Mark previous bid as OUTBID
+                previousHighestBid.setStatus("OUTBID");
+                bidRepository.save(previousHighestBid);
+                
+                // Notify previous highest bidder that they've been outbid
+                createNotification(
+                    previousHighestBid.getBidderId(),
+                    listingId,
+                    newBid.getId(),
+                    "BID_OUTBID",
+                    "Your bid has been outbid",
+                    "Your bid of LKR " + formatAmount(previousHighestBid.getBidAmount()) + 
+                    " on " + gemName + " has been outbid. New highest bid: LKR " + newBidAmount,
+                    newBidderId,
+                    newBidderName,
+                    newBidAmount,
+                    gemName
+                );
+            }
+            
+            // 3. Notify seller about the new bid with updated statistics
+            long totalBids = bidRepository.countByListingId(listingId);
+            String sellerMessage;
+            
+            if (previousHighestBid != null) {
+                sellerMessage = newBidderName + " placed a new highest bid of LKR " + newBidAmount + 
+                               " on your " + gemName + " (Total bids: " + totalBids + ")";
+            } else {
+                sellerMessage = newBidderName + " placed the first bid of LKR " + newBidAmount + 
+                               " on your " + gemName;
+            }
+            
+            createNotification(
+                sellerId,
+                listingId,
+                newBid.getId(),
+                "NEW_BID",
+                "New bid received",
+                sellerMessage,
+                newBidderId,
+                newBidderName,
+                newBidAmount,
+                gemName
+            );
+            
+            // 4. Notify other bidders (not the current highest or the new bidder) about increased activity
+            List<Bid> otherActiveBids = bidRepository.findByListingIdAndStatusAndBidderIdNotIn(
+                listingId, 
+                "ACTIVE", 
+                List.of(newBidderId, previousHighestBid != null ? previousHighestBid.getBidderId() : "")
+            );
+            
+            for (Bid otherBid : otherActiveBids) {
+                // Only notify if this bidder hasn't been outbid yet
+                if (!otherBid.getBidderId().equals(newBidderId)) {
+                    createNotification(
+                        otherBid.getBidderId(),
+                        listingId,
+                        newBid.getId(),
+                        "BID_ACTIVITY",
+                        "Bidding activity on " + gemName,
+                        "New bid activity on " + gemName + ". Current highest bid: LKR " + newBidAmount + 
+                        " (Total bids: " + totalBids + ")",
+                        newBidderId,
+                        newBidderName,
+                        newBidAmount,
+                        gemName
+                    );
+                }
+            }
+            
+            System.out.println("✅ All notifications created for bid: " + newBid.getId());
+            
+        } catch (Exception e) {
+            System.err.println("❌ Error handling bid notifications: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 }

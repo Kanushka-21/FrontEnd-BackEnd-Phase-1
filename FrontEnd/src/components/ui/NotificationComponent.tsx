@@ -85,15 +85,44 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({ userId, c
     switch (type) {
       case 'NEW_BID':
         return <TrendingUp className="w-5 h-5 text-green-600" />;
+      case 'BID_PLACED':
+        return <CheckCircle className="w-5 h-5 text-blue-600" />;
       case 'BID_OUTBID':
         return <Clock className="w-5 h-5 text-red-600" />;
+      case 'BID_ACTIVITY':
+        return <TrendingUp className="w-5 h-5 text-orange-600" />;
       case 'BID_ACCEPTED':
-        return <CheckCircle className="w-5 h-5 text-blue-600" />;
+        return <CheckCircle className="w-5 h-5 text-green-600" />;
       case 'BID_REJECTED':
         return <X className="w-5 h-5 text-gray-600" />;
       default:
         return <Bell className="w-5 h-5 text-gray-600" />;
     }
+  };
+
+  const getNotificationStyle = (type: string, isRead: boolean) => {
+    const baseClasses = "p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors";
+    const unreadClasses = isRead ? "bg-white" : "bg-blue-50 border-l-4 border-l-blue-500";
+    
+    let typeClasses = "";
+    switch (type) {
+      case 'NEW_BID':
+        typeClasses = isRead ? "" : "bg-green-50 border-l-green-500";
+        break;
+      case 'BID_PLACED':
+        typeClasses = isRead ? "" : "bg-blue-50 border-l-blue-500";
+        break;
+      case 'BID_OUTBID':
+        typeClasses = isRead ? "" : "bg-red-50 border-l-red-500";
+        break;
+      case 'BID_ACTIVITY':
+        typeClasses = isRead ? "" : "bg-orange-50 border-l-orange-500";
+        break;
+      default:
+        typeClasses = unreadClasses;
+    }
+    
+    return `${baseClasses} ${isRead ? "bg-white" : typeClasses}`;
   };
 
   const formatTimeAgo = (dateString: string) => {
@@ -158,9 +187,7 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({ userId, c
                 {notifications.map((notification) => (
                   <div
                     key={notification.id}
-                    className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${
-                      !notification.isRead ? 'bg-blue-50' : ''
-                    }`}
+                    className={getNotificationStyle(notification.type, notification.isRead)}
                     onClick={() => {
                       if (!notification.isRead) {
                         markAsRead(notification.id);
@@ -195,6 +222,13 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({ userId, c
                             </span>
                           )}
                         </div>
+                        {notification.gemName && (
+                          <div className="mt-2">
+                            <span className="text-xs font-medium text-purple-600 bg-purple-100 px-2 py-1 rounded-full">
+                              {notification.gemName}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

@@ -48,6 +48,9 @@ public interface BidRepository extends MongoRepository<Bid, String> {
     // Find bids above a certain amount for a listing
     List<Bid> findByListingIdAndBidAmountGreaterThanOrderByBidAmountDesc(String listingId, BigDecimal amount);
     
+    // Find active bids for a listing excluding specific bidders
+    List<Bid> findByListingIdAndStatusAndBidderIdNotIn(String listingId, String status, List<String> excludedBidderIds);
+    
     // Find user's bid for a specific listing
     Optional<Bid> findByListingIdAndBidderIdAndStatus(String listingId, String bidderId, String status);
     

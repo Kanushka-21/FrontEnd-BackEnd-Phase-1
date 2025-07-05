@@ -309,7 +309,7 @@ export interface NotificationInfo {
   userId: string;
   listingId: string;
   bidId?: string;
-  type: 'NEW_BID' | 'BID_OUTBID' | 'BID_ACCEPTED' | 'BID_REJECTED';
+  type: 'NEW_BID' | 'BID_PLACED' | 'BID_OUTBID' | 'BID_ACTIVITY' | 'BID_ACCEPTED' | 'BID_REJECTED';
   title: string;
   message: string;
   isRead: boolean;
