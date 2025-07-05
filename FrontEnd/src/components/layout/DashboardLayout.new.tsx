@@ -6,14 +6,13 @@ import {
   Menu,
   ChevronDown,
   User,
-  Bell,
   Home,
   Search,
   ShoppingBag,
   Settings
 } from 'lucide-react';
 import { useAuth } from '@/hooks';
-import Button from '@/components/ui/Button';
+import NotificationComponent from '@/components/ui/NotificationComponent';
 import logoImage from '@/logo-new.gif';
 
 interface DashboardLayoutProps {
@@ -23,16 +22,8 @@ interface DashboardLayoutProps {
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-  
-  // Mock notifications data
-  const notifications = [
-    { id: 1, text: 'Your bid was accepted', time: '5 minutes ago', read: false },
-    { id: 2, text: 'New gemstone listing available', time: '2 hours ago', read: false },
-    { id: 3, text: 'Meeting confirmed for tomorrow', time: '1 day ago', read: true }
-  ];
   
   const handleLogout = () => {
     console.log('🚪 DashboardLayout: Logout button clicked');
@@ -109,71 +100,14 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
               ))}
             </div>
 
-            {/* Notifications Dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => {
-                  setNotificationsOpen(!notificationsOpen);
-                  setUserMenuOpen(false);
-                }}
-                className="relative p-2 lg:p-3 rounded-full hover:bg-secondary-100 text-secondary-600 transition-colors"
-              >
-                <Bell className="w-5 h-5" />
-                {notifications.some(n => !n.read) && (
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-primary-600 rounded-full"></span>
-                )}
-              </button>
-
-              <AnimatePresence>
-                {notificationsOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.2 }}
-                    className="absolute right-0 mt-2 w-80 bg-white border border-secondary-200 rounded-lg shadow-lg z-10"
-                  >
-                    <div className="px-4 py-2 border-b border-secondary-200">
-                      <h3 className="text-lg font-semibold text-secondary-900">Notifications</h3>
-                    </div>
-                    <div className="max-h-64 overflow-y-auto">
-                      {notifications.length > 0 ? (
-                        notifications.map((notification) => (
-                          <div
-                            key={notification.id}
-                            className={`px-4 py-2 border-b border-secondary-100 hover:bg-secondary-50 ${
-                              !notification.read ? 'bg-primary-50' : ''
-                            }`}
-                          >                            <p className="text-base text-secondary-800">{notification.text}</p>
-                            <p className="text-sm text-secondary-500 mt-1">{notification.time}</p>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="px-4 py-6 text-center">
-                          <p className="text-base text-secondary-500">No notifications yet</p>
-                        </div>
-                      )}
-                    </div>
-                    <div className="px-4 py-2 border-t border-secondary-200">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full text-sm"
-                      >
-                        Mark all as read
-                      </Button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+            {/* Notifications Component */}
+            <NotificationComponent userId={user?.userId || ''} />
 
             {/* User Menu */}
             <div className="relative">
               <button
                 onClick={() => {
                   setUserMenuOpen(!userMenuOpen);
-                  setNotificationsOpen(false);
                 }}
                 className="flex items-center space-x-2 lg:space-x-3 hover:bg-secondary-50 rounded-lg p-2 transition-colors"
               >

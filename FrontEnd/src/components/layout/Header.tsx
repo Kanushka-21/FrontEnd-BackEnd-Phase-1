@@ -25,6 +25,11 @@ const Header: React.FC<HeaderProps> = ({ transparent = false }) => {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   
+  // Debug logging
+  console.log('🧑 Header: isAuthenticated:', isAuthenticated);
+  console.log('🧑 Header: user:', user);
+  console.log('🧑 Header: userId:', user?.userId);
+  
   const handleLogout = () => {
     console.log('🚪 Header: Logout button clicked');
     logout(); // Let the logout function handle the redirect

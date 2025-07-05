@@ -13,9 +13,13 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({ userId, c
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // Debug logging
+  console.log('🔔 NotificationComponent rendered with userId:', userId);
+
   // Load notifications
   useEffect(() => {
     if (userId) {
+      console.log('🔔 Loading notifications for userId:', userId);
       loadNotifications();
       loadUnreadCount();
       
@@ -28,6 +32,8 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({ userId, c
       }, 10000);
       
       return () => clearInterval(interval);
+    } else {
+      console.log('🔔 No userId provided, skipping notification load');
     }
   }, [userId, isOpen]);
 
@@ -41,14 +47,20 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({ userId, c
   const loadNotifications = async () => {
     setLoading(true);
     try {
+      console.log('🔔 Fetching notifications for userId:', userId);
       const response = await fetch(`/api/bidding/notifications/${userId}?page=0&size=20`);
       const result = await response.json();
       
+      console.log('🔔 Notification API response:', result);
+      
       if (result.success) {
         setNotifications(result.data.notifications || []);
+        console.log('🔔 Loaded notifications:', result.data.notifications?.length || 0);
+      } else {
+        console.error('🔔 Failed to load notifications:', result.message);
       }
     } catch (error) {
-      console.error('Error loading notifications:', error);
+      console.error('🔔 Error loading notifications:', error);
     } finally {
       setLoading(false);
     }
@@ -56,14 +68,20 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({ userId, c
 
   const loadUnreadCount = async () => {
     try {
+      console.log('🔔 Fetching unread count for userId:', userId);
       const response = await fetch(`/api/bidding/notifications/${userId}/unread-count`);
       const result = await response.json();
       
+      console.log('🔔 Unread count API response:', result);
+      
       if (result.success) {
         setUnreadCount(result.data || 0);
+        console.log('🔔 Unread count:', result.data || 0);
+      } else {
+        console.error('🔔 Failed to load unread count:', result.message);
       }
     } catch (error) {
-      console.error('Error loading unread count:', error);
+      console.error('🔔 Error loading unread count:', error);
     }
   };
 
