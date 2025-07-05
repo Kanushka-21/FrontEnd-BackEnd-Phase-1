@@ -1347,6 +1347,22 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
     }
   };
 
+  // Helper to construct proper image URL
+  const constructImageUrl = (imagePath: string): string => {
+    if (!imagePath) return 'https://via.placeholder.com/400x300?text=Gemstone';
+    
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      return imagePath;
+    }
+    
+    const baseUrl = 'http://localhost:9092';
+    if (imagePath.startsWith('/')) {
+      return `${baseUrl}${imagePath}`;
+    }
+    
+    return `${baseUrl}/${imagePath}`;
+  };
+
   // Component for gemstone image with fallback
   const GemstoneImage: React.FC<{ record: GemListing }> = ({ record }) => {
     const [imageError, setImageError] = useState(false);
@@ -1361,6 +1377,9 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
       setImageError(false);
     };
 
+    // Construct full image URL
+    const fullImageUrl = constructImageUrl(record.image);
+
     return (
       <div className="flex items-center space-x-3">
         <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center border">
@@ -1368,7 +1387,7 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
             <PictureOutlined className="text-gray-400 text-xl" />
           ) : (
             <img 
-              src={record.image} 
+              src={fullImageUrl} 
               alt={record.name}
               className="w-12 h-12 object-cover"
               onError={handleImageError}
@@ -1676,7 +1695,7 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
                 <h4 className="text-lg font-semibold mb-4">Images</h4>
                 <div className="flex justify-center">
                   <img 
-                    src={selectedListing.image} 
+                    src={constructImageUrl(selectedListing.image)} 
                     alt={selectedListing.name}
                     className="max-w-md rounded-lg border"
                     style={{ maxHeight: '300px', objectFit: 'contain' }}
