@@ -190,11 +190,26 @@ public class BiddingService {
      */
     public ApiResponse<Map<String, Object>> getUserNotifications(String userId, int page, int size) {
         try {
+            System.out.println("🔔 [DEBUG] Getting notifications for userId: " + userId + ", page: " + page + ", size: " + size);
+            
             Pageable pageable = PageRequest.of(page, size);
             Page<Notification> notificationsPage = notificationRepository
                 .findByUserIdOrderByCreatedAtDesc(userId, pageable);
             
+            System.out.println("🔔 [DEBUG] Found " + notificationsPage.getTotalElements() + " total notifications");
+            System.out.println("🔔 [DEBUG] Current page has " + notificationsPage.getContent().size() + " notifications");
+            
             long unreadCount = notificationRepository.countByUserIdAndIsReadFalse(userId);
+            System.out.println("🔔 [DEBUG] Unread count: " + unreadCount);
+            
+            // Log details of notifications being returned
+            List<Notification> notifications = notificationsPage.getContent();
+            for (int i = 0; i < notifications.size(); i++) {
+                Notification notif = notifications.get(i);
+                System.out.println("🔔 [DEBUG] Notification " + (i+1) + ": ID=" + notif.getId() + 
+                                 ", Type=" + notif.getType() + ", isRead=" + notif.isRead() + 
+                                 ", Title=" + notif.getTitle());
+            }
             
             Map<String, Object> response = new HashMap<>();
             response.put("notifications", notificationsPage.getContent());
@@ -207,7 +222,7 @@ public class BiddingService {
             return new ApiResponse<>(true, "Notifications retrieved successfully", response);
             
         } catch (Exception e) {
-            System.err.println("Error getting notifications: " + e.getMessage());
+            System.err.println("🔔 [ERROR] Error getting notifications: " + e.getMessage());
             e.printStackTrace();
             return new ApiResponse<>(false, "Failed to get notifications: " + e.getMessage(), null);
         }
@@ -218,19 +233,31 @@ public class BiddingService {
      */
     public ApiResponse<String> markNotificationAsRead(String notificationId) {
         try {
+            System.out.println("🔔 [DEBUG] Starting markNotificationAsRead for notificationId: " + notificationId);
+            
             Optional<Notification> notificationOpt = notificationRepository.findById(notificationId);
             if (notificationOpt.isEmpty()) {
+                System.out.println("🔔 [DEBUG] Notification not found with ID: " + notificationId);
                 return new ApiResponse<>(false, "Notification not found", null);
             }
             
             Notification notification = notificationOpt.get();
-            notification.markAsRead();
-            notificationRepository.save(notification);
+            System.out.println("🔔 [DEBUG] Found notification - Type: " + notification.getType() + 
+                             ", Currently isRead: " + notification.isRead() + 
+                             ", UserId: " + notification.getUserId());
             
-            return new ApiResponse<>(true, "Notification marked as read", "success");
+            notification.markAsRead();
+            System.out.println("🔔 [DEBUG] After markAsRead() - isRead: " + notification.isRead() + 
+                             ", readAt: " + notification.getReadAt());
+            
+            Notification savedNotification = notificationRepository.save(notification);
+            System.out.println("🔔 [DEBUG] Notification saved successfully - ID: " + savedNotification.getId() + 
+                             ", isRead: " + savedNotification.isRead());
+            
+            return new ApiResponse<>(true, "Notification marked as read successfully", "success");
             
         } catch (Exception e) {
-            System.err.println("Error marking notification as read: " + e.getMessage());
+            System.err.println("🔔 [ERROR] Error marking notification as read: " + e.getMessage());
             e.printStackTrace();
             return new ApiResponse<>(false, "Failed to mark notification as read: " + e.getMessage(), null);
         }
@@ -241,18 +268,60 @@ public class BiddingService {
      */
     public ApiResponse<String> markAllNotificationsAsRead(String userId) {
         try {
-            List<Notification> unreadNotifications = notificationRepository.findByUserIdAndIsReadFalse(userId);
+            System.out.println("🔔 [DEBUG] Starting markAllNotificationsAsRead for userId: " + userId);
             
-            for (Notification notification : unreadNotifications) {
-                notification.markAsRead();
+            // First, get all unread notifications for this user
+            List<Notification> unreadNotifications = notificationRepository.findByUserIdAndIsReadFalseOrderByCreatedAtDesc(userId);
+            System.out.println("🔔 [DEBUG] Found " + unreadNotifications.size() + " unread notifications");
+            
+            if (unreadNotifications.isEmpty()) {
+                System.out.println("🔔 [DEBUG] No unread notifications found for user: " + userId);
+                return new ApiResponse<>(true, "No unread notifications to mark", "success");
             }
             
-            notificationRepository.saveAll(unreadNotifications);
+            // Mark each notification as read and save individually for better error handling
+            int successCount = 0;
+            int errorCount = 0;
             
-            return new ApiResponse<>(true, "All notifications marked as read", "success");
+            for (int i = 0; i < unreadNotifications.size(); i++) {
+                try {
+                    Notification notification = unreadNotifications.get(i);
+                    System.out.println("🔔 [DEBUG] Processing notification " + (i+1) + "/" + unreadNotifications.size() + 
+                                     " - ID: " + notification.getId() + ", Type: " + notification.getType() + 
+                                     ", Currently isRead: " + notification.isRead());
+                    
+                    // Mark as read
+                    notification.setRead(true);
+                    notification.setReadAt(LocalDateTime.now());
+                    
+                    System.out.println("🔔 [DEBUG] After setting read status - isRead: " + notification.isRead() + 
+                                     ", readAt: " + notification.getReadAt());
+                    
+                    // Save individual notification
+                    Notification savedNotification = notificationRepository.save(notification);
+                    System.out.println("🔔 [DEBUG] Successfully saved notification ID: " + savedNotification.getId());
+                    successCount++;
+                    
+                } catch (Exception e) {
+                    System.err.println("🔔 [ERROR] Failed to save notification " + (i+1) + ": " + e.getMessage());
+                    errorCount++;
+                }
+            }
+            
+            System.out.println("🔔 [DEBUG] Completed processing - Success: " + successCount + ", Errors: " + errorCount);
+            
+            // Verify the save by checking the database again
+            long remainingUnreadCount = notificationRepository.countByUserIdAndIsReadFalse(userId);
+            System.out.println("🔔 [DEBUG] Remaining unread count after save: " + remainingUnreadCount);
+            
+            if (errorCount == 0) {
+                return new ApiResponse<>(true, "All " + successCount + " notifications marked as read successfully", "success");
+            } else {
+                return new ApiResponse<>(true, successCount + " notifications marked as read, " + errorCount + " errors occurred", "partial_success");
+            }
             
         } catch (Exception e) {
-            System.err.println("Error marking all notifications as read: " + e.getMessage());
+            System.err.println("🔔 [ERROR] Error marking all notifications as read: " + e.getMessage());
             e.printStackTrace();
             return new ApiResponse<>(false, "Failed to mark all notifications as read: " + e.getMessage(), null);
         }
@@ -263,10 +332,12 @@ public class BiddingService {
      */
     public ApiResponse<Long> getUnreadNotificationCount(String userId) {
         try {
+            System.out.println("🔔 [DEBUG] Getting unread count for userId: " + userId);
             long count = notificationRepository.countByUserIdAndIsReadFalse(userId);
+            System.out.println("🔔 [DEBUG] Unread count result: " + count);
             return new ApiResponse<>(true, "Count retrieved successfully", count);
         } catch (Exception e) {
-            System.err.println("Error getting unread count: " + e.getMessage());
+            System.err.println("🔔 [ERROR] Error getting unread count: " + e.getMessage());
             e.printStackTrace();
             return new ApiResponse<>(false, "Failed to get unread count: " + e.getMessage(), 0L);
         }

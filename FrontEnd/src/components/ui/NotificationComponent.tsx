@@ -15,6 +15,13 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({ userId, c
 
   // Debug logging
   console.log('🔔 NotificationComponent rendered with userId:', userId);
+  console.log('🔔 Current unreadCount:', unreadCount);
+  console.log('🔔 Current notifications count:', notifications.length);
+
+  // Monitor unreadCount changes
+  useEffect(() => {
+    console.log('🔔 unreadCount changed to:', unreadCount);
+  }, [unreadCount]);
 
   // Load notifications
   useEffect(() => {
@@ -48,7 +55,7 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({ userId, c
     setLoading(true);
     try {
       console.log('🔔 Fetching notifications for userId:', userId);
-      const response = await fetch(`/api/bidding/notifications/${userId}?page=0&size=20`);
+      const response = await fetch(`http://localhost:9092/api/bidding/notifications/${userId}?page=0&size=20`);
       const result = await response.json();
       
       console.log('🔔 Notification API response:', result);
@@ -69,7 +76,7 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({ userId, c
   const loadUnreadCount = async () => {
     try {
       console.log('🔔 Fetching unread count for userId:', userId);
-      const response = await fetch(`/api/bidding/notifications/${userId}/unread-count`);
+      const response = await fetch(`http://localhost:9092/api/bidding/notifications/${userId}/unread-count`);
       const result = await response.json();
       
       console.log('🔔 Unread count API response:', result);
@@ -87,19 +94,34 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({ userId, c
 
   const markAsRead = async (notificationId: string) => {
     try {
-      const response = await fetch(`/api/bidding/notifications/${notificationId}/read`, {
+      // Immediately update UI for better user experience
+      const previousNotifications = [...notifications];
+      const previousUnreadCount = unreadCount;
+      
+      // Update local state immediately
+      setNotifications(prev => 
+        prev.map(n => 
+          n.id === notificationId 
+            ? { ...n, isRead: true, readAt: new Date().toISOString() }
+            : n
+        )
+      );
+      setUnreadCount(prev => Math.max(0, prev - 1));
+      
+      // Then sync with backend
+      const response = await fetch(`http://localhost:9092/api/bidding/notifications/${notificationId}/read`, {
         method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
       
-      if (response.ok) {
-        setNotifications(prev => 
-          prev.map(n => 
-            n.id === notificationId 
-              ? { ...n, isRead: true, readAt: new Date().toISOString() }
-              : n
-          )
-        );
-        setUnreadCount(prev => Math.max(0, prev - 1));
+      if (!response.ok) {
+        // If backend fails, revert the UI changes
+        console.error('🔔 Failed to mark notification as read, reverting UI changes');
+        setNotifications(previousNotifications);
+        setUnreadCount(previousUnreadCount);
+        throw new Error('Failed to mark notification as read');
       }
     } catch (error) {
       console.error('Error marking notification as read:', error);
@@ -107,28 +129,50 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({ userId, c
   };
 
   const markAllAsRead = async () => {
+    console.log('🔔 markAllAsRead called - Current unreadCount:', unreadCount);
+    console.log('🔔 markAllAsRead called - Current notifications:', notifications.length);
+    
     try {
       setLoading(true);
       
-      // Use the new backend endpoint for better performance
-      const response = await fetch(`/api/bidding/notifications/${userId}/read-all`, {
+      // Immediately update UI for better user experience
+      const previousNotifications = [...notifications];
+      const previousUnreadCount = unreadCount;
+      
+      console.log('🔔 Setting unreadCount to 0 and marking all notifications as read');
+      
+      // Update local state immediately
+      setNotifications(prev => 
+        prev.map(n => ({ ...n, isRead: true, readAt: new Date().toISOString() }))
+      );
+      setUnreadCount(0);
+      console.log('🔔 UI updated: All notifications marked as read, unreadCount set to 0');
+      
+      // Then try to sync with backend
+      const response = await fetch(`http://localhost:9092/api/bidding/notifications/${userId}/read-all`, {
         method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
       
       if (response.ok) {
-        // Update local state
-        setNotifications(prev => 
-          prev.map(n => ({ ...n, isRead: true, readAt: new Date().toISOString() }))
-        );
-        setUnreadCount(0);
+        console.log('🔔 Backend sync successful: All notifications marked as read');
       } else {
+        // If backend fails, revert the UI changes
+        console.error('🔔 Backend sync failed, reverting UI changes');
+        setNotifications(previousNotifications);
+        setUnreadCount(previousUnreadCount);
         throw new Error('Failed to mark all as read');
       }
       
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
+      // Show user-friendly error message but keep UI changes if it was just a network issue
+      // The user can see the change happened locally
     } finally {
       setLoading(false);
+      console.log('🔔 markAllAsRead completed');
     }
   };
 
@@ -218,7 +262,10 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({ userId, c
       >
         <Bell className="w-6 h-6" />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+          <span 
+            key={`badge-${unreadCount}`}
+            className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center min-w-[20px]"
+          >
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
@@ -230,12 +277,7 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({ userId, c
           {/* Header */}
           <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-800">
-              Notifications 
-              {unreadCount > 0 && (
-                <span className="ml-2 bg-red-500 text-white text-xs rounded-full px-2 py-1">
-                  {unreadCount}
-                </span>
-              )}
+              Notifications {unreadCount > 0 && <span className="text-sm text-red-600">({unreadCount} unread)</span>}
             </h3>
             <div className="flex items-center space-x-2">
               {unreadCount > 0 && (
@@ -323,15 +365,11 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({ userId, c
           {notifications.length > 0 && (
             <div className="px-4 py-3 border-t border-gray-200">
               <button
-                onClick={() => {
-                  // Mark all as read
-                  notifications
-                    .filter(n => !n.isRead)
-                    .forEach(n => markAsRead(n.id));
-                }}
-                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                onClick={markAllAsRead}
+                disabled={loading}
+                className="text-sm text-blue-600 hover:text-blue-800 font-medium disabled:opacity-50"
               >
-                Mark all as read
+                {loading ? 'Marking all as read...' : 'Mark all as read'}
               </button>
             </div>
           )}
