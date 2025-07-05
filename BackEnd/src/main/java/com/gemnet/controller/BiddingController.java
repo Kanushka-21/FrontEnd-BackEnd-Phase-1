@@ -135,34 +135,60 @@ public class BiddingController {
                 .body(new ApiResponse<>(false, "Failed to get notifications: " + e.getMessage(), null));
         }
     }
-    
-    /**
+      /**
      * Mark notification as read
      */
     @PutMapping("/notifications/{notificationId}/read")
     @Operation(summary = "Mark notification as read", description = "Mark a specific notification as read")
     public ResponseEntity<ApiResponse<String>> markNotificationAsRead(@PathVariable String notificationId) {
-        System.out.println("✅ Mark notification as read: " + notificationId);
+        System.out.println("🔔 [CONTROLLER] Mark notification as read request - ID: " + notificationId);
         
         try {
             ApiResponse<String> response = biddingService.markNotificationAsRead(notificationId);
             
             if (response.isSuccess()) {
-                System.out.println("✅ Notification marked as read successfully");
+                System.out.println("🔔 [CONTROLLER] ✅ Notification marked as read successfully");
                 return ResponseEntity.ok(response);
             } else {
-                System.err.println("❌ Failed to mark notification as read: " + response.getMessage());
+                System.err.println("🔔 [CONTROLLER] ❌ Failed to mark notification as read: " + response.getMessage());
                 return ResponseEntity.badRequest().body(response);
             }
             
         } catch (Exception e) {
-            System.err.println("❌ Error in mark notification as read endpoint: " + e.getMessage());
+            System.err.println("🔔 [CONTROLLER] ❌ Error in mark notification as read endpoint: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.internalServerError()
                 .body(new ApiResponse<>(false, "Failed to mark notification as read: " + e.getMessage(), null));
         }
     }
-    
+
+    /**
+     * Mark all notifications as read for a user
+     */
+    @PutMapping("/notifications/{userId}/read-all")
+    @Operation(summary = "Mark all notifications as read", description = "Mark all notifications as read for a specific user")
+    public ResponseEntity<ApiResponse<String>> markAllNotificationsAsRead(@PathVariable String userId) {
+        System.out.println("� [CONTROLLER] Mark all notifications as read request - UserId: " + userId);
+        
+        try {
+            ApiResponse<String> response = biddingService.markAllNotificationsAsRead(userId);
+            
+            if (response.isSuccess()) {
+                System.out.println("🔔 [CONTROLLER] ✅ All notifications marked as read successfully");
+                return ResponseEntity.ok(response);
+            } else {
+                System.err.println("🔔 [CONTROLLER] ❌ Failed to mark all notifications as read: " + response.getMessage());
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("🔔 [CONTROLLER] ❌ Error in mark all notifications as read endpoint: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError()
+                .body(new ApiResponse<>(false, "Failed to mark all notifications as read: " + e.getMessage(), null));
+        }
+    }
+
     /**
      * Get unread notification count
      */

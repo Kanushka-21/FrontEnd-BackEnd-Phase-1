@@ -1,130 +1,170 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Layout as AntLayout, Row, Col, Card, Button, Badge, Rate, Tag, Typography, 
-  Space, Input, InputNumber, Statistic, Avatar, Drawer, Carousel
+  Space, Statistic, Carousel, Spin
 } from 'antd';
 import { 
-  EyeOutlined, HeartOutlined, CheckCircleOutlined, UserOutlined, 
-  ShoppingCartOutlined, SearchOutlined, LoginOutlined, UserAddOutlined,
-  GlobalOutlined, TeamOutlined, ShopOutlined, DollarOutlined,
-  StarFilled, ClockCircleOutlined, SafetyOutlined, TrophyOutlined,
-  CloseOutlined, MenuOutlined
+  CheckCircleOutlined, UserOutlined, 
+  SearchOutlined, UserAddOutlined,
+  GlobalOutlined, ShopOutlined,
+  StarFilled, SafetyOutlined, TrophyOutlined
 } from '@ant-design/icons';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { DetailedGemstone } from '@/types';
 import RoleAwareHeader from '@/components/layout/RoleAwareHeader';
 import GemstoneCard from '@/components/ui/GemstoneCard';
-import GemstoneDetailModal from '@/components/home/GemstoneDetailModal';
+import { api } from '@/services/api';
 
 const { Content } = AntLayout;
 const { Title, Text, Paragraph } = Typography;
-const { Meta } = Card;
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
-  const [selectedGemstone, setSelectedGemstone] = useState<DetailedGemstone | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [bidAmount, setBidAmount] = useState<number>(0);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);  // Featured gemstones (top 4 most engaging items from the marketplace)
-  const featuredGemstones = [
-    {
-      id: '1',
-      name: 'Star Sapphire of Ceylon',
-      price: 12500,
-      image: 'https://images.unsplash.com/photo-1615654771169-65fde4070ade?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-      certified: true,
-      weight: 5.2,
-      color: 'Blue',
-      species: 'Corundum',
-      variety: 'Star Sapphire',
-      shape: 'Oval Cabochon',
-      cut: 'Cabochon',
-      dimensions: { length: 11.5, width: 9.3, height: 5.8 },
-      transparency: 'translucent',
-      certificate: {
-        issuingAuthority: 'GIA',
-        reportNumber: 'GIA2024102',
-        date: '2024-05-15'
-      },
-      predictedPriceRange: {
-        min: 11000,
-        max: 14000
-      }
-    },
-    {
-      id: '2',
-      name: 'Padparadscha Sapphire',
-      price: 18950,
-      image: 'https://images.unsplash.com/photo-1599707367072-cd6ada2bc375?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-      certified: true,
-      weight: 3.8,
-      color: 'Pinkish Orange',
-      species: 'Corundum',
-      variety: 'Padparadscha',
-      shape: 'Cushion',
-      cut: 'Mixed',
-      dimensions: { length: 8.9, width: 8.2, height: 5.1 },
-      transparency: 'transparent',
-      certificate: {
-        issuingAuthority: 'SSEF',
-        reportNumber: 'SSEF202456',
-        date: '2024-06-01'
-      },
-      predictedPriceRange: {
-        min: 16500,
-        max: 21000
-      }
-    },
-    {
-      id: '3',
-      name: 'Royal Blue Sapphire',
-      price: 15800,
-      image: 'https://images.unsplash.com/photo-1612098662204-e95c76707dec?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-      certified: true,
-      weight: 4.5,
-      color: 'Royal Blue',
-      species: 'Corundum',
-      variety: 'Sapphire',
-      shape: 'Oval',
-      cut: 'Brilliant',
-      dimensions: { length: 10.2, width: 8.1, height: 5.3 },
-      transparency: 'transparent',
-      certificate: {
-        issuingAuthority: 'GRS',
-        reportNumber: 'GRS2024158',
-        date: '2024-05-28'
-      },
-      predictedPriceRange: {
-        min: 14200,
-        max: 17500
-      }
-    },
-    {
-      id: '4',
-      name: 'Pigeon Blood Ruby',
-      price: 22500,
-      image: 'https://images.unsplash.com/photo-1573408301185-9146fe634ad0?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-      certified: true,
-      weight: 3.2,
-      color: 'Pigeon Blood Red',
-      species: 'Corundum',
-      variety: 'Ruby',
-      shape: 'Octagon',
-      cut: 'Step',
-      dimensions: { length: 8.5, width: 8.5, height: 4.9 },
-      transparency: 'transparent',
-      certificate: {
-        issuingAuthority: 'Gubelin',
-        reportNumber: 'GUB2024079',
-        date: '2024-06-10'
-      },
-      predictedPriceRange: {
-        min: 19800,
-        max: 25200
-      }
+  
+  // Featured gemstones state
+  const [featuredGemstones, setFeaturedGemstones] = useState<DetailedGemstone[]>([]);
+  const [featuredLoading, setFeaturedLoading] = useState<boolean>(true);
+  const [featuredError, setFeaturedError] = useState<string | null>(null);
+
+  // Helper to construct proper image URL
+  const constructImageUrl = (imagePath: string): string => {
+    if (!imagePath) return 'https://via.placeholder.com/400x300?text=Gemstone';
+    
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      return imagePath;
     }
-  ];
+    
+    const baseUrl = 'http://localhost:9092';
+    if (imagePath.startsWith('/')) {
+      return `${baseUrl}${imagePath}`;
+    }
+    
+    return `${baseUrl}/${imagePath}`;
+  };
+
+  // Helper to convert backend GemListing to frontend DetailedGemstone format
+  const convertToDetailedGemstone = (listing: any): DetailedGemstone => {
+    // Extract all images from the backend listing
+    const allImages: string[] = [];
+    
+    // Add primary image if it exists
+    if (listing.primaryImageUrl) {
+      allImages.push(constructImageUrl(listing.primaryImageUrl));
+    }
+    
+    // Add all images from the images array
+    if (listing.images && Array.isArray(listing.images)) {
+      listing.images.forEach((img: any) => {
+        let imageUrl = '';
+        if (typeof img === 'string') {
+          imageUrl = constructImageUrl(img);
+        } else if (img && img.imageUrl) {
+          imageUrl = constructImageUrl(img.imageUrl);
+        } else if (img && img.url) {
+          imageUrl = constructImageUrl(img.url);
+        }
+        
+        if (imageUrl && !allImages.includes(imageUrl)) {
+          allImages.push(imageUrl);
+        }
+      });
+    }
+    
+    // Fallback to single image property if no images found
+    if (allImages.length === 0 && listing.image) {
+      allImages.push(constructImageUrl(listing.image));
+    }
+    
+    // Use first image as primary, or placeholder if no images
+    const primaryImage = allImages.length > 0 ? allImages[0] : 'https://via.placeholder.com/400x300?text=Gemstone';
+    
+    return {
+      id: listing.id || listing._id,
+      name: listing.gemName || 'Unknown Gemstone',
+      price: listing.price ? Number(listing.price) : 0,
+      predictedPriceRange: {
+        min: listing.price ? Math.floor(Number(listing.price) * 0.9) : 0,
+        max: listing.price ? Math.floor(Number(listing.price) * 1.2) : 0
+      },
+      image: primaryImage,
+      images: allImages,
+      certified: listing.isCertified || false,
+      weight: listing.weight ? parseFloat(listing.weight) : 0,
+      color: listing.color || 'Unknown',
+      species: listing.species || 'Unknown',
+      variety: listing.variety || 'Unknown', 
+      shape: listing.shape || 'Unknown',
+      cut: listing.cut || 'Unknown',
+      clarity: listing.clarity || 'Unknown',
+      dimensions: {
+        length: parseFloat(listing.measurements?.split('x')[0] || '0') || 0,
+        width: parseFloat(listing.measurements?.split('x')[1] || '0') || 0,
+        height: parseFloat(listing.measurements?.split('x')[2] || '0') || 0
+      },
+      transparency: 'transparent' as const,
+      specifications: {
+        species: listing.species || 'Unknown',
+        variety: listing.variety || 'Unknown',
+        transparency: listing.transparency || 'transparent',
+        treatment: listing.treatment || listing.treatments || 'Unknown',
+        refractiveIndex: listing.refractiveIndex || undefined,
+        specificGravity: listing.specificGravity || undefined
+      },
+      certificate: listing.isCertified ? {
+        issuingAuthority: listing.certifyingAuthority || 'Unknown',
+        reportNumber: listing.certificateNumber || 'N/A',
+        date: listing.issueDate || 'Unknown'
+      } : undefined
+    };
+  };
+
+  // Function to fetch top 4 highest-priced gemstones
+  const fetchFeaturedGemstones = async () => {
+    setFeaturedLoading(true);
+    setFeaturedError(null);
+    
+    try {
+      console.log('🔍 Fetching top 4 highest-priced gemstones for featured section...');
+      
+      // Fetch gemstones sorted by price descending, limit to 4
+      const response = await api.marketplace.getListings({
+        page: 0,
+        size: 4,
+        sortBy: 'price',
+        sortDir: 'desc'
+      });
+      
+      if (response.success && response.data) {
+        const listings = response.data.listings || [];
+        console.log('✅ Successfully fetched featured gemstones:', listings);
+        
+        if (listings.length === 0) {
+          console.log('📋 No approved listings found for featured section');
+          setFeaturedGemstones([]);
+          setFeaturedError('No featured gemstones available at the moment');
+        } else {
+          // Convert listings to DetailedGemstone format
+          const convertedGemstones = listings.map(convertToDetailedGemstone);
+          setFeaturedGemstones(convertedGemstones);
+          console.log('✅ Featured gemstones converted and set:', convertedGemstones);
+        }
+      } else {
+        console.error('❌ Failed to fetch featured gemstones:', response.message);
+        setFeaturedError(response.message || 'Failed to load featured gemstones');
+      }
+    } catch (error) {
+      console.error('❌ Error fetching featured gemstones:', error);
+      setFeaturedError('Unable to load featured gemstones. Please try again later.');
+    } finally {
+      setFeaturedLoading(false);
+    }
+  };
+
+  // Fetch featured gemstones on component mount
+  useEffect(() => {
+    fetchFeaturedGemstones();
+  }, []);
   const statistics = [
     { title: 'Verified Gems', value: 2847, icon: <CheckCircleOutlined className="text-blue-500" /> },
     { title: 'Active Traders', value: 1230, icon: <UserOutlined className="text-green-500" /> },
@@ -151,27 +191,13 @@ const HomePage: React.FC = () => {
       comment: 'Finding quality gemstones for my designs used to be challenging. With GemNet, I can source verified gems with confidence.',
       avatar: ''
     }
-  ];const handleViewDetails = (gemstoneId: string) => {
+  ];  const handleViewDetails = (gemstoneId: string) => {
     console.log('View details clicked for gemstone:', gemstoneId);
-    const gemstone = featuredGemstones.find(g => g.id === gemstoneId);
-    if (gemstone) {
-      console.log('Setting selected gemstone:', gemstone);
-      setSelectedGemstone(gemstone as DetailedGemstone);
-      setIsModalOpen(true);
-      setBidAmount(gemstone.price);
-    }
-  };
-  const handlePlaceBid = (amount: number) => {
-    // Handle bid placement logic
-    console.log(`Bid placed for ${amount}`);
-    setIsModalOpen(false);
-    setSelectedGemstone(null);
-    setBidAmount(0);
+    console.log('Navigating to marketplace with gemstone ID:', gemstoneId);
+    // Navigate to marketplace page with the gemstone ID as a query parameter
+    navigate(`/marketplace?viewGemstone=${gemstoneId}`);
   };
 
-  const toggleMobileMenu = () => {
-    setMobileMenuOpen(!mobileMenuOpen);
-  };
   return (
     <AntLayout className="min-h-screen bg-gray-50 overflow-x-hidden w-full max-w-[100vw]">
       {/* Modern Header */}
@@ -469,36 +495,87 @@ const HomePage: React.FC = () => {
                 Featured Gemstones
               </Title>
               <Paragraph className="!text-sm sm:!text-base lg:!text-lg !text-gray-600 max-w-2xl mx-auto">
-                Discover our handpicked collection of premium gemstones from verified sellers
+                Discover our highest-priced premium gemstones from verified sellers
               </Paragraph>
-            </motion.div>            <Row gutter={[4, 12]} xxs:gutter={[6, 14]} xs:gutter={[8, 16]} className="sm:gutter-16 lg:gutter-24">
-              {featuredGemstones.map((gemstone, index) => (
-                <Col xs={24} sm={12} lg={6} key={gemstone.id}>
-                  <motion.div
-                    initial={{ opacity: 0, y: 30 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: index * 0.1 }}
-                    viewport={{ once: true }}
-                    className="gemstone-card-motion-wrapper h-full"
-                  >                    <GemstoneCard 
-                      gemstone={gemstone}
-                      onViewDetails={() => handleViewDetails(gemstone.id)}
-                    />
-                  </motion.div>
-                </Col>
-              ))}
-            </Row>
+            </motion.div>
 
-            <div className="text-center mt-6 sm:mt-8 lg:mt-12">
-              <Button 
-                size="large" 
-                type="primary"
-                className="bg-blue-500 border-blue-500 hover:bg-blue-600 px-6 sm:px-8 h-10 sm:h-12 font-semibold"
-                onClick={() => navigate('/marketplace')}
-              >
-                View All Gemstones
-              </Button>
-            </div>
+            {/* Loading State */}
+            {featuredLoading && (
+              <div className="text-center py-8">
+                <Spin size="large" />
+                <div className="mt-4">
+                  <Text className="text-gray-600">Loading featured gemstones...</Text>
+                </div>
+              </div>
+            )}
+
+            {/* Error State */}
+            {featuredError && !featuredLoading && (
+              <div className="text-center py-8">
+                <div className="mb-4">
+                  <Text type="secondary" className="text-lg">😔 {featuredError}</Text>
+                </div>
+                <Button 
+                  type="primary" 
+                  onClick={fetchFeaturedGemstones}
+                  className="bg-blue-500 border-blue-500 hover:bg-blue-600"
+                >
+                  Try Again
+                </Button>
+              </div>
+            )}
+
+            {/* Featured Gemstones Grid */}
+            {!featuredLoading && !featuredError && featuredGemstones.length > 0 && (
+              <Row gutter={[16, 16]}>
+                {featuredGemstones.map((gemstone, index) => (
+                  <Col xs={24} sm={12} lg={6} key={gemstone.id}>
+                    <motion.div
+                      initial={{ opacity: 0, y: 30 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.6, delay: index * 0.1 }}
+                      viewport={{ once: true }}
+                      className="gemstone-card-motion-wrapper h-full"
+                    >
+                      <GemstoneCard 
+                        gemstone={gemstone}
+                        onViewDetails={() => handleViewDetails(gemstone.id)}
+                      />
+                    </motion.div>
+                  </Col>
+                ))}
+              </Row>
+            )}
+
+            {/* No Data State */}
+            {!featuredLoading && !featuredError && featuredGemstones.length === 0 && (
+              <div className="text-center py-8">
+                <div className="mb-4">
+                  <Text type="secondary" className="text-lg">No featured gemstones available at the moment</Text>
+                </div>
+                <Button 
+                  type="primary" 
+                  onClick={() => navigate('/marketplace')}
+                  className="bg-blue-500 border-blue-500 hover:bg-blue-600"
+                >
+                  Browse Marketplace
+                </Button>
+              </div>
+            )}
+
+            {/* View All Button - Only show when we have featured gemstones */}
+            {!featuredLoading && !featuredError && featuredGemstones.length > 0 && (
+              <div className="text-center mt-6 sm:mt-8 lg:mt-12">
+                <Button 
+                  size="large" 
+                  type="primary"
+                  className="bg-blue-500 border-blue-500 hover:bg-blue-600 px-6 sm:px-8 h-10 sm:h-12 font-semibold"
+                  onClick={() => navigate('/marketplace')}
+                >
+                  View All Gemstones
+                </Button>
+              </div>
+            )}
           </div>
         </section>
 
@@ -779,19 +856,6 @@ const HomePage: React.FC = () => {
             </motion.div>
           </div>
         </section>      </Content>      
-      {/* Gemstone Detail Modal */}
-      {selectedGemstone && (
-        <GemstoneDetailModal
-          isOpen={isModalOpen}
-          gemstone={selectedGemstone}
-          onClose={() => {
-            console.log('Closing detail modal');
-            setIsModalOpen(false);
-            setSelectedGemstone(null);
-          }}
-          onPlaceBid={handlePlaceBid}
-        />
-      )}
     </AntLayout>
   );
 };

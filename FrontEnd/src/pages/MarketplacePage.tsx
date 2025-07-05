@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { 
   Layout as AntLayout, 
   Row, 
@@ -37,6 +38,9 @@ const { Option } = Select;
 
 const MarketplacePage: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedGemstone, setSelectedGemstone] = useState<DetailedGemstone | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -247,6 +251,33 @@ const MarketplacePage: React.FC = () => {
   useEffect(() => {
     fetchMarketplaceListings();
   }, [currentPage, sortBy, searchTerm, priceRange, selectedTypes, selectedColors, certifiedOnly]);
+
+  // Handle URL parameters for direct navigation to specific items from HomePage or notifications
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const gemstoneid = urlParams.get('viewGemstone') || urlParams.get('item'); // Support both parameters for compatibility
+    
+    if (gemstoneid && gemstones.length > 0) {
+      console.log('🔍 Looking for gemstone with ID:', gemstoneid);
+      // Find the specific gemstone and open its modal
+      const targetGemstone = gemstones.find(g => g.id === gemstoneid);
+      if (targetGemstone) {
+        console.log('✅ Found gemstone, opening modal:', targetGemstone);
+        setSelectedGemstone(targetGemstone);
+        setIsModalOpen(true);
+        
+        // Clean up URL by removing both possible parameters
+        let newUrl = window.location.pathname + window.location.search;
+        newUrl = newUrl.replace(/[?&]viewGemstone=[^&]+/, '');
+        newUrl = newUrl.replace(/[?&]item=[^&]+/, '');
+        newUrl = newUrl.replace(/^&/, '?'); // Fix leading & if query starts with it
+        if (newUrl.endsWith('?')) newUrl = newUrl.slice(0, -1); // Remove trailing ?
+        navigate(newUrl || window.location.pathname, { replace: true });
+      } else {
+        console.log('❌ Gemstone not found with ID:', gemstoneid);
+      }
+    }
+  }, [gemstones, location.search, navigate]); // Trigger when gemstones are loaded or URL changes
 
   // Remove the old mock data loading effect
   // useEffect(() => {

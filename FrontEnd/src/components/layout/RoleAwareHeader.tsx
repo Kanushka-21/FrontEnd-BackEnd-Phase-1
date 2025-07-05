@@ -5,7 +5,6 @@ import {
   LogOut,
   Menu,
   User,
-  Bell,
   Home,
   Search,
   ShoppingBag,
@@ -20,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/hooks';
 import Button from '@/components/ui/Button';
+import NotificationComponent from '@/components/ui/NotificationComponent';
 import logoImage from '@/logo-new.gif';
 
 interface RoleAwareHeaderProps {
@@ -29,34 +29,9 @@ interface RoleAwareHeaderProps {
 const RoleAwareHeader: React.FC<RoleAwareHeaderProps> = ({ transparent = false }) => {
   const { user, logout, isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   
-  // Mock notifications data - can be role-specific
-  const getNotifications = () => {
-    if (user?.role === 'admin') {
-      return [
-        { id: 1, text: 'New user registration pending approval', time: '5 minutes ago', read: false },
-        { id: 2, text: 'Seller verification request submitted', time: '2 hours ago', read: false },
-        { id: 3, text: 'System maintenance scheduled for tomorrow', time: '1 day ago', read: true }
-      ];
-    } else if (user?.role === 'seller') {
-      return [
-        { id: 1, text: 'New bid received on your Ruby listing', time: '10 minutes ago', read: false },
-        { id: 2, text: 'Meeting scheduled with buyer', time: '1 hour ago', read: false },
-        { id: 3, text: 'Your Sapphire listing was approved', time: '3 hours ago', read: true }
-      ];
-    } else if (user?.role === 'buyer') {
-      return [
-        { id: 1, text: 'Your bid was accepted', time: '5 minutes ago', read: false },
-        { id: 2, text: 'New gemstone listing available', time: '2 hours ago', read: false },
-        { id: 3, text: 'Meeting confirmed for tomorrow', time: '1 day ago', read: true }
-      ];
-    }
-    return [];
-  };
-
   // Get user display name with fallbacks based on role
   const getUserDisplayInfo = () => {
     const firstName = user?.firstName;
@@ -95,7 +70,6 @@ const RoleAwareHeader: React.FC<RoleAwareHeaderProps> = ({ transparent = false }
   };
 
   const userDisplayInfo = getUserDisplayInfo();
-  const notifications = getNotifications();
   
   const handleLogout = () => {
     console.log('🚪 RoleAwareHeader: Logout button clicked');
@@ -296,44 +270,7 @@ const RoleAwareHeader: React.FC<RoleAwareHeaderProps> = ({ transparent = false }
             <div className="relative">
               <div className="flex items-center space-x-2">
                 {/* Notifications */}
-                <div className="relative">
-                  <button
-                    onClick={() => setNotificationsOpen(!notificationsOpen)}
-                    className="p-2 rounded-full hover:bg-secondary-100"
-                  >
-                    <Bell className="w-5 h-5 text-secondary-700" />
-                    {notifications.some(n => !n.read) && (
-                      <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                        {notifications.filter(n => !n.read).length}
-                      </span>
-                    )}
-                  </button>
-                  
-                  {/* Notifications dropdown */}
-                  {notificationsOpen && (
-                    <div className="absolute right-0 mt-2 w-72 bg-white shadow-lg rounded-lg py-2 z-50 border border-secondary-200">
-                      <div className="px-4 py-2 border-b border-secondary-200">
-                        <h3 className="text-lg font-semibold text-secondary-900">Notifications</h3>
-                      </div>
-                      <div className="max-h-80 overflow-y-auto">
-                        {notifications.map(notification => (
-                          <div 
-                            key={notification.id} 
-                            className={`px-4 py-2 hover:bg-secondary-50 ${!notification.read ? 'bg-blue-50' : ''}`}
-                          >
-                            <p className="text-base text-secondary-900">{notification.text}</p>
-                            <p className="text-sm text-secondary-500">{notification.time}</p>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="px-4 py-2 border-t border-secondary-200">
-                        <button className="text-base text-primary-600 hover:text-primary-800 font-medium">
-                          View all notifications
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <NotificationComponent userId={user?.userId || ''} />
                 
                 {/* User menu button */}
                 <div className="relative">

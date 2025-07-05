@@ -97,42 +97,8 @@ public class BiddingService {
             // Save the bid
             Bid savedBid = bidRepository.save(newBid);
             
-            // Mark previous highest bid as OUTBID and notify that bidder
-            if (currentHighestBid.isPresent()) {
-                Bid previousHighest = currentHighestBid.get();
-                previousHighest.setStatus("OUTBID");
-                bidRepository.save(previousHighest);
-                
-                // Notify previous highest bidder that they've been outbid
-                createNotification(
-                    previousHighest.getBidderId(),
-                    bidRequest.getListingId(),
-                    savedBid.getId(),
-                    "BID_OUTBID",
-                    "Your bid has been outbid",
-                    "Your bid of LKR " + formatAmount(previousHighest.getBidAmount()) + 
-                    " on " + listing.getGemName() + " has been outbid by LKR " + formatAmount(bidRequest.getBidAmount()),
-                    bidRequest.getBidderId(),
-                    bidRequest.getBidderName(),
-                    formatAmount(bidRequest.getBidAmount()),
-                    listing.getGemName()
-                );
-            }
-            
-            // Notify seller about the new bid
-            createNotification(
-                listing.getUserId(),
-                bidRequest.getListingId(),
-                savedBid.getId(),
-                "NEW_BID",
-                "New bid received",
-                bidRequest.getBidderName() + " placed a bid of LKR " + formatAmount(bidRequest.getBidAmount()) + 
-                " on your " + listing.getGemName(),
-                bidRequest.getBidderId(),
-                bidRequest.getBidderName(),
-                formatAmount(bidRequest.getBidAmount()),
-                listing.getGemName()
-            );
+            // Handle notifications for all affected users
+            handleBidNotifications(savedBid, listing, currentHighestBid.orElse(null));
             
             // Prepare response
             Map<String, Object> response = new HashMap<>();
@@ -224,11 +190,26 @@ public class BiddingService {
      */
     public ApiResponse<Map<String, Object>> getUserNotifications(String userId, int page, int size) {
         try {
+            System.out.println("🔔 [DEBUG] Getting notifications for userId: " + userId + ", page: " + page + ", size: " + size);
+            
             Pageable pageable = PageRequest.of(page, size);
             Page<Notification> notificationsPage = notificationRepository
                 .findByUserIdOrderByCreatedAtDesc(userId, pageable);
             
+            System.out.println("🔔 [DEBUG] Found " + notificationsPage.getTotalElements() + " total notifications");
+            System.out.println("🔔 [DEBUG] Current page has " + notificationsPage.getContent().size() + " notifications");
+            
             long unreadCount = notificationRepository.countByUserIdAndIsReadFalse(userId);
+            System.out.println("🔔 [DEBUG] Unread count: " + unreadCount);
+            
+            // Log details of notifications being returned
+            List<Notification> notifications = notificationsPage.getContent();
+            for (int i = 0; i < notifications.size(); i++) {
+                Notification notif = notifications.get(i);
+                System.out.println("🔔 [DEBUG] Notification " + (i+1) + ": ID=" + notif.getId() + 
+                                 ", Type=" + notif.getType() + ", isRead=" + notif.isRead() + 
+                                 ", Title=" + notif.getTitle());
+            }
             
             Map<String, Object> response = new HashMap<>();
             response.put("notifications", notificationsPage.getContent());
@@ -241,7 +222,7 @@ public class BiddingService {
             return new ApiResponse<>(true, "Notifications retrieved successfully", response);
             
         } catch (Exception e) {
-            System.err.println("Error getting notifications: " + e.getMessage());
+            System.err.println("🔔 [ERROR] Error getting notifications: " + e.getMessage());
             e.printStackTrace();
             return new ApiResponse<>(false, "Failed to get notifications: " + e.getMessage(), null);
         }
@@ -252,21 +233,97 @@ public class BiddingService {
      */
     public ApiResponse<String> markNotificationAsRead(String notificationId) {
         try {
+            System.out.println("🔔 [DEBUG] Starting markNotificationAsRead for notificationId: " + notificationId);
+            
             Optional<Notification> notificationOpt = notificationRepository.findById(notificationId);
             if (notificationOpt.isEmpty()) {
+                System.out.println("🔔 [DEBUG] Notification not found with ID: " + notificationId);
                 return new ApiResponse<>(false, "Notification not found", null);
             }
             
             Notification notification = notificationOpt.get();
-            notification.markAsRead();
-            notificationRepository.save(notification);
+            System.out.println("🔔 [DEBUG] Found notification - Type: " + notification.getType() + 
+                             ", Currently isRead: " + notification.isRead() + 
+                             ", UserId: " + notification.getUserId());
             
-            return new ApiResponse<>(true, "Notification marked as read", "success");
+            notification.markAsRead();
+            System.out.println("🔔 [DEBUG] After markAsRead() - isRead: " + notification.isRead() + 
+                             ", readAt: " + notification.getReadAt());
+            
+            Notification savedNotification = notificationRepository.save(notification);
+            System.out.println("🔔 [DEBUG] Notification saved successfully - ID: " + savedNotification.getId() + 
+                             ", isRead: " + savedNotification.isRead());
+            
+            return new ApiResponse<>(true, "Notification marked as read successfully", "success");
             
         } catch (Exception e) {
-            System.err.println("Error marking notification as read: " + e.getMessage());
+            System.err.println("🔔 [ERROR] Error marking notification as read: " + e.getMessage());
             e.printStackTrace();
             return new ApiResponse<>(false, "Failed to mark notification as read: " + e.getMessage(), null);
+        }
+    }
+    
+    /**
+     * Mark all notifications as read for a user
+     */
+    public ApiResponse<String> markAllNotificationsAsRead(String userId) {
+        try {
+            System.out.println("🔔 [DEBUG] Starting markAllNotificationsAsRead for userId: " + userId);
+            
+            // First, get all unread notifications for this user
+            List<Notification> unreadNotifications = notificationRepository.findByUserIdAndIsReadFalseOrderByCreatedAtDesc(userId);
+            System.out.println("🔔 [DEBUG] Found " + unreadNotifications.size() + " unread notifications");
+            
+            if (unreadNotifications.isEmpty()) {
+                System.out.println("🔔 [DEBUG] No unread notifications found for user: " + userId);
+                return new ApiResponse<>(true, "No unread notifications to mark", "success");
+            }
+            
+            // Mark each notification as read and save individually for better error handling
+            int successCount = 0;
+            int errorCount = 0;
+            
+            for (int i = 0; i < unreadNotifications.size(); i++) {
+                try {
+                    Notification notification = unreadNotifications.get(i);
+                    System.out.println("🔔 [DEBUG] Processing notification " + (i+1) + "/" + unreadNotifications.size() + 
+                                     " - ID: " + notification.getId() + ", Type: " + notification.getType() + 
+                                     ", Currently isRead: " + notification.isRead());
+                    
+                    // Mark as read
+                    notification.setRead(true);
+                    notification.setReadAt(LocalDateTime.now());
+                    
+                    System.out.println("🔔 [DEBUG] After setting read status - isRead: " + notification.isRead() + 
+                                     ", readAt: " + notification.getReadAt());
+                    
+                    // Save individual notification
+                    Notification savedNotification = notificationRepository.save(notification);
+                    System.out.println("🔔 [DEBUG] Successfully saved notification ID: " + savedNotification.getId());
+                    successCount++;
+                    
+                } catch (Exception e) {
+                    System.err.println("🔔 [ERROR] Failed to save notification " + (i+1) + ": " + e.getMessage());
+                    errorCount++;
+                }
+            }
+            
+            System.out.println("🔔 [DEBUG] Completed processing - Success: " + successCount + ", Errors: " + errorCount);
+            
+            // Verify the save by checking the database again
+            long remainingUnreadCount = notificationRepository.countByUserIdAndIsReadFalse(userId);
+            System.out.println("🔔 [DEBUG] Remaining unread count after save: " + remainingUnreadCount);
+            
+            if (errorCount == 0) {
+                return new ApiResponse<>(true, "All " + successCount + " notifications marked as read successfully", "success");
+            } else {
+                return new ApiResponse<>(true, successCount + " notifications marked as read, " + errorCount + " errors occurred", "partial_success");
+            }
+            
+        } catch (Exception e) {
+            System.err.println("🔔 [ERROR] Error marking all notifications as read: " + e.getMessage());
+            e.printStackTrace();
+            return new ApiResponse<>(false, "Failed to mark all notifications as read: " + e.getMessage(), null);
         }
     }
     
@@ -275,10 +332,12 @@ public class BiddingService {
      */
     public ApiResponse<Long> getUnreadNotificationCount(String userId) {
         try {
+            System.out.println("🔔 [DEBUG] Getting unread count for userId: " + userId);
             long count = notificationRepository.countByUserIdAndIsReadFalse(userId);
+            System.out.println("🔔 [DEBUG] Unread count result: " + count);
             return new ApiResponse<>(true, "Count retrieved successfully", count);
         } catch (Exception e) {
-            System.err.println("Error getting unread count: " + e.getMessage());
+            System.err.println("🔔 [ERROR] Error getting unread count: " + e.getMessage());
             e.printStackTrace();
             return new ApiResponse<>(false, "Failed to get unread count: " + e.getMessage(), 0L);
         }
@@ -388,6 +447,113 @@ public class BiddingService {
             System.err.println("Error getting user bids: " + e.getMessage());
             e.printStackTrace();
             return new ApiResponse<>(false, "Failed to get user bids: " + e.getMessage(), null);
+        }
+    }
+    
+    /**
+     * Handle all notifications for a new bid - covers all user scenarios
+     */
+    private void handleBidNotifications(Bid newBid, GemListing listing, Bid previousHighestBid) {
+        try {
+            String listingId = newBid.getListingId();
+            String newBidderId = newBid.getBidderId();
+            String newBidderName = newBid.getBidderName();
+            String newBidAmount = formatAmount(newBid.getBidAmount());
+            String gemName = listing.getGemName();
+            String sellerId = listing.getUserId();
+            
+            // 1. Notify the new bidder about their successful bid
+            createNotification(
+                newBidderId,
+                listingId,
+                newBid.getId(),
+                "BID_PLACED",
+                "Bid placed successfully",
+                "You have successfully bid LKR " + newBidAmount + " on " + gemName,
+                newBidderId,
+                newBidderName,
+                newBidAmount,
+                gemName
+            );
+            
+            // 2. Handle previous highest bidder (if exists)
+            if (previousHighestBid != null) {
+                // Mark previous bid as OUTBID
+                previousHighestBid.setStatus("OUTBID");
+                bidRepository.save(previousHighestBid);
+                
+                // Notify previous highest bidder that they've been outbid
+                createNotification(
+                    previousHighestBid.getBidderId(),
+                    listingId,
+                    newBid.getId(),
+                    "BID_OUTBID",
+                    "Your bid has been outbid",
+                    "Your bid of LKR " + formatAmount(previousHighestBid.getBidAmount()) + 
+                    " on " + gemName + " has been outbid. New highest bid: LKR " + newBidAmount,
+                    newBidderId,
+                    newBidderName,
+                    newBidAmount,
+                    gemName
+                );
+            }
+            
+            // 3. Notify seller about the new bid with updated statistics
+            long totalBids = bidRepository.countByListingId(listingId);
+            String sellerMessage;
+            
+            if (previousHighestBid != null) {
+                sellerMessage = newBidderName + " placed a new highest bid of LKR " + newBidAmount + 
+                               " on your " + gemName + " (Total bids: " + totalBids + ")";
+            } else {
+                sellerMessage = newBidderName + " placed the first bid of LKR " + newBidAmount + 
+                               " on your " + gemName;
+            }
+            
+            createNotification(
+                sellerId,
+                listingId,
+                newBid.getId(),
+                "NEW_BID",
+                "New bid received",
+                sellerMessage,
+                newBidderId,
+                newBidderName,
+                newBidAmount,
+                gemName
+            );
+            
+            // 4. Notify other bidders (not the current highest or the new bidder) about increased activity
+            List<Bid> otherActiveBids = bidRepository.findByListingIdAndStatusAndBidderIdNotIn(
+                listingId, 
+                "ACTIVE", 
+                List.of(newBidderId, previousHighestBid != null ? previousHighestBid.getBidderId() : "")
+            );
+            
+            for (Bid otherBid : otherActiveBids) {
+                // Only notify if this bidder hasn't been outbid yet
+                if (!otherBid.getBidderId().equals(newBidderId)) {
+                    createNotification(
+                        otherBid.getBidderId(),
+                        listingId,
+                        newBid.getId(),
+                        "BID_ACTIVITY",
+                        "Bidding activity on " + gemName,
+                        "New bid activity on " + gemName + ". Current highest bid: LKR " + newBidAmount + 
+                        " (Total bids: " + totalBids + ")",
+                        newBidderId,
+                        newBidderName,
+                        newBidAmount,
+                        gemName
+                    );
+                }
+            }
+            
+            System.out.println("✅ All notifications created for bid: " + newBid.getId());
+            
+        } catch (Exception e) {
+            System.err.println("❌ Error handling bid notifications: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 }
