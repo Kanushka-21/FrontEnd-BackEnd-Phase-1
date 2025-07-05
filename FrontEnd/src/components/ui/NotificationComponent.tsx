@@ -177,6 +177,8 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({ userId, c
   };
 
   const handleNotificationClick = (notification: NotificationInfo) => {
+    console.log('🔔 Notification clicked:', notification);
+    
     // Mark as read if unread
     if (!notification.isRead) {
       markAsRead(notification.id);
@@ -184,12 +186,17 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({ userId, c
     
     // Navigate to the marketplace item
     if (notification.listingId) {
+      console.log('🔔 Navigating to marketplace with listingId:', notification.listingId);
+      
       // Close notification dropdown
       setIsOpen(false);
       
-      // Navigate to marketplace with specific item
-      const marketplaceUrl = `/marketplace?item=${notification.listingId}`;
+      // Navigate to marketplace with specific gemstone using the same parameter as HomePage
+      const marketplaceUrl = `/marketplace?viewGemstone=${notification.listingId}`;
+      console.log('🔔 Navigation URL:', marketplaceUrl);
       window.location.href = marketplaceUrl;
+    } else {
+      console.log('🔔 No listingId found in notification, cannot navigate');
     }
   };
 
