@@ -1,24 +1,31 @@
 export interface Advertisement {
-  id: number;
+  id: string;
   title: string;
   category: string;
   description: string;
   price: string;
-  contactInfo: string;
+  mobileNo: string;
+  email: string;
   images: string[];
-  status: 'Draft' | 'Pending Review' | 'Approved' | 'Rejected';
-  dateCreated: string;
-  views: number;
-  inquiries: number;
+  approved: string | boolean | null | undefined; // Now supports both string and boolean for backward compatibility
+  userId: string;
+  createdOn: string;
+  modifiedOn: string;
+  // UI-specific fields
+  status?: 'Draft' | 'Pending Review' | 'Approved' | 'Rejected';
+  dateCreated?: string;
+  views?: number;
+  inquiries?: number;
 }
 
-export interface FormData {
+export interface AdvertisementFormData {
   title: string;
   category: string;
   description: string;
   price: string;
-  contactInfo: string;
-  images: string[];
+  mobileNo: string;
+  email: string;
+  images: File[]; // Changed to File[] for actual file uploads
 }
 
 export interface Stats {
@@ -35,14 +42,20 @@ export interface SidebarItem {
 }
 
 export const CATEGORIES = [
-  'Electronics',
-  'Vehicles',
-  'Property',
-  'Furniture',
-  'Clothing',
-  'Books',
-  'Sports',
-  'Other'
+  'Sapphires',
+  'Rubies',
+  'Cats Eye Chrysoberyl',
+  'Garnets',
+  'Tourmalines',
+  'Spinels',
+  'Moonstone',
+  'Zircons',
+  'Topaz',
+  'Beryl',
+  'Quartz varieties',
+  'Padparadscha Sapphire',
+  'Ceylon Sapphire',
+  'Star Sapphires and Star Rubies',
 ] as const;
 
 export type Category = typeof CATEGORIES[number];

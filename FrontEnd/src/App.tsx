@@ -9,7 +9,7 @@ import HomePage from '@/pages/HomePage';
 import MarketplacePage from '@/pages/MarketplacePage';
 
 // Dashboard Pages
-import AdminDashboard from '@/pages/dashboard/AdminDashboard.responsive';
+import AdminDashboard from '@/pages/dashboard/AdminDashboard';
 import SellerDashboard from '@/pages/dashboard/SellerDashboard.new';
 import BuyerDashboard from '@/pages/dashboard/BuyerDashboard.new';
 

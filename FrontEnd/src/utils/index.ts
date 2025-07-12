@@ -219,6 +219,142 @@ export const storageUtils = {
   },
 };
 
+// Authentication utilities
+export const authUtils = {
+  // Get user data from localStorage
+  getUserData: () => {
+    try {
+      const userData = localStorage.getItem('userData');
+      return userData ? JSON.parse(userData) : null;
+    } catch (error) {
+      console.error('Error parsing userData from localStorage:', error);
+      return null;
+    }
+  },
+
+  // Get current user ID
+  getCurrentUserId: () => {
+    try {
+      const userData = authUtils.getUserData();
+      return userData?.userId || null;
+    } catch (error) {
+      console.error('Error getting user ID:', error);
+      return null;
+    }
+  },
+
+  // Get current user email
+  getCurrentUserEmail: () => {
+    try {
+      const userData = authUtils.getUserData();
+      return userData?.email || null;
+    } catch (error) {
+      console.error('Error getting user email:', error);
+      return null;
+    }
+  },
+
+  // Get current user role
+  getCurrentUserRole: () => {
+    try {
+      const userData = authUtils.getUserData();
+      return userData?.role || null;
+    } catch (error) {
+      console.error('Error getting user role:', error);
+      return null;
+    }
+  },
+
+  // Get current user full name
+  getCurrentUserFullName: () => {
+    try {
+      const userData = authUtils.getUserData();
+      if (userData?.firstName && userData?.lastName) {
+        return `${userData.firstName} ${userData.lastName}`;
+      }
+      return userData?.email || 'Unknown User';
+    } catch (error) {
+      console.error('Error getting user full name:', error);
+      return 'Unknown User';
+    }
+  },
+
+  // Check if user is authenticated
+  isAuthenticated: () => {
+    try {
+      const userData = authUtils.getUserData();
+      const token = localStorage.getItem('authToken');
+      return !!(userData && token);
+    } catch (error) {
+      console.error('Error checking authentication:', error);
+      return false;
+    }
+  },
+
+  // Check if user is verified
+  isVerified: () => {
+    try {
+      const userData = authUtils.getUserData();
+      return userData?.isVerified === true;
+    } catch (error) {
+      console.error('Error checking verification status:', error);
+      return false;
+    }
+  },
+
+  // Get auth token
+  getAuthToken: () => {
+    try {
+      return localStorage.getItem('authToken');
+    } catch (error) {
+      console.error('Error getting auth token:', error);
+      return null;
+    }
+  },
+
+  // Clear all auth data
+  clearAuthData: () => {
+    try {
+      localStorage.removeItem('userData');
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('i18nextLng');
+      localStorage.removeItem('token');
+    } catch (error) {
+      console.error('Error clearing auth data:', error);
+    }
+  },
+
+  // Save user data and token
+  saveAuthData: (userData: any, token: string) => {
+    try {
+      localStorage.setItem('userData', JSON.stringify(userData));
+      localStorage.setItem('authToken', token);
+    } catch (error) {
+      console.error('Error saving auth data:', error);
+    }
+  },
+
+  // Check if user has specific role
+  hasRole: (role: string) => {
+    try {
+      const userRole = authUtils.getCurrentUserRole();
+      return userRole === role;
+    } catch (error) {
+      console.error('Error checking user role:', error);
+      return false;
+    }
+  },
+
+  // Check if user is admin
+  isAdmin: () => authUtils.hasRole('admin'),
+
+  // Check if user is buyer
+  isBuyer: () => authUtils.hasRole('buyer'),
+
+  // Check if user is seller
+  isSeller: () => authUtils.hasRole('seller'),
+};
+
 // Image utilities
 export const imageUtils = {
   resizeImage: (
