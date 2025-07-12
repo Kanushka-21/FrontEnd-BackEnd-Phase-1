@@ -14,6 +14,8 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -25,6 +27,7 @@ public class FileStorageService {
     private Path faceImagesPath;
     private Path nicImagesPath;
     private Path extractedPhotosPath;
+    private Path advertisementImagesPath;
     
     @PostConstruct
     public void init() {
@@ -34,11 +37,13 @@ public class FileStorageService {
             faceImagesPath = basePath.resolve("face-images");
             nicImagesPath = basePath.resolve("nic-images");
             extractedPhotosPath = basePath.resolve("extracted-photos");
+            advertisementImagesPath = basePath.resolve("advertisement-images");
             
             // Create directories if they don't exist
             Files.createDirectories(faceImagesPath);
             Files.createDirectories(nicImagesPath);
             Files.createDirectories(extractedPhotosPath);
+            Files.createDirectories(advertisementImagesPath);
             
         } catch (IOException e) {
             throw new RuntimeException("Could not initialize file storage directories", e);
@@ -67,6 +72,40 @@ public class FileStorageService {
         
         String filename = generateFileName(userId, "nic", getFileExtension(file.getOriginalFilename()));
         Path targetPath = nicImagesPath.resolve(filename);
+        
+        Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
+        
+        return targetPath.toString();
+    }
+    
+    /**
+     * Store advertisement images
+     */
+    public List<String> storeAdvertisementImages(List<MultipartFile> files, String userId) throws IOException {
+        List<String> imagePaths = new ArrayList<>();
+        
+        for (int i = 0; i < files.size(); i++) {
+            MultipartFile file = files.get(i);
+            validateImageFile(file);
+            
+            String filename = generateFileName(userId, "advertisement_" + i, getFileExtension(file.getOriginalFilename()));
+            Path targetPath = advertisementImagesPath.resolve(filename);
+            
+            Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
+            imagePaths.add(targetPath.toString());
+        }
+        
+        return imagePaths;
+    }
+    
+    /**
+     * Store single advertisement image
+     */
+    public String storeAdvertisementImage(MultipartFile file, String userId) throws IOException {
+        validateImageFile(file);
+        
+        String filename = generateFileName(userId, "advertisement", getFileExtension(file.getOriginalFilename()));
+        Path targetPath = advertisementImagesPath.resolve(filename);
         
         Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
         
