@@ -80,6 +80,22 @@ const MarketplacePage: React.FC = () => {
   
   const itemsPerPage = 12;
   
+  // Helper to construct proper image URL
+  const constructImageUrl = (imagePath: string): string => {
+    if (!imagePath) return 'https://via.placeholder.com/400x300?text=Gemstone';
+    
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      return imagePath;
+    }
+    
+    const baseUrl = 'http://localhost:9092';
+    if (imagePath.startsWith('/')) {
+      return `${baseUrl}${imagePath}`;
+    }
+    
+    return `${baseUrl}/${imagePath}`;
+  };
+  
   // Helper to convert backend GemListing to frontend DetailedGemstone format
   const convertToDetailedGemstone = (listing: any): DetailedGemstone => {
     // Extract all images from the backend listing
@@ -154,22 +170,6 @@ const MarketplacePage: React.FC = () => {
         date: listing.issueDate || 'Unknown'
       } : undefined
     };
-  };
-
-  // Helper to construct proper image URL
-  const constructImageUrl = (imagePath: string): string => {
-    if (!imagePath) return 'https://via.placeholder.com/400x300?text=Gemstone';
-    
-    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-      return imagePath;
-    }
-    
-    const baseUrl = 'http://localhost:9092';
-    if (imagePath.startsWith('/')) {
-      return `${baseUrl}${imagePath}`;
-    }
-    
-    return `${baseUrl}/${imagePath}`;
   };
 
   // Function to fetch marketplace listings from real database

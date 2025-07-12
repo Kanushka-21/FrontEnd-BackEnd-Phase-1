@@ -19,8 +19,14 @@ public class WebConfig implements WebMvcConfigurer {
                 .addResourceLocations("file:" + uploadsPath + "/")
                 .setCachePeriod(3600); // Cache for 1 hour
         
+        // Also add alternative path handling for more robust file serving
+        registry.addResourceHandler("/uploads/**")
+                .addResourceLocations("file:./uploads/")
+                .setCachePeriod(3600);
+        
         System.out.println("✅ Static resource handler configured for uploads");
         System.out.println("📁 Serving files from: " + uploadsPath);
+        System.out.println("📁 Alternative path: ./uploads/");
         System.out.println("🌐 Accessible via: /uploads/**");
     }
 }
