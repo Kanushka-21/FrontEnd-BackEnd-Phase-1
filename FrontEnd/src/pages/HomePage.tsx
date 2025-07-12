@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Layout as AntLayout, Row, Col, Card, Button, Badge, Rate, Tag, Typography, 
   Space, Input, InputNumber, Statistic, Avatar, Drawer, Carousel
@@ -8,7 +8,7 @@ import {
   ShoppingCartOutlined, SearchOutlined, LoginOutlined, UserAddOutlined,
   GlobalOutlined, TeamOutlined, ShopOutlined, DollarOutlined,
   StarFilled, ClockCircleOutlined, SafetyOutlined, TrophyOutlined,
-  CloseOutlined, MenuOutlined
+  CloseOutlined, MenuOutlined, PhoneOutlined, MailOutlined
 } from '@ant-design/icons';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -16,17 +16,34 @@ import { DetailedGemstone } from '@/types';
 import Header from '@/components/layout/Header';
 import GemstoneCard from '@/components/ui/GemstoneCard';
 import GemstoneDetailModal from '@/components/home/GemstoneDetailModal';
+import { api } from '@/services/api';
 
 const { Content } = AntLayout;
 const { Title, Text, Paragraph } = Typography;
 const { Meta } = Card;
+
+// Advertisement interface for homepage display
+interface Advertisement {
+  id: string;
+  title: string;
+  category: string;
+  description: string;
+  price: string;
+  mobileNo: string;
+  email: string;
+  images: string[];
+  approved: string;
+  createdOn: string;
+}
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const [selectedGemstone, setSelectedGemstone] = useState<DetailedGemstone | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [bidAmount, setBidAmount] = useState<number>(0);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);  // Featured gemstones (top 4 most engaging items from the marketplace)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [advertisements, setAdvertisements] = useState<Advertisement[]>([]);
+  const [loadingAds, setLoadingAds] = useState(false);  // Featured gemstones (top 4 most engaging items from the marketplace)
   const featuredGemstones = [
     {
       id: '1',
@@ -151,7 +168,54 @@ const HomePage: React.FC = () => {
       comment: 'Finding quality gemstones for my designs used to be challenging. With GemNet, I can source verified gems with confidence.',
       avatar: ''
     }
-  ];const handleViewDetails = (gemstoneId: string) => {
+  ];
+
+  // Fetch approved advertisements
+  const fetchApprovedAdvertisements = async () => {
+    try {
+      setLoadingAds(true);
+      const response = await api.getAllAdvertisements();
+      
+      if (Array.isArray(response)) {
+        // Filter only approved advertisements and take first 4
+        const approvedAds = response
+          .filter(ad => ad.approved === 'approved')
+          .slice(0, 4)
+          .map(ad => ({
+            id: ad.id || ad._id,
+            title: ad.title,
+            category: ad.category,
+            description: ad.description,
+            price: ad.price,
+            mobileNo: ad.mobileNo,
+            email: ad.email,
+            images: ad.images ? ad.images.map(imagePath => {
+              // Transform image paths if needed
+              if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+                return imagePath;
+              }
+              const fileName = imagePath.split('/').pop() || imagePath.split('\\').pop();
+              return `http://localhost:9092/uploads/advertisement-images/${fileName}`;
+            }) : [],
+            approved: ad.approved,
+            createdOn: ad.createdOn
+          }));
+        
+        setAdvertisements(approvedAds);
+      }
+    } catch (error) {
+      console.error('Error fetching advertisements:', error);
+    } finally {
+      setLoadingAds(false);
+    }
+  };
+
+  // Load advertisements on component mount
+  useEffect(() => {
+    fetchApprovedAdvertisements();
+  }, []);
+
+const handleViewDetails = (gemstoneId: string) => {
     console.log('View details clicked for gemstone:', gemstoneId);
     const gemstone = featuredGemstones.find(g => g.id === gemstoneId);
     if (gemstone) {
@@ -172,6 +236,85 @@ const HomePage: React.FC = () => {
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
   };
+
+  // Advertisement Card Component
+  const AdvertisementCard: React.FC<{ advertisement: Advertisement }> = ({ advertisement }) => (
+    <Card
+      hoverable
+      className="h-full shadow-lg hover:shadow-xl transition-all duration-300 border-0 rounded-lg overflow-hidden"
+      cover={
+        <div className="relative h-48 overflow-hidden">
+          <img
+            alt={advertisement.title}
+            src={advertisement.images && advertisement.images.length > 0 
+              ? advertisement.images[0] 
+              : 'https://via.placeholder.com/300x200?text=No+Image'}
+            className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = 'https://via.placeholder.com/300x200?text=No+Image';
+            }}
+          />
+          <div className="absolute top-3 right-3">
+            <Badge status="processing" />
+          </div>
+        </div>
+      }
+    >
+      <Meta
+        title={
+          <div className="space-y-1">
+            <Title level={4} className="!mb-0 !text-base lg:!text-lg line-clamp-1">
+              {advertisement.title}
+            </Title>
+            <Tag color="blue" className="text-xs">
+              {advertisement.category}
+            </Tag>
+          </div>
+        }
+        description={
+          <div className="space-y-3">
+            <Paragraph 
+              ellipsis={{ rows: 2, expandable: false }} 
+              className="!text-gray-600 !text-sm !mb-0"
+            >
+              {advertisement.description}
+            </Paragraph>
+            
+            <div className="flex justify-between items-center">
+              <div>
+                <Text className="text-lg font-bold text-green-600">
+                  LKR {advertisement.price}
+                </Text>
+              </div>
+            </div>
+            
+            <div className="space-y-1 pt-2 border-t border-gray-100">
+              <div className="flex items-center text-xs text-gray-500">
+                <PhoneOutlined className="mr-1" />
+                {advertisement.mobileNo}
+              </div>
+              <div className="flex items-center text-xs text-gray-500">
+                <MailOutlined className="mr-1" />
+                {advertisement.email}
+              </div>
+            </div>
+            
+            <Button 
+              type="primary" 
+              block 
+              className="mt-3 bg-blue-500 hover:bg-blue-600"
+              onClick={() => {
+                // You can add navigation to advertisement details or contact functionality
+                window.location.href = `tel:${advertisement.mobileNo}`;
+              }}
+            >
+              Contact Seller
+            </Button>
+          </div>
+        }
+      />
+    </Card>
+  );
   return (
     <AntLayout className="min-h-screen bg-gray-50">
       {/* Modern Header */}
@@ -500,6 +643,68 @@ const HomePage: React.FC = () => {
                 View All Gemstones
               </Button>
             </div>
+          </div>
+        </section>
+
+        {/* Advertisements Section */}
+        <section className="py-8 sm:py-12 md:py-16 lg:py-20 bg-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8 }}
+              viewport={{ once: true }}
+              className="text-center mb-6 sm:mb-8 lg:mb-12"
+            >
+              <Title level={2} className="!text-xl sm:!text-2xl lg:!text-3xl xl:!text-4xl !font-bold !text-gray-800 !mb-2 sm:!mb-3 lg:!mb-4">
+                Featured Advertisements
+              </Title>
+              <Paragraph className="!text-sm sm:!text-base lg:!text-lg !text-gray-600 max-w-2xl mx-auto">
+                Discover quality gemstones and jewelry from verified advertisers
+              </Paragraph>
+            </motion.div>
+
+            {loadingAds ? (
+              <div className="text-center py-12">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <p className="mt-4 text-gray-500">Loading advertisements...</p>
+              </div>
+            ) : advertisements.length > 0 ? (
+              <>
+                <Row gutter={[12, 16]} className="sm:gutter-16 lg:gutter-24">
+                  {advertisements.map((advertisement, index) => (
+                    <Col xs={24} sm={12} lg={6} key={advertisement.id}>
+                      <motion.div
+                        initial={{ opacity: 0, y: 30 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6, delay: index * 0.1 }}
+                        viewport={{ once: true }}
+                        className="advertisement-card-motion-wrapper h-full"
+                      >
+                        <AdvertisementCard advertisement={advertisement} />
+                      </motion.div>
+                    </Col>
+                  ))}
+                </Row>
+
+                <div className="text-center mt-6 sm:mt-8 lg:mt-12">
+                  <Button 
+                    size="large" 
+                    type="primary"
+                    className="bg-blue-500 border-blue-500 hover:bg-blue-600 px-6 sm:px-8 h-10 sm:h-12 font-semibold"
+                    onClick={() => navigate('/advertisements')}
+                  >
+                    View All Advertisements
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-12">
+                <div className="text-4xl text-gray-300 mb-4">📢</div>
+                <h3 className="text-lg font-medium text-gray-600 mb-2">No advertisements available</h3>
+                <p className="text-gray-500">Check back later for new advertisements from our verified sellers.</p>
+              </div>
+            )}
           </div>
         </section>
 
