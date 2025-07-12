@@ -65,7 +65,7 @@ public class AdvertisementService {
     /**
      * Get all advertisements with optional approved filter
      */
-    public List<Advertisement> getAllAdvertisements(Boolean approved) {
+    public List<Advertisement> getAllAdvertisements(String approved) {
         List<Advertisement> advertisements;
         if (approved != null) {
             advertisements = advertisementRepository.findByApproved(approved);

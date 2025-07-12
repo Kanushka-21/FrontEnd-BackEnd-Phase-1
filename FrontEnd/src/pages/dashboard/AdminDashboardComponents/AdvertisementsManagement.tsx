@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import React, { useState, useEffect } from 'react';
 import { Card, Row, Col, Table, Button, Tag, Space, Input, Statistic, Spin, message, Tabs, Modal } from 'antd';
 import { 
   EyeOutlined, CheckOutlined, CloseOutlined, 
-  NotificationOutlined, CheckCircleOutlined, LoadingOutlined,
-  ClockCircleOutlined, StopOutlined, ExclamationCircleOutlined
+  NotificationOutlined, CheckCircleOutlined,
+  ClockCircleOutlined, StopOutlined,ExclamationCircleOutlined
 } from '@ant-design/icons';
 import { AlertTriangle } from 'lucide-react';
 import dayjs from 'dayjs';
@@ -30,6 +29,7 @@ const AdvertisementsManagement: React.FC<AdvertisementsManagementProps> = ({ act
   
   // State management
   const [advertisements, setAdvertisements] = useState<Advertisement[]>([]);
+  const [allAdvertisements, setAllAdvertisements] = useState<Advertisement[]>([]); // Store all advertisements for counts
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [refreshing, setRefreshing] = useState(false);
@@ -51,68 +51,41 @@ const AdvertisementsManagement: React.FC<AdvertisementsManagementProps> = ({ act
   // Define tab types
   type TabType = 'all' | 'pending' | 'approved' | 'rejected';
 
-  // Calculate statistics from real data
+  // Calculate statistics from all advertisements (not just current tab)
   const stats = {
-    totalAdvertisements: advertisements.length,
-    activeAdvertisements: advertisements.filter(ad => ad.approved === 'approved').length,
-    pendingAdvertisements: advertisements.filter(ad => ad.approved === 'pending' || ad.approved === null || ad.approved === undefined).length,
-    rejectedAdvertisements: advertisements.filter(ad => ad.approved === 'rejected').length
+    totalAdvertisements: allAdvertisements.length,
+    activeAdvertisements: allAdvertisements.filter(ad => ad.approved === 'approved').length,
+    pendingAdvertisements: allAdvertisements.filter(ad => ad.approved === 'pending' || ad.approved === null || ad.approved === undefined).length,
+    rejectedAdvertisements: allAdvertisements.filter(ad => ad.approved === 'rejected').length
   };
 
-  // Get counts for tab badges (these will be calculated from current data)
+  // Get counts for tab badges from all advertisements
   const getTabCounts = () => {
     return {
-      all: advertisements.length,
-      pending: advertisements.filter(ad => ad.approved === 'pending' || ad.approved === null || ad.approved === undefined).length,
-      approved: advertisements.filter(ad => ad.approved === 'approved').length,
-      rejected: advertisements.filter(ad => ad.approved === 'rejected').length
+      all: allAdvertisements.length,
+      pending: allAdvertisements.filter(ad => ad.approved === 'pending' || ad.approved === null || ad.approved === undefined).length,
+      approved: allAdvertisements.filter(ad => ad.approved === 'approved').length,
+      rejected: allAdvertisements.filter(ad => ad.approved === 'rejected').length
     };
   };
 
   const tabCounts = getTabCounts();
 
-  // Fetch advertisements from API based on tab
+  // Fetch advertisements from API and filter based on tab
   const fetchAdvertisements = async (tab: TabType = activeTab as TabType) => {
     try {
       setLoading(true);
       
-      let response: any;
-      
-      // Call API with different parameters based on tab
-      switch (tab) {
-        case 'all':
-          response = await api.getAllAdvertisements(); // No filter, get all
-          break;
-        case 'approved':
-          response = await api.getAllAdvertisements(true); // Only approved
-          break;
-        case 'rejected':
-          response = await api.getAllAdvertisements(false); // Only rejected
-          break;
-        case 'pending':
-          response = await api.getAllAdvertisements(); // Get all, then filter pending
-          break;
-        default:
-          response = await api.getAllAdvertisements();
-      }
+      // Always fetch all advertisements to maintain consistent counts
+      const response = await api.getAllAdvertisements();
       
       console.log(`API response for ${tab} tab:`, response);
       console.log('Response type:', typeof response);
       console.log('Is array:', Array.isArray(response));
       
-      // The getAllAdvertisements function returns response.data directly
-      // So 'response' should be the array of advertisements
       if (Array.isArray(response)) {
-        let filteredData = response;
-        
-        // For pending tab, filter out advertisements where approved is null/undefined
-        if (tab === 'pending') {
-          filteredData = response.filter((ad: any) => 
-            ad.approved === null || ad.approved === undefined || ad.approved === 'pending'
-          );
-        }
-        
-        const transformedData: Advertisement[] = filteredData.map((ad: any) => ({
+        // Transform all data first
+        const transformedData: Advertisement[] = response.map((ad: any) => ({
           // Direct mapping from API response
           id: ad.id || ad._id,
           title: ad.title,
@@ -141,24 +114,49 @@ const AdvertisementsManagement: React.FC<AdvertisementsManagementProps> = ({ act
           location: 'marketplace'
         }));
         
-        console.log(`Transformed data for ${tab}:`, transformedData);
-        setAdvertisements(transformedData);
+        // Store all advertisements for counts
+        setAllAdvertisements(transformedData);
+        
+        // Filter data based on active tab for display
+        let filteredData = transformedData;
+        switch (tab) {
+          case 'pending':
+            filteredData = transformedData.filter(ad => 
+              ad.approved === 'pending' || ad.approved === null || ad.approved === undefined
+            );
+            break;
+          case 'approved':
+            filteredData = transformedData.filter(ad => ad.approved === 'approved');
+            break;
+          case 'rejected':
+            filteredData = transformedData.filter(ad => ad.approved === 'rejected');
+            break;
+          case 'all':
+          default:
+            filteredData = transformedData;
+            break;
+        }
+        
+        console.log(`Filtered data for ${tab}:`, filteredData);
+        setAdvertisements(filteredData);
         setLastUpdated(new Date());
-        message.success(`Loaded ${transformedData.length} ${tab} advertisements`);
       } else if (response && response.success === false) {
         // Handle error response
         console.error('API error:', response.message);
         message.error(response.message || 'Failed to fetch advertisements');
         setAdvertisements([]);
+        setAllAdvertisements([]);
       } else {
         console.warn('Unexpected response structure:', response);
         message.warning('Received unexpected response format');
         setAdvertisements([]);
+        setAllAdvertisements([]);
       }
     } catch (error) {
       console.error('Error fetching advertisements:', error);
       message.error('Failed to load advertisements. Please try again.');
       setAdvertisements([]);
+      setAllAdvertisements([]);
     } finally {
       setLoading(false);
     }
@@ -255,27 +253,6 @@ const AdvertisementsManagement: React.FC<AdvertisementsManagementProps> = ({ act
     }),
   };
 
-  // Handle advertisement approval/rejection with API update
-  const handleAdvertisementAction = async (advertisement: Advertisement, newStatus: string) => {
-    try {
-      // Call the API to update advertisement status
-      const response = await api.updateAdvertisementApproval(advertisement.id, newStatus);
-      
-      if (response.success) {
-        // Refresh the current tab to get updated data
-        await fetchAdvertisements(activeTab as TabType);
-        
-        const actionText = newStatus === 'approved' ? 'approved' : 'rejected';
-        message.success(`Advertisement ${actionText} successfully`);
-      } else {
-        message.error(response.message || 'Failed to update advertisement status');
-      }
-    } catch (error) {
-      console.error('Error updating advertisement status:', error);
-      message.error('Failed to update advertisement status. Please try again.');
-    }
-  };
-
   // Show confirmation dialog for individual advertisement actions
   const showConfirmationDialog = (advertisement: Advertisement, action: 'approved' | 'rejected') => {
     const actionText = action === 'approved' ? 'approve' : 'reject';
@@ -301,6 +278,94 @@ const AdvertisementsManagement: React.FC<AdvertisementsManagementProps> = ({ act
   const handleConfirmationCancel = () => {
     setConfirmationVisible(false);
     setPendingAction(null);
+  };
+
+  // Handle advertisement approval/rejection with API update
+  const handleAdvertisementAction = async (advertisement: Advertisement, newStatus: string) => {
+    try {
+      // Call the API to update advertisement status with string value
+      const response = await api.updateAdvertisementApproval(advertisement.id, newStatus);
+      
+      // Debug logging to see the actual response
+      console.log('API Response:', response);
+      console.log('Response type:', typeof response);
+      console.log('Response keys:', response ? Object.keys(response) : 'No response');
+      
+      // More flexible response handling - check for various success indicators
+      let isSuccess = false;
+      let errorMessage = '';
+
+      if (response) {
+        // Check multiple possible success conditions
+        if (
+          response.success === true ||           // { success: true }
+          response.status === 'success' ||       // { status: 'success' }
+          response.status === 200 ||             // { status: 200 }
+          response.statusCode === 200 ||         // { statusCode: 200 }
+          response.code === 200 ||               // { code: 200 }
+          (response.data && !response.error) ||  // { data: {...} } without error
+          (response.message && !response.error && response.success !== false) || // { message: '...' } without error
+          (!response.error && response.success !== false && response.id) || // Direct data with id
+          (!response.error && response.success !== false && Object.keys(response).length > 0) // Any non-error response with data
+        ) {
+          isSuccess = true;
+        } else if (
+          response.success === false ||
+          response.status === 'error' ||
+          response.error ||
+          (response.status && response.status >= 400)
+        ) {
+          // Explicit failure cases
+          isSuccess = false;
+          errorMessage = response.message || response.error || response.errorMessage || 'Unknown error occurred';
+        } else {
+          // Default to success if response exists and doesn't indicate failure
+          isSuccess = true;
+          console.log('Defaulting to success for response:', response);
+        }
+      } else {
+        isSuccess = false;
+        errorMessage = 'No response received from server';
+      }
+
+      console.log('Response evaluation - isSuccess:', isSuccess, 'errorMessage:', errorMessage);
+
+      if (isSuccess) {
+        // Success case
+        const actionText = newStatus === 'approved' ? 'approved' : 'rejected';
+        message.success(`Advertisement ${actionText} successfully`);
+        
+        // Refresh the current tab to get updated data
+        await fetchAdvertisements(activeTab as TabType);
+      } else {
+        // Error case
+        console.error('API Error:', errorMessage);
+        message.error(errorMessage || 'Failed to update advertisement status');
+      }
+    } catch (error) {
+      console.error('Error updating advertisement status:', error);
+      
+      // Handle different error types
+      let errorMessage = 'An error occurred while updating advertisement status';
+      
+      if (error.response) {
+        // Server responded with an error status
+        console.error('Server error response:', error.response);
+        errorMessage = error.response.data?.message || 
+                      error.response.data?.error || 
+                      `Server error: ${error.response.status}`;
+      } else if (error.request) {
+        // Network error
+        console.error('Network error:', error.request);
+        errorMessage = 'Network error. Please check your connection and try again.';
+      } else {
+        // Other error
+        console.error('Other error:', error.message);
+        errorMessage = error.message || errorMessage;
+      }
+      
+      message.error(errorMessage);
+    }
   };
 
   // Override the action handler to show confirmation dialog
@@ -398,7 +463,7 @@ const AdvertisementsManagement: React.FC<AdvertisementsManagementProps> = ({ act
             View
           </Button>
           {/* Show approve/reject buttons for pending advertisements */}
-          {(record.approved === null || record.approved === undefined || record.approved === 'pending' || record.status === 'pending') && (
+          {(record.approved === null || record.approved === undefined || record.status === 'pending') && (
             <>
               <Button 
                 size="small" 
@@ -419,7 +484,7 @@ const AdvertisementsManagement: React.FC<AdvertisementsManagementProps> = ({ act
             </>
           )}
           {/* Show deactivate button for approved advertisements */}
-          {(record.approved === 'approved' || record.status === 'approved') && (
+          {(record.approved === true || record.status === 'approved') && (
             <Button 
               size="small" 
               icon={<CloseOutlined />} 
@@ -430,7 +495,7 @@ const AdvertisementsManagement: React.FC<AdvertisementsManagementProps> = ({ act
             </Button>
           )}
           {/* Show reactivate button for rejected advertisements */}
-          {(record.approved === 'rejected' || record.status === 'rejected') && (
+          {(record.approved === false || record.status === 'rejected') && (
             <Button 
               size="small" 
               icon={<CheckOutlined />} 
@@ -447,50 +512,7 @@ const AdvertisementsManagement: React.FC<AdvertisementsManagementProps> = ({ act
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Manage Advertisements</h2>
-        <div className="flex space-x-4">
-          <Input.Search
-            placeholder="Search advertisements..."
-            style={{ width: 300 }}
-            allowClear
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          <Button 
-            type="primary" 
-            icon={refreshing ? <LoadingOutlined /> : <CheckOutlined />}
-            onClick={refreshAdvertisements}
-            loading={refreshing}
-          >
-            Refresh
-          </Button>
-          {/* Bulk Action Buttons */}
-          <Button 
-            type="primary" 
-            icon={<CheckOutlined />}
-            onClick={() => handleBulkAction(true)}
-            disabled={selectedAdvertisements.length === 0}
-            loading={processingBulkAction}
-            style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
-          >
-            Approve ({selectedAdvertisements.length})
-          </Button>
-          <Button 
-            danger
-            icon={<CloseOutlined />}
-            onClick={() => handleBulkAction(false)}
-            disabled={selectedAdvertisements.length === 0}
-            loading={processingBulkAction}
-          >
-            Reject ({selectedAdvertisements.length})
-          </Button>
-          <Button type="default" icon={<CheckOutlined />}>
-            Create New Ad
-          </Button>
-        </div>
-      </div>
-
+    
       {/* Statistics Cards */}
       <Row gutter={[16, 16]} className="mb-6">
         <Col xs={24} sm={12} lg={6}>
@@ -600,20 +622,7 @@ const AdvertisementsManagement: React.FC<AdvertisementsManagementProps> = ({ act
                 </span>
               ),
             },
-            {
-              key: 'all',
-              label: (
-                <span className="flex items-center space-x-2">
-                  <NotificationOutlined />
-                  <span>All Advertisements</span>
-                  {tabCounts.all > 0 && (
-                    <Tag color="blue" style={{ marginLeft: '8px' }}>
-                      {tabCounts.all}
-                    </Tag>
-                  )}
-                </span>
-              ),
-            },
+            
             {
               key: 'approved',
               label: (
@@ -637,6 +646,20 @@ const AdvertisementsManagement: React.FC<AdvertisementsManagementProps> = ({ act
                   {tabCounts.rejected > 0 && (
                     <Tag color="red" style={{ marginLeft: '8px' }}>
                       {tabCounts.rejected}
+                    </Tag>
+                  )}
+                </span>
+              ),
+            },
+            {
+              key: 'all',
+              label: (
+                <span className="flex items-center space-x-2">
+                  <NotificationOutlined />
+                  <span>All Advertisements</span>
+                  {tabCounts.all > 0 && (
+                    <Tag color="blue" style={{ marginLeft: '8px' }}>
+                      {tabCounts.all}
                     </Tag>
                   )}
                 </span>

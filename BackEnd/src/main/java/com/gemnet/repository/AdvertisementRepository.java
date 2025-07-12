@@ -10,7 +10,7 @@ import java.util.List;
 @Repository
 public interface AdvertisementRepository extends MongoRepository<Advertisement, String> {
     
-    List<Advertisement> findByApproved(Boolean approved);
+    List<Advertisement> findByApproved(String approved);
     
     List<Advertisement> findByUserId(String userId);
     

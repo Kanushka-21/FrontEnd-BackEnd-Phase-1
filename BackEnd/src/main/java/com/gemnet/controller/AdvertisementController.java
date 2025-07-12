@@ -97,7 +97,7 @@ public class AdvertisementController {
      */
     @GetMapping
     public ResponseEntity<List<Advertisement>> getAllAdvertisements(
-            @RequestParam(required = false) Boolean approved) {
+            @RequestParam(required = false) String approved) {
         
         try {
             List<Advertisement> advertisements;

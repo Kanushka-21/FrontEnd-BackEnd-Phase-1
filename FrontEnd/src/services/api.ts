@@ -712,7 +712,7 @@ const extendedAPI = {
     }
   },
 
-  getAllAdvertisements: async (approved?: boolean): Promise<ApiResponse<any[]>> => {
+  getAllAdvertisements: async (approved?: String): Promise<ApiResponse<any[]>> => {
     try {
       const params = approved !== undefined ? `?approved=${approved}` : '';
       const response = await api.get(`/api/advertisements${params}`);
@@ -767,7 +767,7 @@ const extendedAPI = {
     }
   },
 
-  updateAdvertisementApproval: async (id: string, approve: boolean): Promise<ApiResponse> => {
+  updateAdvertisementApproval: async (id: string, approve: string): Promise<ApiResponse> => {
     try {
       const response = await api.patch(`/api/advertisements/${id}/approval`, null, {
         params: { approve }
