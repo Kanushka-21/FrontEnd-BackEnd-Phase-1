@@ -687,6 +687,98 @@ const extendedAPI = {
     }
   },
 
+  // Advertisements API (User)
+  createAdvertisement: async (formData: FormData): Promise<ApiResponse> => {
+    try {
+      const response = await api.post('/api/advertisements', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error creating advertisement:', error);
+      return { success: false, message: apiUtils.formatErrorMessage(error) };
+    }
+  },
+
+  getUserAdvertisements: async (userId: string): Promise<ApiResponse<any[]>> => {
+    try {
+      const response = await api.get(`/api/advertisements/user/${userId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching user advertisements:', error);
+      return { success: false, message: apiUtils.formatErrorMessage(error) };
+    }
+  },
+
+  getAllAdvertisements: async (approved?: boolean): Promise<ApiResponse<any[]>> => {
+    try {
+      const params = approved !== undefined ? `?approved=${approved}` : '';
+      const response = await api.get(`/api/advertisements${params}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching all advertisements:', error);
+      return { success: false, message: apiUtils.formatErrorMessage(error) };
+    }
+  },
+
+  getAdvertisementById: async (id: string): Promise<ApiResponse<any>> => {
+    try {
+      const response = await api.get(`/api/advertisements/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching advertisement:', error);
+      return { success: false, message: apiUtils.formatErrorMessage(error) };
+    }
+  },
+
+  updateAdvertisement: async (id: string, formData: FormData): Promise<ApiResponse> => {
+    try {
+      const response = await api.put(`/api/advertisements/${id}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error updating advertisement:', error);
+      return { success: false, message: apiUtils.formatErrorMessage(error) };
+    }
+  },
+
+  deleteAdvertisement: async (id: string): Promise<ApiResponse> => {
+    try {
+      const response = await api.delete(`/api/advertisements/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error deleting advertisement:', error);
+      return { success: false, message: apiUtils.formatErrorMessage(error) };
+    }
+  },
+
+  getAdvertisementsByCategory: async (category: string): Promise<ApiResponse<any[]>> => {
+    try {
+      const response = await api.get(`/api/advertisements/category/${category}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching advertisements by category:', error);
+      return { success: false, message: apiUtils.formatErrorMessage(error) };
+    }
+  },
+
+  updateAdvertisementApproval: async (id: string, approved: boolean): Promise<ApiResponse> => {
+    try {
+      const response = await api.patch(`/api/advertisements/${id}/approval`, null, {
+        params: { approved }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error updating advertisement approval:', error);
+      return { success: false, message: apiUtils.formatErrorMessage(error) };
+    }
+  },
+
   // Machine Learning Price Prediction
   predictPrice: async (attributes: PriceAttributes): Promise<ApiResponse<PricePrediction>> => {
     const response = await api.post('/api/ml/predict-price', attributes);
