@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Shield, MessageCircle, TrendingUp, Info } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Shield, TrendingUp, Clock, Users } from 'lucide-react';
 import Button from '@/components/ui/Button';
-import { DetailedGemstone } from '@/types';
+import { DetailedGemstone, BidInfo } from '@/types';
 
 // Helper function to format price in LKR
 const formatLKR = (price: number) => {
@@ -30,24 +29,70 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [bidAmount, setBidAmount] = useState<string>('');
   const [bidError, setBidError] = useState<string>('');
+  const [bids, setBids] = useState<BidInfo[]>([]);
+  const [bidStats, setBidStats] = useState({
+    totalBids: 0,
+    highestBid: 0,
+    highestBidder: ''
+  });
+  const [loadingBids, setLoadingBids] = useState(false);
 
-  const currentHighestBid = gemstone ? gemstone.price : 0;
-  const minimumBid = currentHighestBid * 1.05; // 5% higher than current price
+  // Get current highest bid from props or fetched data
+  const currentHighestBid = gemstone?.currentBid || bidStats.highestBid || (gemstone ? gemstone.price : 0);
+  const minimumBid = currentHighestBid * 1.02; // 2% higher than current price
   
-  // Mock multiple images for demonstration
-  const images = gemstone 
-    ? [gemstone.image, 
-      'https://images.unsplash.com/photo-1583937443566-6fe1a1c6e400?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1599707367072-cd6ada2bc375?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80']
-    : [];
+  // Use actual uploaded images from the gemstone data
+  const images = gemstone?.images && gemstone.images.length > 0 
+    ? gemstone.images 
+    : gemstone?.image 
+      ? [gemstone.image] 
+      : ['https://via.placeholder.com/400x300?text=No+Image+Available'];
+
+  // Load bid data when modal opens
+  useEffect(() => {
+    if (isOpen && gemstone?.id) {
+      loadBidData();
+    }
+  }, [isOpen, gemstone?.id]);
+
+  const loadBidData = async () => {
+    if (!gemstone?.id) return;
+    
+    setLoadingBids(true);
+    try {
+      // Load bid statistics
+      const statsResponse = await fetch(`/api/bidding/listing/${gemstone.id}/stats`);
+      const statsResult = await statsResponse.json();
+      
+      if (statsResult.success) {
+        setBidStats({
+          totalBids: statsResult.data.totalBids || 0,
+          highestBid: statsResult.data.highestBid || 0,
+          highestBidder: statsResult.data.highestBidder || ''
+        });
+      }
+
+      // Load recent bids
+      const bidsResponse = await fetch(`/api/bidding/listing/${gemstone.id}/bids?page=0&size=5`);
+      const bidsResult = await bidsResponse.json();
+      
+      if (bidsResult.success) {
+        setBids(bidsResult.data.bids || []);
+      }
+    } catch (error) {
+      console.error('Error loading bid data:', error);
+    } finally {
+      setLoadingBids(false);
+    }
+  };
 
   const validateBid = (amount: number): boolean => {
     if (amount <= currentHighestBid) {
-      setBidError(`Bid must be higher than current price ${formatLKR(currentHighestBid)}`);
+      setBidError(`Bid must be higher than current highest bid ${formatLKR(currentHighestBid)}`);
       return false;
     }
     if (amount < minimumBid) {
-      setBidError(`Minimum bid is ${formatLKR(minimumBid)} (5% higher than current price)`);
+      setBidError(`Minimum bid is ${formatLKR(minimumBid)} (2% higher than current highest bid)`);
       return false;
     }
     setBidError('');
@@ -59,6 +104,8 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
     const amount = parseFloat(bidAmount);
     if (validateBid(amount)) {
       onPlaceBid(amount);
+      setBidAmount(''); // Clear the form
+      loadBidData(); // Reload bid data
     }
   };
 
@@ -90,20 +137,47 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
                     src={images[currentImageIndex]}
                     alt={gemstone.name}
                     className="w-full h-full object-contain"
+                    onError={(e) => {
+                      console.error('Failed to load image:', images[currentImageIndex]);
+                      e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Image+Not+Found';
+                    }}
                   />
                 </div>
-                <div className="grid grid-cols-3 gap-3 max-w-md mx-auto">
-                  {images.map((img, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setCurrentImageIndex(index)}
-                      className={`aspect-square rounded-xl overflow-hidden border-2 ${
-                        index === currentImageIndex ? 'border-primary-500' : 'border-transparent'
-                      }`}
-                    >
-                      <img src={img} alt={`${gemstone.name} view ${index + 1}`} className="w-full h-full object-cover" />
-                    </button>
-                  ))}
+                
+                {/* Only show thumbnails if there are multiple images */}
+                {images.length > 1 && (
+                  <div className={`grid gap-3 max-w-md mx-auto ${
+                    images.length <= 3 ? 'grid-cols-3' : 
+                    images.length <= 4 ? 'grid-cols-4' : 
+                    'grid-cols-5'
+                  }`}>
+                    {images.map((img, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setCurrentImageIndex(index)}
+                        className={`aspect-square rounded-xl overflow-hidden border-2 transition-all ${
+                          index === currentImageIndex 
+                            ? 'border-primary-500 ring-2 ring-primary-200' 
+                            : 'border-gray-200 hover:border-primary-300'
+                        }`}
+                      >
+                        <img 
+                          src={img} 
+                          alt={`${gemstone.name} view ${index + 1}`} 
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            console.error('Failed to load thumbnail:', img);
+                            e.currentTarget.src = 'https://via.placeholder.com/100x100?text=Error';
+                          }}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Image counter */}
+                <div className="text-center text-sm text-gray-500">
+                  {images.length > 1 ? `${currentImageIndex + 1} of ${images.length} images` : '1 image'}
                 </div>
               </div>
 
@@ -165,23 +239,25 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
                 </div>
 
                 {/* Dimensions */}
-                <div className="space-y-3">
-                  <h3 className="text-xl font-semibold">Dimensions</h3>
-                  <div className="grid grid-cols-3 gap-4 bg-gray-50 p-4 rounded-xl">
-                    <div className="text-center">
-                      <div className="text-base text-secondary-600">Length</div>
-                      <div className="font-medium text-lg">{gemstone.dimensions.length}mm</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-base text-secondary-600">Width</div>
-                      <div className="font-medium text-lg">{gemstone.dimensions.width}mm</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-base text-secondary-600">Height</div>
-                      <div className="font-medium text-lg">{gemstone.dimensions.height}mm</div>
+                {gemstone.dimensions && (
+                  <div className="space-y-3">
+                    <h3 className="text-xl font-semibold">Dimensions</h3>
+                    <div className="grid grid-cols-3 gap-4 bg-gray-50 p-4 rounded-xl">
+                      <div className="text-center">
+                        <div className="text-base text-secondary-600">Length</div>
+                        <div className="font-medium text-lg">{gemstone.dimensions.length}mm</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-base text-secondary-600">Width</div>
+                        <div className="font-medium text-lg">{gemstone.dimensions.width}mm</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-base text-secondary-600">Height</div>
+                        <div className="font-medium text-lg">{gemstone.dimensions.height}mm</div>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
 
                 {/* Certificate Information */}
                 {gemstone.certificate && (
@@ -207,12 +283,106 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
                   </div>
                 )}
 
+                {/* Current Bidding Status */}
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <TrendingUp className="w-5 h-5 text-green-600" />
+                    <h3 className="text-xl font-semibold">Bidding Information</h3>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-blue-50 p-4 rounded-xl text-center">
+                      <div className="text-2xl font-bold text-blue-600">
+                        {bidStats.totalBids || gemstone.totalBids || 0}
+                      </div>
+                      <div className="text-sm text-blue-700">Total Bids</div>
+                    </div>
+                    
+                    <div className="bg-green-50 p-4 rounded-xl text-center">
+                      <div className="text-2xl font-bold text-green-600">
+                        {formatLKR(currentHighestBid)}
+                      </div>
+                      <div className="text-sm text-green-700">Current Highest</div>
+                    </div>
+                    
+                    <div className="bg-purple-50 p-4 rounded-xl text-center">
+                      <div className="text-lg font-bold text-purple-600">
+                        {bidStats.highestBidder || gemstone.highestBidder || 'No bids yet'}
+                      </div>
+                      <div className="text-sm text-purple-700">Highest Bidder</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Recent Bids */}
+                {bids.length > 0 && (
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <Clock className="w-5 h-5 text-gray-600" />
+                      <h3 className="text-xl font-semibold">Recent Bids</h3>
+                    </div>
+                    
+                    <div className="bg-gray-50 rounded-xl p-4 max-h-48 overflow-y-auto">
+                      {loadingBids ? (
+                        <div className="text-center py-4">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto"></div>
+                          <p className="text-sm text-gray-500 mt-2">Loading bids...</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {bids.map((bid, index) => (
+                            <div 
+                              key={bid.id} 
+                              className={`flex justify-between items-center p-3 rounded-lg ${
+                                index === 0 ? 'bg-green-100' : 'bg-white'
+                              }`}
+                            >
+                              <div>
+                                <div className="font-medium">{bid.bidderName}</div>
+                                <div className="text-sm text-gray-500">
+                                  {new Date(bid.bidTime).toLocaleString()}
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="font-bold text-lg">
+                                  {formatLKR(bid.bidAmount)}
+                                </div>
+                                <div className={`text-xs px-2 py-1 rounded-full ${
+                                  bid.status === 'ACTIVE' ? 'bg-green-200 text-green-800' :
+                                  bid.status === 'OUTBID' ? 'bg-red-200 text-red-800' :
+                                  'bg-gray-200 text-gray-800'
+                                }`}>
+                                  {bid.status}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Bid Section */}
-                <form onSubmit={handleSubmit} className="space-y-4 bg-gray-50 p-6 rounded-xl">
+                <form onSubmit={handleSubmit} className="space-y-4 bg-gradient-to-br from-primary-50 to-blue-50 p-6 rounded-xl border border-primary-200">
+                  <div className="flex items-center space-x-2 mb-4">
+                    <Users className="w-5 h-5 text-primary-600" />
+                    <h3 className="text-xl font-semibold text-primary-800">Place Your Bid</h3>
+                  </div>
+                  
                   <div>
-                    <label htmlFor="bidAmount" className="block text-base font-medium text-secondary-700">
-                      Your Bid (Minimum: {formatLKR(minimumBid)})
+                    <label htmlFor="bidAmount" className="block text-base font-medium text-secondary-700 mb-2">
+                      Your Bid Amount
                     </label>
+                    <div className="text-sm text-gray-600 mb-3">
+                      Minimum bid: <span className="font-semibold text-primary-600">{formatLKR(minimumBid)}</span>
+                      {currentHighestBid > gemstone.price && (
+                        <span className="ml-2">
+                          (2% above current highest: <span className="font-semibold">{formatLKR(currentHighestBid)}</span>)
+                        </span>
+                      )}
+                    </div>
+                    
                     <div className="mt-2">
                       <input
                         type="number"
@@ -224,7 +394,7 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
                         }}
                         className="block w-full px-4 py-3 text-lg border border-secondary-300 rounded-xl shadow-sm focus:ring-primary-500 focus:border-primary-500"
                         min={minimumBid}
-                        step="100"
+                        step="any"
                         required
                       />
                     </div>

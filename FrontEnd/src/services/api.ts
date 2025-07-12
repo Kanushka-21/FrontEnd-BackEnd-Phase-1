@@ -251,14 +251,14 @@ export const gemstonesAPI = {
     }
 
     const response: AxiosResponse<ApiResponse<DetailedGemstone[]>> = await api.get(
-      `/api/gemstones${params.toString() ? `?${params.toString()}` : ''}`
+      `/api/marketplace/listings${params.toString() ? `?${params.toString()}` : ''}`
     );
     return response.data;
   },
 
   // Get a single gemstone by ID
   getById: async (id: string): Promise<ApiResponse<DetailedGemstone>> => {
-    const response: AxiosResponse<ApiResponse<DetailedGemstone>> = await api.get(`/api/gemstones/${id}`);
+    const response: AxiosResponse<ApiResponse<DetailedGemstone>> = await api.get(`/api/marketplace/listings/${id}`);
     return response.data;
   },
 
@@ -798,6 +798,207 @@ const extendedAPI = {
 
   // Utils
   ...apiUtils,
+
+  // Admin Gemstone Listing Management
+  admin: {
+    // Get pending gemstone listings for admin approval
+    getPendingListings: async (page: number = 0, size: number = 10): Promise<ApiResponse<any>> => {
+      try {
+        const response = await api.get(`/api/admin/pending-listings?page=${page}&size=${size}`);
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching pending listings:', error);
+        return { success: false, message: apiUtils.formatErrorMessage(error) };
+      }
+    },
+
+    // Update listing status (approve or reject)
+    updateListingStatus: async (listingId: string, status: 'APPROVED' | 'REJECTED', adminComment?: string): Promise<ApiResponse<any>> => {
+      try {
+        const params = new URLSearchParams();
+        params.append('status', status);
+        if (adminComment) {
+          params.append('adminComment', adminComment);
+        }
+        
+        const response = await api.put(`/api/admin/listings/${listingId}/status?${params.toString()}`);
+        return response.data;
+      } catch (error) {
+        console.error('Error updating listing status:', error);
+        return { success: false, message: apiUtils.formatErrorMessage(error) };
+      }
+    },
+
+    // Get admin dashboard statistics
+    getDashboardStats: async (): Promise<ApiResponse<any>> => {
+      try {
+        const response = await api.get('/api/admin/dashboard-stats');
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching dashboard stats:', error);
+        return { success: false, message: apiUtils.formatErrorMessage(error) };
+      }
+    },
+
+    // Get listing details for admin review
+    getListingDetails: async (listingId: string): Promise<ApiResponse<any>> => {
+      try {
+        const response = await api.get(`/api/admin/listings/${listingId}`);
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching listing details:', error);
+        return { success: false, message: apiUtils.formatErrorMessage(error) };
+      }
+    }
+  },
+
+  // Marketplace APIs
+  marketplace: {
+    // Get marketplace listings (approved gemstones)
+    getListings: async (params?: {
+      page?: number,
+      size?: number,
+      sortBy?: string,
+      sortDir?: string,
+      search?: string,
+      category?: string,
+      minPrice?: number,
+      maxPrice?: number,
+      certifiedOnly?: boolean
+    }): Promise<ApiResponse<any>> => {
+      try {
+        const queryParams = new URLSearchParams();
+        
+        if (params?.page !== undefined) queryParams.append('page', params.page.toString());
+        if (params?.size !== undefined) queryParams.append('size', params.size.toString());
+        if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
+        if (params?.sortDir) queryParams.append('sortDir', params.sortDir);
+        if (params?.search) queryParams.append('search', params.search);
+        if (params?.category) queryParams.append('category', params.category);
+        if (params?.minPrice !== undefined) queryParams.append('minPrice', params.minPrice.toString());
+        if (params?.maxPrice !== undefined) queryParams.append('maxPrice', params.maxPrice.toString());
+        if (params?.certifiedOnly) queryParams.append('certifiedOnly', params.certifiedOnly.toString());
+        
+        const response = await api.get(`/api/marketplace/listings?${queryParams.toString()}`);
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching marketplace listings:', error);
+        return { success: false, message: apiUtils.formatErrorMessage(error) };
+      }
+    },
+
+    // Get listing details
+    getListingDetails: async (listingId: string): Promise<ApiResponse<any>> => {
+      try {
+        const response = await api.get(`/api/marketplace/listings/${listingId}`);
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching listing details:', error);
+        return { success: false, message: apiUtils.formatErrorMessage(error) };
+      }
+    },
+
+    // Search gemstones
+    searchGemstones: async (query: string, limit?: number): Promise<ApiResponse<any>> => {
+      try {
+        const params = new URLSearchParams();
+        params.append('q', query);
+        if (limit) params.append('limit', limit.toString());
+        
+        const response = await api.get(`/api/marketplace/search?${params.toString()}`);
+        return response.data;
+      } catch (error) {
+        console.error('Error searching gemstones:', error);
+        return { success: false, message: apiUtils.formatErrorMessage(error) };
+      }
+    },
+
+    // Get marketplace statistics
+    getStats: async (): Promise<ApiResponse<any>> => {
+      try {
+        const response = await api.get('/api/marketplace/stats');
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching marketplace stats:', error);
+        return { success: false, message: apiUtils.formatErrorMessage(error) };
+      }
+    }
+  },
+
+  // Bidding API endpoints
+  bidding: {
+    // Place a bid
+    placeBid: async (bidRequest: {
+      listingId: string;
+      bidderId: string;
+      bidderName: string;
+      bidAmount: number;
+      bidType?: string;
+    }): Promise<ApiResponse<any>> => {
+      try {
+        const response = await api.post('/api/bidding/place-bid', bidRequest);
+        return response.data;
+      } catch (error) {
+        console.error('Error placing bid:', error);
+        return { success: false, message: apiUtils.formatErrorMessage(error) };
+      }
+    },
+
+    // Get bid statistics for a listing
+    getBidStats: async (listingId: string): Promise<ApiResponse<any>> => {
+      try {
+        const response = await api.get(`/api/bidding/stats/${listingId}`);
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching bid stats:', error);
+        return { success: false, message: apiUtils.formatErrorMessage(error) };
+      }
+    },
+
+    // Get bid history for a listing
+    getBidHistory: async (listingId: string): Promise<ApiResponse<any>> => {
+      try {
+        const response = await api.get(`/api/bidding/history/${listingId}`);
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching bid history:', error);
+        return { success: false, message: apiUtils.formatErrorMessage(error) };
+      }
+    },
+
+    // Get user's notifications
+    getNotifications: async (userId: string): Promise<ApiResponse<any>> => {
+      try {
+        const response = await api.get(`/api/bidding/notifications/${userId}`);
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching notifications:', error);
+        return { success: false, message: apiUtils.formatErrorMessage(error) };
+      }
+    },
+
+    // Mark notification as read
+    markNotificationRead: async (notificationId: string): Promise<ApiResponse<any>> => {
+      try {
+        const response = await api.put(`/api/bidding/notifications/${notificationId}/read`);
+        return response.data;
+      } catch (error) {
+        console.error('Error marking notification as read:', error);
+        return { success: false, message: apiUtils.formatErrorMessage(error) };
+      }
+    },
+
+    // Get user's bids
+    getUserBids: async (userId: string, page: number = 0, size: number = 10): Promise<ApiResponse<any>> => {
+      try {
+        const response = await api.get(`/api/bidding/user/${userId}/bids?page=${page}&size=${size}`);
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching user bids:', error);
+        return { success: false, message: apiUtils.formatErrorMessage(error) };
+      }
+    }
+  },
 };
 
 export { extendedAPI as api };

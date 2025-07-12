@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Table, Button, Tag, Space, Modal, Form, Input, 
-  InputNumber, message, Steps, Card, Radio, Upload,
+  InputNumber, message, Steps, Card, Upload,
   Row, Col, Select, Divider, Typography, Spin, Alert
 } from 'antd';
 import { 
@@ -12,7 +12,6 @@ import {
   PictureOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import NewGemListingForm from '../../../components/forms/NewGemListingForm';
 import { 
   formatLKR, 
   LISTING_STATUS_COLORS,
@@ -20,7 +19,6 @@ import {
 } from './shared';
 
 const { Title, Text } = Typography;
-const { Step } = Steps;
 const { Dragger } = Upload;
 
 interface ListingsProps {
@@ -49,10 +47,11 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
   });
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isEditListingModalVisible, setIsEditListingModalVisible] = useState(false);
+  const [isViewListingModalVisible, setIsViewListingModalVisible] = useState(false);
+  const [isDeleteConfirmVisible, setIsDeleteConfirmVisible] = useState(false);
   const [selectedListing, setSelectedListing] = useState<GemListing | null>(null);
   const [editForm] = Form.useForm();
   const [basicInfoForm] = Form.useForm();
-  const [certificationForm] = Form.useForm();
   const [loading, setLoading] = useState(false);
   
   // New state for data loading
@@ -113,7 +112,7 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
       console.log('📋 Backend response:', result);
 
       if (result.success && result.data) {
-        const { listings: backendListings, totalElements, totalPages } = result.data;
+        const { listings: backendListings, totalElements } = result.data;
         
         console.log('📋 Raw backend listings:', backendListings);
         
@@ -192,6 +191,117 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
     loadListingsData(currentPage, pagination.pageSize);
   };
 
+  // Action Handlers for View, Edit, Delete
+  
+  // Handle View Listing
+  const handleViewListing = (listing: GemListing) => {
+    console.log('👁️ Viewing listing:', listing);
+    setSelectedListing(listing);
+    setIsViewListingModalVisible(true);
+  };
+
+  // Handle Edit Listing
+  const handleEditListing = (listing: GemListing) => {
+    console.log('✏️ Editing listing:', listing);
+    setSelectedListing(listing);
+    
+    // Pre-populate form with existing data
+    editForm.setFieldsValue({
+      gemName: listing.name,
+      price: listing.price,
+      weight: listing.weight,
+      color: listing.color,
+      species: listing.species,
+      variety: listing.variety,
+      shape: listing.shape,
+      cut: listing.cut,
+      clarity: listing.clarity,
+      measurements: listing.measurements,
+      treatment: listing.treatment,
+      origin: listing.origin,
+      description: listing.description,
+    });
+    
+    setIsEditListingModalVisible(true);
+  };
+
+  // Handle Delete Listing
+  const handleDeleteListing = (listing: GemListing) => {
+    console.log('🗑️ Initiating delete for listing:', listing);
+    setSelectedListing(listing);
+    setIsDeleteConfirmVisible(true);
+  };
+
+  // Confirm Delete Listing
+  const confirmDeleteListing = async () => {
+    if (!selectedListing) return;
+
+    try {
+      setLoading(true);
+      console.log('🗑️ Deleting listing:', selectedListing.id);
+
+      const response = await fetch(`/api/gemsData/delete-listing/${selectedListing.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+        },
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        message.success('Listing deleted successfully');
+        setIsDeleteConfirmVisible(false);
+        setSelectedListing(null);
+        refreshData(); // Reload the listings
+      } else {
+        message.error(result.message || 'Failed to delete listing');
+      }
+    } catch (error) {
+      console.error('❌ Delete listing error:', error);
+      message.error('Failed to delete listing. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle Edit Form Submit
+  const handleEditSubmit = async () => {
+    try {
+      const values = await editForm.validateFields();
+      setLoading(true);
+      
+      console.log('💾 Updating listing:', selectedListing?.id, 'with values:', values);
+
+      const response = await fetch(`/api/gemsData/update-listing/${selectedListing?.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+        },
+        body: JSON.stringify(values),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        message.success('Listing updated successfully');
+        setIsEditListingModalVisible(false);
+        setSelectedListing(null);
+        editForm.resetFields();
+        refreshData(); // Reload the listings
+      } else {
+        message.error(result.message || 'Failed to update listing');
+      }
+    } catch (error) {
+      console.error('❌ Update listing error:', error);
+      message.error('Failed to update listing. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   // Handle starting new listing wizard
   const handleStartNewListing = () => {
     setViewMode('add-listing');
@@ -311,7 +421,10 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
         color: extractedData.color,
         clarity: extractedData.clarity,
         cut: extractedData.cut,
-        origin: extractedData.origin
+        origin: extractedData.origin,
+        // Add certificate fields for the manual form
+        certificateNumber: extractedData.certificateNumber,
+        authority: extractedData.authority
       });
 
       message.success('Certificate data extracted successfully!');
@@ -326,11 +439,52 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
     }
   };
 
+  // Validate the form data before final submission
+  const validateBeforeSubmit = () => {
+    // For certified stones, verify certificate number is present
+    if (wizardData.certificationType === 'certified') {
+      const certificateNumber = 
+        wizardData.basicInfo.certificateNumber || 
+        wizardData.certificationDetails?.certificateNumber;
+      
+      if (!certificateNumber) {
+        message.error('Certificate number is required for certified gemstones. Please fill in the certificate information.');
+        
+        // Highlight the certificate fields tab to guide the user
+        const certFieldsElement = document.querySelector('#certificate-fields');
+        if (certFieldsElement) {
+          certFieldsElement.scrollIntoView({ behavior: 'smooth' });
+          // Add a temporary highlight effect
+          certFieldsElement.classList.add('bg-red-100');
+          setTimeout(() => {
+            certFieldsElement.classList.remove('bg-red-100');
+          }, 2000);
+        }
+        
+        return false;
+      }
+    }
+    
+    // If images are missing
+    if (!wizardData.images || wizardData.images.length === 0) {
+      message.error('Please upload at least one image of your gemstone.');
+      return false;
+    }
+    
+    return true;
+  };
+
   // Handle final submission
   const handleFinalSubmission = async () => {
     console.log('🚀 handleFinalSubmission called!');
     console.log('📋 Current wizardData:', wizardData);
     console.log('📸 Images count:', wizardData.images?.length || 0);
+    
+    // Validate form data before proceeding
+    const isValid = validateBeforeSubmit();
+    if (!isValid) {
+      return;
+    }
     
     setLoading(true);
     try {
@@ -364,18 +518,22 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
         description: wizardData.basicInfo.description || '',
         comments: wizardData.basicInfo.comments || '',
         
-        // For non-certified stones (CSL format)
+        // For non-certified stones - explicitly set certificate fields to null
         ...(wizardData.certificationType === 'non-certified' && {
-          cslMemoNo: wizardData.basicInfo.cslMemoNo,
-          issueDate: wizardData.basicInfo.issueDate,
-          authority: wizardData.basicInfo.authority,
-          giaAlumniMember: wizardData.basicInfo.giaAlumniMember || false,
+          cslMemoNo: null,
+          issueDate: null,
+          authority: null,
+          giaAlumniMember: null,
+          certificateNumber: null,
+          certifyingAuthority: null,
         }),
         
         // For certified stones
         ...(wizardData.certificationType === 'certified' && {
-          certificateNumber: wizardData.certificationDetails?.certificateNumber,
-          certifyingAuthority: wizardData.certificationDetails?.authority,
+          // Use manually entered certificate number first, fall back to extracted data
+          certificateNumber: wizardData.basicInfo.certificateNumber || wizardData.certificationDetails?.certificateNumber,
+          // Use manually entered authority first, fall back to extracted data
+          certifyingAuthority: wizardData.basicInfo.authority || wizardData.certificationDetails?.authority,
           clarity: wizardData.basicInfo.clarity,
           cut: wizardData.basicInfo.cut,
           origin: wizardData.basicInfo.origin,
@@ -390,7 +548,7 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
       
       // Add images if any
       if (wizardData.images && wizardData.images.length > 0) {
-        wizardData.images.forEach((image, index) => {
+        wizardData.images.forEach((image) => {
           if (image.originFileObj) {
             formData.append('gemImages', image.originFileObj);
           }
@@ -592,6 +750,11 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
             <Text type="secondary">
               The following details have been automatically filled from your certificate. Please review and edit if needed.
             </Text>
+            {(!wizardData.certificationDetails?.certificateNumber) && (
+              <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-red-600 font-medium">
+                ⚠️ Certificate number could not be extracted. Please manually enter it in the Certificate Information section below.
+              </div>
+            )}
           </div>
         )}
 
@@ -601,65 +764,9 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
           onFinish={handleBasicInfoSubmit}
           initialValues={wizardData.basicInfo}
         >
-        {/* Non-Certified (CSL Format) Form */}
+        {/* Non-Certified Form */}
         {isNonCertified ? (
           <div className="space-y-6">
-            {/* CSL Certificate Information */}
-            <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-              <Title level={4} className="text-red-600 mb-6 mt-0">
-                <SafetyCertificateOutlined className="mr-2" />
-                CSL Certificate Information
-              </Title>
-              <Row gutter={[24, 16]}>
-                <Col xs={24} md={12}>
-                  <Form.Item
-                    label="CSL Memo Number"
-                    name="cslMemoNo"
-                    rules={[{ required: true, message: 'Please enter CSL memo number' }]}
-                  >
-                    <Input placeholder="e.g. CSL-2024-001234" size="large" />
-                  </Form.Item>
-                </Col>
-                
-                <Col xs={24} md={12}>
-                  <Form.Item
-                    label="Issue Date"
-                    name="issueDate"
-                    rules={[{ required: true, message: 'Please enter issue date' }]}
-                  >
-                    <Input placeholder="e.g. 2024-01-15" size="large" />
-                  </Form.Item>
-                </Col>
-              </Row>
-
-              <Row gutter={[24, 16]}>
-                <Col xs={24} md={12}>
-                  <Form.Item
-                    label="Authority"
-                    name="authority"
-                    rules={[{ required: true, message: 'Please select authority' }]}
-                  >
-                    <Select placeholder="Select certifying authority" size="large">
-                      <Select.Option value="CSL">CSL (Colored Stone Laboratory)</Select.Option>
-                      <Select.Option value="Other">Other</Select.Option>
-                    </Select>
-                  </Form.Item>
-                </Col>
-                
-                <Col xs={24} md={12}>
-                  <Form.Item
-                    label="GIA Alumni Member"
-                    name="giaAlumniMember"
-                    initialValue={false}
-                  >
-                    <Radio.Group size="large">
-                      <Radio value={true}>Yes</Radio>
-                      <Radio value={false}>No</Radio>
-                    </Radio.Group>
-                  </Form.Item>
-                </Col>
-              </Row>
-            </div>
 
             {/* Gem Identification Details */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
@@ -912,32 +1019,28 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
                 </Col>
               </Row>
 
-              {/* Additional fields for certified gemstones */}
+              {/* Certificate Number and Authority Fields */}
               {wizardData.certificationType === 'certified' && (
-                <Row gutter={[24, 16]}>
+                <Row id="certificate-fields" gutter={[24, 16]} className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6 transition-all duration-300">
+                  <Col span={24}>
+                    <div className="text-green-700 font-medium mb-2">Certificate Information</div>
+                    <div className="text-green-600 text-sm mb-4">Please ensure this information matches your certificate exactly</div>
+                  </Col>
                   <Col xs={24} md={12}>
-                    <Form.Item label="Color" name="color">
-                      <Input placeholder="e.g. Royal Blue" size="large" />
+                    <Form.Item 
+                      label="Certificate Number" 
+                      name="certificateNumber"
+                      rules={[{ required: true, message: 'Certificate number is required for certified stones' }]}
+                    >
+                      <Input placeholder="e.g. GIA 1234567890" size="large" />
                     </Form.Item>
                   </Col>
                   <Col xs={24} md={12}>
-                    <Form.Item label="Clarity" name="clarity">
-                      <Input placeholder="e.g. VVS" size="large" />
-                    </Form.Item>
-                  </Col>
-                </Row>
-              )}
-
-              {wizardData.certificationType === 'certified' && (
-                <Row gutter={[24, 16]}>
-                  <Col xs={24} md={12}>
-                    <Form.Item label="Cut" name="cut">
-                      <Input placeholder="e.g. Oval" size="large" />
-                    </Form.Item>
-                  </Col>
-                  <Col xs={24} md={12}>
-                    <Form.Item label="Origin" name="origin">
-                      <Input placeholder="e.g. Sri Lanka" size="large" />
+                    <Form.Item 
+                      label="Certifying Authority" 
+                      name="authority"
+                    >
+                      <Input placeholder="e.g. GIA, IGI" size="large" />
                     </Form.Item>
                   </Col>
                 </Row>
@@ -1244,6 +1347,22 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
     }
   };
 
+  // Helper to construct proper image URL
+  const constructImageUrl = (imagePath: string): string => {
+    if (!imagePath) return 'https://via.placeholder.com/400x300?text=Gemstone';
+    
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      return imagePath;
+    }
+    
+    const baseUrl = 'http://localhost:9092';
+    if (imagePath.startsWith('/')) {
+      return `${baseUrl}${imagePath}`;
+    }
+    
+    return `${baseUrl}/${imagePath}`;
+  };
+
   // Component for gemstone image with fallback
   const GemstoneImage: React.FC<{ record: GemListing }> = ({ record }) => {
     const [imageError, setImageError] = useState(false);
@@ -1258,6 +1377,9 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
       setImageError(false);
     };
 
+    // Construct full image URL
+    const fullImageUrl = constructImageUrl(record.image);
+
     return (
       <div className="flex items-center space-x-3">
         <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center border">
@@ -1265,7 +1387,7 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
             <PictureOutlined className="text-gray-400 text-xl" />
           ) : (
             <img 
-              src={record.image} 
+              src={fullImageUrl} 
               alt={record.name}
               className="w-12 h-12 object-cover"
               onError={handleImageError}
@@ -1341,6 +1463,7 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
             icon={<EyeOutlined />}
             type="text"
             className="text-blue-600 hover:text-blue-800"
+            onClick={() => handleViewListing(record)}
           >
             View
           </Button>
@@ -1349,6 +1472,7 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
             icon={<EditOutlined />}
             type="text"
             className="text-green-600 hover:text-green-800"
+            onClick={() => handleEditListing(record)}
           >
             Edit
           </Button>
@@ -1358,6 +1482,7 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
               icon={<DeleteOutlined />} 
               danger
               type="text"
+              onClick={() => handleDeleteListing(record)}
             >
               Remove
             </Button>
@@ -1463,7 +1588,6 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
               dataSource={listings}
               columns={columns}
               rowKey="id"
-              responsive
               scroll={{ x: 'max-content' }}
               pagination={{
                 ...pagination,
@@ -1478,6 +1602,325 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
           )}
         </div>
       </div>
+
+      {/* View Listing Modal */}
+      <Modal
+        title="Listing Details"
+        open={isViewListingModalVisible}
+        onCancel={() => setIsViewListingModalVisible(false)}
+        footer={[
+          <Button key="close" onClick={() => setIsViewListingModalVisible(false)}>
+            Close
+          </Button>
+        ]}
+        width={800}
+      >
+        {selectedListing && (
+          <div className="space-y-6">
+            {/* Basic Information */}
+            <div>
+              <h4 className="text-lg font-semibold mb-4">Basic Information</h4>
+              <Row gutter={[16, 16]}>
+                <Col span={12}>
+                  <div><strong>Name:</strong> {selectedListing.name}</div>
+                </Col>
+                <Col span={12}>
+                  <div><strong>Price:</strong> {formatLKR(selectedListing.price)}</div>
+                </Col>
+                <Col span={12}>
+                  <div><strong>Weight:</strong> {selectedListing.weight} carats</div>
+                </Col>
+                <Col span={12}>
+                  <div><strong>Color:</strong> {selectedListing.color}</div>
+                </Col>
+                <Col span={12}>
+                  <div><strong>Species:</strong> {selectedListing.species}</div>
+                </Col>
+                <Col span={12}>
+                  <div><strong>Variety:</strong> {selectedListing.variety}</div>
+                </Col>
+                <Col span={12}>
+                  <div><strong>Shape:</strong> {selectedListing.shape}</div>
+                </Col>
+                <Col span={12}>
+                  <div><strong>Cut:</strong> {selectedListing.cut}</div>
+                </Col>
+                <Col span={12}>
+                  <div><strong>Clarity:</strong> {selectedListing.clarity}</div>
+                </Col>
+                <Col span={12}>
+                  <div><strong>Status:</strong> 
+                    <Tag color={LISTING_STATUS_COLORS[selectedListing.status] || 'default'} className="ml-2">
+                      {selectedListing.status.charAt(0).toUpperCase() + selectedListing.status.slice(1)}
+                    </Tag>
+                  </div>
+                </Col>
+              </Row>
+            </div>
+
+            {/* Additional Details */}
+            <div>
+              <h4 className="text-lg font-semibold mb-4">Additional Details</h4>
+              <Row gutter={[16, 16]}>
+                <Col span={12}>
+                  <div><strong>Measurements:</strong> {selectedListing.measurements || 'N/A'}</div>
+                </Col>
+                <Col span={12}>
+                  <div><strong>Treatment:</strong> {selectedListing.treatment || 'N/A'}</div>
+                </Col>
+                <Col span={12}>
+                  <div><strong>Origin:</strong> {selectedListing.origin || 'N/A'}</div>
+                </Col>
+                <Col span={12}>
+                  <div><strong>Certified:</strong> 
+                    <Tag color={selectedListing.isCertified ? 'green' : 'orange'} className="ml-2">
+                      {selectedListing.isCertified ? 'Certified' : 'Non-Certified'}
+                    </Tag>
+                  </div>
+                </Col>
+              </Row>
+            </div>
+
+            {/* Description */}
+            {selectedListing.description && (
+              <div>
+                <h4 className="text-lg font-semibold mb-4">Description</h4>
+                <p className="text-gray-700">{selectedListing.description}</p>
+              </div>
+            )}
+
+            {/* Images */}
+            {selectedListing.image && (
+              <div>
+                <h4 className="text-lg font-semibold mb-4">Images</h4>
+                <div className="flex justify-center">
+                  <img 
+                    src={constructImageUrl(selectedListing.image)} 
+                    alt={selectedListing.name}
+                    className="max-w-md rounded-lg border"
+                    style={{ maxHeight: '300px', objectFit: 'contain' }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Listing Stats */}
+            <div>
+              <h4 className="text-lg font-semibold mb-4">Listing Statistics</h4>
+              <Row gutter={[16, 16]}>
+                <Col span={8}>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-600">{selectedListing.views || 0}</div>
+                    <div className="text-gray-500">Views</div>
+                  </div>
+                </Col>
+                <Col span={8}>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600">{selectedListing.bids || 0}</div>
+                    <div className="text-gray-500">Bids</div>
+                  </div>
+                </Col>
+                <Col span={8}>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-purple-600">
+                      {selectedListing.createdAt ? dayjs(selectedListing.createdAt).format('MMM DD') : 'N/A'}
+                    </div>
+                    <div className="text-gray-500">Created</div>
+                  </div>
+                </Col>
+              </Row>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        title="Confirm Delete"
+        open={isDeleteConfirmVisible}
+        onOk={confirmDeleteListing}
+        onCancel={() => setIsDeleteConfirmVisible(false)}
+        okText="Delete"
+        cancelText="Cancel"
+        okButtonProps={{ danger: true, loading: loading }}
+      >
+        {selectedListing && (
+          <div>
+            <p>Are you sure you want to delete the listing:</p>
+            <p className="font-semibold text-lg mt-2">"{selectedListing.name}"</p>
+            <p className="text-gray-600 mt-2">This action cannot be undone.</p>
+          </div>
+        )}
+      </Modal>
+
+      {/* Edit Listing Modal */}
+      <Modal
+        title="Edit Listing"
+        visible={isEditListingModalVisible}
+        onCancel={() => setIsEditListingModalVisible(false)}
+        footer={null}
+        width={800}
+      >
+        <Form
+          form={editForm}
+          layout="vertical"
+          onFinish={handleEditSubmit}
+        >
+          <Form.Item
+            label="Gemstone Name"
+            name="name"
+            rules={[{ required: true, message: 'Please enter gemstone name' }]}
+          >
+            <Input placeholder="e.g. Blue Sapphire" size="large" />
+          </Form.Item>
+
+          <Form.Item
+            label="Price (LKR)"
+            name="price"
+            rules={[{ required: true, message: 'Please enter price' }]}
+          >
+            <InputNumber
+              placeholder="Enter price"
+              style={{ width: '100%' }}
+              size="large"
+              formatter={value => `LKR ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+              parser={(value: string | undefined) => value ? value.replace(/LKR\s?|(,*)/g, '') : ''}
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="Weight (Carats)"
+            name="weight"
+            rules={[{ required: true, message: 'Please enter weight' }]}
+          >
+            <InputNumber
+              placeholder="Enter weight"
+              style={{ width: '100%' }}
+              size="large"
+              min={0}
+              step={0.01}
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="Color"
+            name="color"
+            rules={[{ required: true, message: 'Please enter color' }]}
+          >
+            <Input placeholder="e.g. Royal Blue, Padparadscha" size="large" />
+          </Form.Item>
+
+          <Form.Item
+            label="Shape"
+            name="shape"
+            rules={[{ required: true, message: 'Please enter shape' }]}
+          >
+            <Select placeholder="Select shape" size="large">
+              <Select.Option value="round">Round</Select.Option>
+              <Select.Option value="oval">Oval</Select.Option>
+              <Select.Option value="cushion">Cushion</Select.Option>
+              <Select.Option value="emerald">Emerald Cut</Select.Option>
+              <Select.Option value="pear">Pear</Select.Option>
+              <Select.Option value="marquise">Marquise</Select.Option>
+              <Select.Option value="heart">Heart</Select.Option>
+              <Select.Option value="princess">Princess</Select.Option>
+              <Select.Option value="radiant">Radiant</Select.Option>
+              <Select.Option value="asscher">Asscher</Select.Option>
+              <Select.Option value="other">Other</Select.Option>
+            </Select>
+          </Form.Item>
+
+          <Form.Item
+            label="Variety"
+            name="variety"
+            rules={[{ required: true, message: 'Please enter variety' }]}
+            extra="Usually highlighted in red on CSL certificates"
+          >
+            <Input placeholder="e.g. Sapphire, Ruby, Emerald" size="large" />
+          </Form.Item>
+
+          <Form.Item
+            label="Species"
+            name="species"
+            rules={[{ required: true, message: 'Please enter species' }]}
+          >
+            <Input placeholder="e.g. Corundum, Beryl" size="large" />
+          </Form.Item>
+
+          <Form.Item
+            label="Treatment"
+            name="treatment"
+            rules={[{ required: true, message: 'Please select treatment' }]}
+          >
+            <Select placeholder="Select treatment" size="large">
+              <Select.Option value="Heated">Heated</Select.Option>
+              <Select.Option value="Unheated">Unheated</Select.Option>
+              <Select.Option value="Diffusion">Diffusion</Select.Option>
+              <Select.Option value="Oiled">Oiled</Select.Option>
+              <Select.Option value="Fracture Filled">Fracture Filled</Select.Option>
+              <Select.Option value="Irradiated">Irradiated</Select.Option>
+              <Select.Option value="No Treatment">No Treatment</Select.Option>
+              <Select.Option value="Other">Other</Select.Option>
+            </Select>
+          </Form.Item>
+
+          {/* Certificate Number and Authority Fields */}
+          {wizardData.certificationType === 'certified' && (
+            <div id="certificate-fields" className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+              <div className="text-green-700 font-medium mb-2">Certificate Information</div>
+              <div className="text-green-600 text-sm mb-4">Please ensure this information matches your certificate exactly</div>
+              
+              <Row gutter={[24, 16]}>
+                <Col xs={24} md={12}>
+                  <Form.Item 
+                    label="Certificate Number" 
+                    name="certificateNumber"
+                    rules={[{ required: true, message: 'Certificate number is required for certified stones' }]}
+                  >
+                    <Input placeholder="e.g. GIA 1234567890" size="large" />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={12}>
+                  <Form.Item 
+                    label="Certifying Authority" 
+                    name="authority"
+                  >
+                    <Input placeholder="e.g. GIA, IGI" size="large" />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </div>
+          )}
+
+          <Form.Item
+            label="Description"
+            name="description"
+            rules={[{ required: true, message: 'Please enter description' }]}
+          >
+            <Input.TextArea 
+              rows={4} 
+              placeholder="Provide detailed description of your gemstone..." 
+              size="large"
+            />
+          </Form.Item>
+
+          <div className="flex justify-end">
+            <Button 
+              onClick={() => setIsEditListingModalVisible(false)} 
+              style={{ marginRight: 8 }}
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="primary" 
+              htmlType="submit"
+              loading={loading}
+            >
+              Update Listing
+            </Button>
+          </div>
+        </Form>
+      </Modal>
     </div>
   );
 };

@@ -31,7 +31,8 @@ public class GemListingDataDto {
     @NotNull(message = "Certification status is required")
     private Boolean isCertified; // true for certified, false for non-certified
     
-    // CSL Certificate Information (for non-certified stones)
+    // CSL Certificate Information (ONLY for certified stones)
+    // These fields should be null for non-certified gemstones
     @JsonProperty("cslMemoNo")
     private String cslMemoNo;
     

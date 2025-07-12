@@ -58,7 +58,11 @@ public class SecurityConfig {
                 .requestMatchers("/api/gemsData/**").permitAll()
                 .requestMatchers("/api/advertisements/**").permitAll()
                 .requestMatchers("/uploads/**").permitAll() // Allow access to uploaded files
+                .requestMatchers("/api/gemstones/**").permitAll() // Allow access to gemstones endpoints
+                .requestMatchers("/api/marketplace/**").permitAll() // Allow access to marketplace endpoints
                 .requestMatchers("/api/public/**").permitAll()
+                .requestMatchers("/api/bidding/**").permitAll() // Allow access to bidding endpoints
+                .requestMatchers("/uploads/**").permitAll() // Allow access to uploaded files
                 .requestMatchers("/swagger-ui/**").permitAll()
                 .requestMatchers("/v3/api-docs/**").permitAll()
                 .requestMatchers("/swagger-resources/**").permitAll()

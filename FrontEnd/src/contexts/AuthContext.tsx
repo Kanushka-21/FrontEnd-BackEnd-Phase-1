@@ -202,8 +202,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     
     // Redirect based on user role and current location
     if (isAdminUser || currentPath.startsWith('/admin')) {
-      console.log('👑 Redirecting admin to admin login');
-      navigate('/admin/login');
+      console.log('👑 Redirecting admin to regular login');
+      navigate('/login');
       toast.success('Admin logged out successfully');
     } else {
       console.log('👤 Redirecting regular user to login');

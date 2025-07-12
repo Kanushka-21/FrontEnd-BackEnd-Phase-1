@@ -172,5 +172,35 @@ public interface GemListingRepository extends MongoRepository<GemListing, String
     // Find seller's active listings with pagination
     @Query("{'userId': ?0, 'isActive': true, 'listingStatus': {$ne: 'SOLD'}}")
     Page<GemListing> findSellerActiveListings(String userId, Pageable pageable);
+    
+    // ===== MARKETPLACE-SPECIFIC SEARCH METHODS =====
+    
+    // Search marketplace listings by name with pagination
+    @Query("{'gemName': {$regex: ?0, $options: 'i'}, 'listingStatus': {$in: ['APPROVED', 'ACTIVE']}, 'isActive': true}")
+    Page<GemListing> searchByNameInMarketplace(String gemName, Pageable pageable);
+    
+    // Search marketplace listings by name (without pagination) 
+    @Query("{'gemName': {$regex: ?0, $options: 'i'}, 'listingStatus': {$in: ['APPROVED', 'ACTIVE']}, 'isActive': true}")
+    List<GemListing> searchByNameInMarketplace(String gemName);
+    
+    // Search marketplace listings by variety (without pagination)
+    @Query("{'variety': {$regex: ?0, $options: 'i'}, 'listingStatus': {$in: ['APPROVED', 'ACTIVE']}, 'isActive': true}")
+    List<GemListing> searchByVarietyInMarketplace(String variety);
+    
+    // Find by category and certification in marketplace
+    @Query("{'category': ?0, 'isCertified': ?1, 'listingStatus': {$in: ['APPROVED', 'ACTIVE']}, 'isActive': true}")
+    Page<GemListing> findByCategoryAndCertificationInMarketplace(String category, Boolean isCertified, Pageable pageable);
+    
+    // Find by minimum price in marketplace
+    @Query("{'price': {$gte: ?0}, 'listingStatus': {$in: ['APPROVED', 'ACTIVE']}, 'isActive': true}")
+    Page<GemListing> findByMinPriceInMarketplace(Double minPrice, Pageable pageable);
+    
+    // Count marketplace listings
+    @Query(value = "{'listingStatus': {$in: ['APPROVED', 'ACTIVE']}, 'isActive': true}", count = true)
+    long countMarketplaceListings();
+    
+    // Count certified listings in marketplace
+    @Query(value = "{'listingStatus': {$in: ['APPROVED', 'ACTIVE']}, 'isActive': true, 'isCertified': ?0}", count = true)
+    long countByCertificationInMarketplace(Boolean isCertified);
 }
 

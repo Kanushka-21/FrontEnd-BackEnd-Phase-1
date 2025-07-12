@@ -214,7 +214,8 @@ export interface Gemstone {
   id: string;
   name: string;
   price: number;
-  image: string;
+  image: string; // Primary image for backward compatibility
+  images?: string[]; // Array of all uploaded images
   certified: boolean;
   weight: number;
   color: string;
@@ -292,13 +293,41 @@ export interface GemPriceRange {
   max: number;
 }
 
+// Bidding related types
+export interface BidInfo {
+  id: string;
+  bidderId: string;
+  bidderName: string;
+  bidAmount: number;
+  bidTime: string;
+  status: 'ACTIVE' | 'OUTBID' | 'WITHDRAWN' | 'ACCEPTED' | 'REJECTED';
+  message?: string;
+}
+
+export interface NotificationInfo {
+  id: string;
+  userId: string;
+  listingId: string;
+  bidId?: string;
+  type: 'NEW_BID' | 'BID_PLACED' | 'BID_OUTBID' | 'BID_ACTIVITY' | 'BID_ACCEPTED' | 'BID_REJECTED';
+  title: string;
+  message: string;
+  isRead: boolean;
+  createdAt: string;
+  readAt?: string;
+  triggerUserId?: string;
+  triggerUserName?: string;
+  bidAmount?: string;
+  gemName?: string;
+}
+
 // Gemstone Card Props
 export interface GemstoneCardProps {
   gemstone: Gemstone;
   onViewDetails?: (id: string) => void;
 }
 
-export interface DetailedGemstone extends GemstoneCardProps['gemstone'] {
+export interface DetailedGemstone extends Gemstone {
   species: string;
   variety: string;
   shape: string;
@@ -319,6 +348,11 @@ export interface DetailedGemstone extends GemstoneCardProps['gemstone'] {
     date: string;
     link?: string;
   };
+  // Bidding properties
+  totalBids?: number;
+  currentBid?: number;
+  highestBidder?: string;
+  bids?: BidInfo[];
 }
 
 // Gemstone Listing Form

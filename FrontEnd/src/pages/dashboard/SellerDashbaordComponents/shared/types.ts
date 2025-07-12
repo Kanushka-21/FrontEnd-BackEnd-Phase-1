@@ -2,6 +2,7 @@ export interface GemListing {
   id: string;
   name: string;
   image: string;
+  images?: string[]; // Multiple images support
   price: number;
   status: 'active' | 'pending' | 'sold' | 'rejected';
   bids: number;
@@ -11,6 +12,21 @@ export interface GemListing {
   description?: string;
   attributes?: any;
   isCertified?: boolean;
+  
+  // Extended gemstone properties
+  weight?: number;
+  color?: string;
+  species?: string;
+  variety?: string;
+  shape?: string;
+  cut?: string;
+  clarity?: string;
+  measurements?: string;
+  treatment?: string;
+  origin?: string;
+  transparency?: string;
+  refractiveIndex?: string;
+  specificGravity?: string;
 }
 
 export interface Bid {

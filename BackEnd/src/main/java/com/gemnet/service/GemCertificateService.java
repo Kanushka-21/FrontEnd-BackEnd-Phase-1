@@ -20,6 +20,7 @@ import jakarta.annotation.PostConstruct;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -27,6 +28,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.imageio.ImageIO;
@@ -601,12 +603,11 @@ public class GemCertificateService {
         saveResult.put("saveStartTime", System.currentTimeMillis());
         
         try {
-            // Check for duplicate CSL memo number (for non-certified stones)
-            if (gemListingData.isNonCertifiedStone() && gemListingData.getCslMemoNo() != null) {
-                if (gemListingRepository.existsByCslMemoNo(gemListingData.getCslMemoNo())) {
-                    System.err.println("❌ Duplicate CSL memo number: " + gemListingData.getCslMemoNo());
-                    return ApiResponse.error("A listing with this CSL memo number already exists");
-                }
+            // For non-certified stones, we don't need to check for duplicate CSL memo numbers
+            // as they shouldn't have CSL memo numbers
+            if (gemListingData.isNonCertifiedStone()) {
+                // Skip CSL memo number validation for non-certified stones
+                System.out.println("ℹ️ Non-certified gemstone: Skipping certificate validation");
             }
             
             // Check for duplicate certificate number (for certified stones)
@@ -632,10 +633,10 @@ public class GemCertificateService {
                         // Generate unique image ID
                         String imageId = "IMG_" + System.currentTimeMillis() + "_" + i;
                         
-                        // TODO: Store image using FileStorageService
-                        // For now, simulate image storage
-                        String imageUrl = "/uploads/gems/" + imageId + getFileExtension(image.getOriginalFilename());
-                        String thumbnailUrl = "/uploads/gems/thumbnails/" + imageId + "_thumb" + getFileExtension(image.getOriginalFilename());
+                        // Store image using FileStorageService
+                        String imageUrl = fileStorageService.storeGemImage(image, imageId);
+                        // For now, use the same image as thumbnail
+                        String thumbnailUrl = imageUrl;
                         
                         // Create GemImage entity
                         GemImage gemImage = new GemImage();
@@ -650,7 +651,8 @@ public class GemCertificateService {
                         
                         processedImages.add(gemImage);
                         
-                        System.out.println("✅ Image " + (i + 1) + " processed for database: " + image.getOriginalFilename());
+                        System.out.println("✅ Image " + (i + 1) + " processed and stored: " + image.getOriginalFilename());
+                        System.out.println("   📁 Stored at: " + imageUrl);
                         
                     } catch (Exception e) {
                         System.err.println("❌ Error processing image " + (i + 1) + ": " + e.getMessage());
@@ -695,18 +697,21 @@ public class GemCertificateService {
             
             // Add specific data based on certification type
             if (savedListing.isNonCertifiedStone()) {
-                saveResult.put("cslMemoNo", savedListing.getCslMemoNo());
-                saveResult.put("authority", savedListing.getAuthority());
-                saveResult.put("giaAlumniMember", savedListing.getGiaAlumniMember());
+                // For non-certified stones, only include non-certificate properties
                 saveResult.put("treatment", savedListing.getTreatment());
                 saveResult.put("isHeated", savedListing.isHeated());
                 saveResult.put("isUnheated", savedListing.isUnheated());
             } else {
+                // For certified stones, include certificate properties
                 saveResult.put("certificateNumber", savedListing.getCertificateNumber());
                 saveResult.put("certifyingAuthority", savedListing.getCertifyingAuthority());
                 saveResult.put("clarity", savedListing.getClarity());
                 saveResult.put("cut", savedListing.getCut());
                 saveResult.put("origin", savedListing.getOrigin());
+                // Include CSL certificate info only for certified stones
+                saveResult.put("cslMemoNo", savedListing.getCslMemoNo());
+                saveResult.put("authority", savedListing.getAuthority());
+                saveResult.put("giaAlumniMember", savedListing.getGiaAlumniMember());
             }
             
             // Gem details
@@ -755,11 +760,20 @@ public class GemCertificateService {
         // Certification status
         entity.setIsCertified(dto.getIsCertified());
         
-        // CSL Certificate Information (for non-certified stones)
-        entity.setCslMemoNo(dto.getCslMemoNo());
-        entity.setIssueDate(dto.getIssueDate());
-        entity.setAuthority(dto.getAuthority());
-        entity.setGiaAlumniMember(dto.getGiaAlumniMember());
+        // Certificate information only for certified stones
+        if (dto.getIsCertified()) {
+            // CSL Certificate Information (only for certified stones)
+            entity.setCslMemoNo(dto.getCslMemoNo());
+            entity.setIssueDate(dto.getIssueDate());
+            entity.setAuthority(dto.getAuthority());
+            entity.setGiaAlumniMember(dto.getGiaAlumniMember());
+        } else {
+            // For non-certified stones, explicitly set these fields to null
+            entity.setCslMemoNo(null);
+            entity.setIssueDate(null);
+            entity.setAuthority(null);
+            entity.setGiaAlumniMember(null);
+        }
         
         // Gem identification details
         entity.setColor(dto.getColor());
@@ -994,4 +1008,151 @@ public class GemCertificateService {
         }
         return filename.substring(filename.lastIndexOf("."));
     }
+    
+    /**
+     * Delete a gem listing by ID
+     * @param listingId The ID of the listing to delete
+     * @return ApiResponse indicating success or failure
+     */
+    public ApiResponse<Map<String, Object>> deleteGemListing(String listingId) {
+        try {
+            // Check if listing exists
+            Optional<GemListing> existingListing = gemListingRepository.findById(listingId);
+            
+            if (existingListing.isEmpty()) {
+                Map<String, Object> errorData = new HashMap<>();
+                errorData.put("listingId", listingId);
+                errorData.put("error", "Listing not found");
+                
+                return new ApiResponse<>(
+                    false,
+                    "Listing with ID " + listingId + " not found",
+                    errorData
+                );
+            }
+            
+            // Delete the listing
+            gemListingRepository.deleteById(listingId);
+            
+            // Prepare success response
+            Map<String, Object> responseData = new HashMap<>();
+            responseData.put("listingId", listingId);
+            responseData.put("deletedAt", java.time.LocalDateTime.now());
+            
+            return new ApiResponse<>(
+                true,
+                "Gem listing deleted successfully",
+                responseData
+            );
+            
+        } catch (Exception e) {
+            // Log the error (you might want to use a proper logger)
+            System.err.println("Error deleting gem listing: " + e.getMessage());
+            e.printStackTrace();
+            
+            Map<String, Object> errorData = new HashMap<>();
+            errorData.put("listingId", listingId);
+            errorData.put("error", e.getMessage());
+            
+            return new ApiResponse<>(
+                false,
+                "Failed to delete gem listing: " + e.getMessage(),
+                errorData
+            );
+        }
+    }
+    
+    /**
+     * Update an existing gem listing
+     */
+    public ApiResponse<String> updateGemListing(String listingId, Map<String, Object> updateData) {
+        try {
+            System.out.println("🔄 Updating gem listing with ID: " + listingId);
+            
+            Optional<GemListing> existingListingOpt = gemListingRepository.findById(listingId);
+            if (!existingListingOpt.isPresent()) {
+                return ApiResponse.error("Gem listing not found with ID: " + listingId);
+            }
+            
+            GemListing existingListing = existingListingOpt.get();
+            
+            // Update fields from the updateData map
+            updateData.forEach((key, value) -> {
+                switch (key) {
+                    case "gemName":
+                        existingListing.setGemName((String) value);
+                        break;
+                    case "description":
+                        existingListing.setDescription((String) value);
+                        break;
+                    case "price":
+                        if (value instanceof Number) {
+                            existingListing.setPrice(BigDecimal.valueOf(((Number) value).doubleValue()));
+                        }
+                        break;
+                    case "category":
+                        existingListing.setCategory((String) value);
+                        break;
+                    case "listingStatus":
+                        existingListing.setListingStatus((String) value);
+                        break;
+                    case "weight":
+                        existingListing.setWeight((String) value);
+                        break;
+                    case "color":
+                        existingListing.setColor((String) value);
+                        break;
+                    case "clarity":
+                        existingListing.setClarity((String) value);
+                        break;
+                    case "cut":
+                        existingListing.setCut((String) value);
+                        break;
+                    case "origin":
+                        existingListing.setOrigin((String) value);
+                        break;
+                    case "treatment":
+                        existingListing.setTreatment((String) value);
+                        break;
+                    case "certificateNumber":
+                        existingListing.setCertificateNumber((String) value);
+                        break;
+                    case "certifyingAuthority":
+                        existingListing.setCertifyingAuthority((String) value);
+                        break;
+                    case "shape":
+                        existingListing.setShape((String) value);
+                        break;
+                    case "measurements":
+                        existingListing.setMeasurements((String) value);
+                        break;
+                    case "variety":
+                        existingListing.setVariety((String) value);
+                        break;
+                    case "species":
+                        existingListing.setSpecies((String) value);
+                        break;
+                    case "comments":
+                        existingListing.setComments((String) value);
+                        break;
+                    default:
+                        System.out.println("⚠️ Unknown field to update: " + key);
+                        break;
+                }
+            });
+            
+            // Save the updated listing
+            GemListing updatedListing = gemListingRepository.save(existingListing);
+            System.out.println("✅ Gem listing updated successfully: " + updatedListing.getId());
+            
+            return ApiResponse.success("Gem listing updated successfully", updatedListing.getId());
+            
+        } catch (Exception e) {
+            System.err.println("❌ Error updating gem listing: " + e.getMessage());
+            e.printStackTrace();
+            return ApiResponse.error("Failed to update gem listing: " + e.getMessage());
+        }
+    }
+
+    // ...existing code...
 }

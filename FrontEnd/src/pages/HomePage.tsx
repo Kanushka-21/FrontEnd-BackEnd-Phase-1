@@ -1,147 +1,170 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Layout as AntLayout, Row, Col, Card, Button, Badge, Rate, Tag, Typography, 
-  Space, Input, InputNumber, Statistic, Avatar, Drawer, Carousel
+  Space, Statistic, Carousel, Spin
 } from 'antd';
 import { 
-  EyeOutlined, HeartOutlined, CheckCircleOutlined, UserOutlined, 
-  ShoppingCartOutlined, SearchOutlined, LoginOutlined, UserAddOutlined,
-  GlobalOutlined, TeamOutlined, ShopOutlined, DollarOutlined,
-  StarFilled, ClockCircleOutlined, SafetyOutlined, TrophyOutlined,
-  CloseOutlined, MenuOutlined, PhoneOutlined, MailOutlined
+  CheckCircleOutlined, UserOutlined, 
+  SearchOutlined, UserAddOutlined,
+  GlobalOutlined, ShopOutlined,
+  StarFilled, SafetyOutlined, TrophyOutlined
 } from '@ant-design/icons';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { DetailedGemstone } from '@/types';
-import Header from '@/components/layout/Header';
+import RoleAwareHeader from '@/components/layout/RoleAwareHeader';
 import GemstoneCard from '@/components/ui/GemstoneCard';
-import GemstoneDetailModal from '@/components/home/GemstoneDetailModal';
 import { api } from '@/services/api';
 
 const { Content } = AntLayout;
 const { Title, Text, Paragraph } = Typography;
-const { Meta } = Card;
-
-// Advertisement interface for homepage display
-interface Advertisement {
-  id: string;
-  title: string;
-  category: string;
-  description: string;
-  price: string;
-  mobileNo: string;
-  email: string;
-  images: string[];
-  approved: string;
-  createdOn: string;
-}
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
-  const [selectedGemstone, setSelectedGemstone] = useState<DetailedGemstone | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [bidAmount, setBidAmount] = useState<number>(0);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [advertisements, setAdvertisements] = useState<Advertisement[]>([]);
-  const [loadingAds, setLoadingAds] = useState(false);  // Featured gemstones (top 4 most engaging items from the marketplace)
-  const featuredGemstones = [
-    {
-      id: '1',
-      name: 'Star Sapphire of Ceylon',
-      price: 12500,
-      image: 'https://images.unsplash.com/photo-1615654771169-65fde4070ade?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-      certified: true,
-      weight: 5.2,
-      color: 'Blue',
-      species: 'Corundum',
-      variety: 'Star Sapphire',
-      shape: 'Oval Cabochon',
-      cut: 'Cabochon',
-      dimensions: { length: 11.5, width: 9.3, height: 5.8 },
-      transparency: 'translucent',
-      certificate: {
-        issuingAuthority: 'GIA',
-        reportNumber: 'GIA2024102',
-        date: '2024-05-15'
-      },
-      predictedPriceRange: {
-        min: 11000,
-        max: 14000
-      }
-    },
-    {
-      id: '2',
-      name: 'Padparadscha Sapphire',
-      price: 18950,
-      image: 'https://images.unsplash.com/photo-1599707367072-cd6ada2bc375?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-      certified: true,
-      weight: 3.8,
-      color: 'Pinkish Orange',
-      species: 'Corundum',
-      variety: 'Padparadscha',
-      shape: 'Cushion',
-      cut: 'Mixed',
-      dimensions: { length: 8.9, width: 8.2, height: 5.1 },
-      transparency: 'transparent',
-      certificate: {
-        issuingAuthority: 'SSEF',
-        reportNumber: 'SSEF202456',
-        date: '2024-06-01'
-      },
-      predictedPriceRange: {
-        min: 16500,
-        max: 21000
-      }
-    },
-    {
-      id: '3',
-      name: 'Royal Blue Sapphire',
-      price: 15800,
-      image: 'https://images.unsplash.com/photo-1612098662204-e95c76707dec?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-      certified: true,
-      weight: 4.5,
-      color: 'Royal Blue',
-      species: 'Corundum',
-      variety: 'Sapphire',
-      shape: 'Oval',
-      cut: 'Brilliant',
-      dimensions: { length: 10.2, width: 8.1, height: 5.3 },
-      transparency: 'transparent',
-      certificate: {
-        issuingAuthority: 'GRS',
-        reportNumber: 'GRS2024158',
-        date: '2024-05-28'
-      },
-      predictedPriceRange: {
-        min: 14200,
-        max: 17500
-      }
-    },
-    {
-      id: '4',
-      name: 'Pigeon Blood Ruby',
-      price: 22500,
-      image: 'https://images.unsplash.com/photo-1573408301185-9146fe634ad0?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-      certified: true,
-      weight: 3.2,
-      color: 'Pigeon Blood Red',
-      species: 'Corundum',
-      variety: 'Ruby',
-      shape: 'Octagon',
-      cut: 'Step',
-      dimensions: { length: 8.5, width: 8.5, height: 4.9 },
-      transparency: 'transparent',
-      certificate: {
-        issuingAuthority: 'Gubelin',
-        reportNumber: 'GUB2024079',
-        date: '2024-06-10'
-      },
-      predictedPriceRange: {
-        min: 19800,
-        max: 25200
-      }
+  
+  // Featured gemstones state
+  const [featuredGemstones, setFeaturedGemstones] = useState<DetailedGemstone[]>([]);
+  const [featuredLoading, setFeaturedLoading] = useState<boolean>(true);
+  const [featuredError, setFeaturedError] = useState<string | null>(null);
+
+  // Helper to construct proper image URL
+  const constructImageUrl = (imagePath: string): string => {
+    if (!imagePath) return 'https://via.placeholder.com/400x300?text=Gemstone';
+    
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      return imagePath;
     }
-  ];
+    
+    const baseUrl = 'http://localhost:9092';
+    if (imagePath.startsWith('/')) {
+      return `${baseUrl}${imagePath}`;
+    }
+    
+    return `${baseUrl}/${imagePath}`;
+  };
+
+  // Helper to convert backend GemListing to frontend DetailedGemstone format
+  const convertToDetailedGemstone = (listing: any): DetailedGemstone => {
+    // Extract all images from the backend listing
+    const allImages: string[] = [];
+    
+    // Add primary image if it exists
+    if (listing.primaryImageUrl) {
+      allImages.push(constructImageUrl(listing.primaryImageUrl));
+    }
+    
+    // Add all images from the images array
+    if (listing.images && Array.isArray(listing.images)) {
+      listing.images.forEach((img: any) => {
+        let imageUrl = '';
+        if (typeof img === 'string') {
+          imageUrl = constructImageUrl(img);
+        } else if (img && img.imageUrl) {
+          imageUrl = constructImageUrl(img.imageUrl);
+        } else if (img && img.url) {
+          imageUrl = constructImageUrl(img.url);
+        }
+        
+        if (imageUrl && !allImages.includes(imageUrl)) {
+          allImages.push(imageUrl);
+        }
+      });
+    }
+    
+    // Fallback to single image property if no images found
+    if (allImages.length === 0 && listing.image) {
+      allImages.push(constructImageUrl(listing.image));
+    }
+    
+    // Use first image as primary, or placeholder if no images
+    const primaryImage = allImages.length > 0 ? allImages[0] : 'https://via.placeholder.com/400x300?text=Gemstone';
+    
+    return {
+      id: listing.id || listing._id,
+      name: listing.gemName || 'Unknown Gemstone',
+      price: listing.price ? Number(listing.price) : 0,
+      predictedPriceRange: {
+        min: listing.price ? Math.floor(Number(listing.price) * 0.9) : 0,
+        max: listing.price ? Math.floor(Number(listing.price) * 1.2) : 0
+      },
+      image: primaryImage,
+      images: allImages,
+      certified: listing.isCertified || false,
+      weight: listing.weight ? parseFloat(listing.weight) : 0,
+      color: listing.color || 'Unknown',
+      species: listing.species || 'Unknown',
+      variety: listing.variety || 'Unknown', 
+      shape: listing.shape || 'Unknown',
+      cut: listing.cut || 'Unknown',
+      clarity: listing.clarity || 'Unknown',
+      dimensions: {
+        length: parseFloat(listing.measurements?.split('x')[0] || '0') || 0,
+        width: parseFloat(listing.measurements?.split('x')[1] || '0') || 0,
+        height: parseFloat(listing.measurements?.split('x')[2] || '0') || 0
+      },
+      transparency: 'transparent' as const,
+      specifications: {
+        species: listing.species || 'Unknown',
+        variety: listing.variety || 'Unknown',
+        transparency: listing.transparency || 'transparent',
+        treatment: listing.treatment || listing.treatments || 'Unknown',
+        refractiveIndex: listing.refractiveIndex || undefined,
+        specificGravity: listing.specificGravity || undefined
+      },
+      certificate: listing.isCertified ? {
+        issuingAuthority: listing.certifyingAuthority || 'Unknown',
+        reportNumber: listing.certificateNumber || 'N/A',
+        date: listing.issueDate || 'Unknown'
+      } : undefined
+    };
+  };
+
+  // Function to fetch top 4 highest-priced gemstones
+  const fetchFeaturedGemstones = async () => {
+    setFeaturedLoading(true);
+    setFeaturedError(null);
+    
+    try {
+      console.log('🔍 Fetching top 4 highest-priced gemstones for featured section...');
+      
+      // Fetch gemstones sorted by price descending, limit to 4
+      const response = await api.marketplace.getListings({
+        page: 0,
+        size: 4,
+        sortBy: 'price',
+        sortDir: 'desc'
+      });
+      
+      if (response.success && response.data) {
+        const listings = response.data.listings || [];
+        console.log('✅ Successfully fetched featured gemstones:', listings);
+        
+        if (listings.length === 0) {
+          console.log('📋 No approved listings found for featured section');
+          setFeaturedGemstones([]);
+          setFeaturedError('No featured gemstones available at the moment');
+        } else {
+          // Convert listings to DetailedGemstone format
+          const convertedGemstones = listings.map(convertToDetailedGemstone);
+          setFeaturedGemstones(convertedGemstones);
+          console.log('✅ Featured gemstones converted and set:', convertedGemstones);
+        }
+      } else {
+        console.error('❌ Failed to fetch featured gemstones:', response.message);
+        setFeaturedError(response.message || 'Failed to load featured gemstones');
+      }
+    } catch (error) {
+      console.error('❌ Error fetching featured gemstones:', error);
+      setFeaturedError('Unable to load featured gemstones. Please try again later.');
+    } finally {
+      setFeaturedLoading(false);
+    }
+  };
+
+  // Fetch featured gemstones on component mount
+  useEffect(() => {
+    fetchFeaturedGemstones();
+  }, []);
   const statistics = [
     { title: 'Verified Gems', value: 2847, icon: <CheckCircleOutlined className="text-blue-500" /> },
     { title: 'Active Traders', value: 1230, icon: <UserOutlined className="text-green-500" /> },
@@ -168,162 +191,22 @@ const HomePage: React.FC = () => {
       comment: 'Finding quality gemstones for my designs used to be challenging. With GemNet, I can source verified gems with confidence.',
       avatar: ''
     }
-  ];
-
-  // Fetch approved advertisements
-  const fetchApprovedAdvertisements = async () => {
-    try {
-      setLoadingAds(true);
-      const response = await api.getAllAdvertisements();
-      
-      if (Array.isArray(response)) {
-        // Filter only approved advertisements and take first 4
-        const approvedAds = response
-          .filter(ad => ad.approved === 'approved')
-          .slice(0, 4)
-          .map(ad => ({
-            id: ad.id || ad._id,
-            title: ad.title,
-            category: ad.category,
-            description: ad.description,
-            price: ad.price,
-            mobileNo: ad.mobileNo,
-            email: ad.email,
-            images: ad.images ? ad.images.map(imagePath => {
-              // Transform image paths if needed
-              if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-                return imagePath;
-              }
-              const fileName = imagePath.split('/').pop() || imagePath.split('\\').pop();
-              return `http://localhost:9092/uploads/advertisement-images/${fileName}`;
-            }) : [],
-            approved: ad.approved,
-            createdOn: ad.createdOn
-          }));
-        
-        setAdvertisements(approvedAds);
-      }
-    } catch (error) {
-      console.error('Error fetching advertisements:', error);
-    } finally {
-      setLoadingAds(false);
-    }
-  };
-
-  // Load advertisements on component mount
-  useEffect(() => {
-    fetchApprovedAdvertisements();
-  }, []);
-
-const handleViewDetails = (gemstoneId: string) => {
+  ];  const handleViewDetails = (gemstoneId: string) => {
     console.log('View details clicked for gemstone:', gemstoneId);
-    const gemstone = featuredGemstones.find(g => g.id === gemstoneId);
-    if (gemstone) {
-      console.log('Setting selected gemstone:', gemstone);
-      setSelectedGemstone(gemstone as DetailedGemstone);
-      setIsModalOpen(true);
-      setBidAmount(gemstone.price);
-    }
-  };
-  const handlePlaceBid = (amount: number) => {
-    // Handle bid placement logic
-    console.log(`Bid placed for ${amount}`);
-    setIsModalOpen(false);
-    setSelectedGemstone(null);
-    setBidAmount(0);
+    console.log('Navigating to marketplace with gemstone ID:', gemstoneId);
+    // Navigate to marketplace page with the gemstone ID as a query parameter
+    navigate(`/marketplace?viewGemstone=${gemstoneId}`);
   };
 
-  const toggleMobileMenu = () => {
-    setMobileMenuOpen(!mobileMenuOpen);
-  };
-
-  // Advertisement Card Component
-  const AdvertisementCard: React.FC<{ advertisement: Advertisement }> = ({ advertisement }) => (
-    <Card
-      hoverable
-      className="h-full shadow-lg hover:shadow-xl transition-all duration-300 border-0 rounded-lg overflow-hidden"
-      cover={
-        <div className="relative h-48 overflow-hidden">
-          <img
-            alt={advertisement.title}
-            src={advertisement.images && advertisement.images.length > 0 
-              ? advertisement.images[0] 
-              : 'https://via.placeholder.com/300x200?text=No+Image'}
-            className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = 'https://via.placeholder.com/300x200?text=No+Image';
-            }}
-          />
-          <div className="absolute top-3 right-3">
-            <Badge status="processing" />
-          </div>
-        </div>
-      }
-    >
-      <Meta
-        title={
-          <div className="space-y-1">
-            <Title level={4} className="!mb-0 !text-base lg:!text-lg line-clamp-1">
-              {advertisement.title}
-            </Title>
-            <Tag color="blue" className="text-xs">
-              {advertisement.category}
-            </Tag>
-          </div>
-        }
-        description={
-          <div className="space-y-3">
-            <Paragraph 
-              ellipsis={{ rows: 2, expandable: false }} 
-              className="!text-gray-600 !text-sm !mb-0"
-            >
-              {advertisement.description}
-            </Paragraph>
-            
-            <div className="flex justify-between items-center">
-              <div>
-                <Text className="text-lg font-bold text-green-600">
-                  LKR {advertisement.price}
-                </Text>
-              </div>
-            </div>
-            
-            <div className="space-y-1 pt-2 border-t border-gray-100">
-              <div className="flex items-center text-xs text-gray-500">
-                <PhoneOutlined className="mr-1" />
-                {advertisement.mobileNo}
-              </div>
-              <div className="flex items-center text-xs text-gray-500">
-                <MailOutlined className="mr-1" />
-                {advertisement.email}
-              </div>
-            </div>
-            
-            <Button 
-              type="primary" 
-              block 
-              className="mt-3 bg-blue-500 hover:bg-blue-600"
-              onClick={() => {
-                // You can add navigation to advertisement details or contact functionality
-                window.location.href = `tel:${advertisement.mobileNo}`;
-              }}
-            >
-              Contact Seller
-            </Button>
-          </div>
-        }
-      />
-    </Card>
-  );
   return (
-    <AntLayout className="min-h-screen bg-gray-50">
+    <AntLayout className="min-h-screen bg-gray-50 overflow-x-hidden w-full max-w-[100vw]">
       {/* Modern Header */}
-      <Header transparent={false} />
-      <Content>        {/* Enhanced Hero Section with Carousel */}
-        <section className="relative text-white overflow-hidden min-h-[400px] sm:min-h-[500px] lg:min-h-[600px] xl:min-h-[700px]">
+      <RoleAwareHeader transparent={false} />
+      <Content className="overflow-x-hidden w-full max-w-[100vw]">        {/* Enhanced Hero Section with Carousel */}
+        <section className="relative text-white overflow-hidden overflow-x-hidden min-h-[320px] xxs:min-h-[330px] xs:min-h-[360px] sm:min-h-[450px] lg:min-h-[600px] xl:min-h-[700px] w-full max-w-[100vw]">
           {/* Blurred background image */}
           <div 
-            className="absolute inset-0 blur-[0.5px]"
+            className="absolute inset-0 blur-[1px]"
             style={{
               backgroundImage: `url('/src/gem32.webp')`,
               backgroundSize: 'cover',
@@ -351,47 +234,47 @@ const handleViewDetails = (gemstoneId: string) => {
           </div>
           
           {/* Hero Content */}
-          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-8 sm:py-12 md:py-16 lg:py-24 xl:py-32">
+          <div className="relative max-w-7xl w-full mx-auto px-2 xxs:px-3 xs:px-5 sm:px-6 lg:px-12 py-4 xxs:py-5 xs:py-6 sm:py-12 md:py-16 lg:py-24 xl:py-32 overflow-x-hidden">
             <Carousel 
               autoplay 
               effect="fade"
               dots={{ className: "custom-dots" }}
-              className="hero-carousel rounded-lg"
+              className="hero-carousel rounded-lg overflow-hidden w-full"
               autoplaySpeed={6000}
             >              {/* Slide 1: Main intro */}
-              <div className="relative rounded-lg overflow-hidden">
+              <div className="relative rounded-lg xs:rounded-xl lg:rounded-2xl xl:rounded-3xl overflow-hidden">
                 <div className="absolute inset-0 bg-blue-500/20 backdrop-blur-sm"></div>
-                <Row gutter={[16, 24]} align="middle" className="min-h-[350px] sm:min-h-[400px] lg:min-h-[480px] relative z-30">
+                <Row gutter={[2, 4]} xxs:gutter={[4, 6]} xs:gutter={[8, 12]} sm:gutter={[16, 16]} align="middle" className="min-h-[280px] xxs:min-h-[290px] xs:min-h-[310px] sm:min-h-[380px] lg:min-h-[480px] xl:min-h-[560px] relative z-30 rounded-lg xs:rounded-xl lg:rounded-2xl xl:rounded-3xl bg-gradient-to-br from-blue-600/10 to-blue-800/10 backdrop-blur-sm border border-blue-400/20 px-1 xxs:px-2 xs:px-4 sm:px-6 lg:px-12 py-2 xxs:py-3 xs:py-4 sm:py-6 lg:py-8">
                   <Col xs={24}>
                     <motion.div
                       initial={{ opacity: 0, y: 30 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.8 }}
-                      className="space-y-4 sm:space-y-6 lg:space-y-8 text-center"
+                      className="space-y-3 xs:space-y-4 sm:space-y-6 lg:space-y-8 text-center"
                     >
-                      <div className="inline-block px-3 py-1 bg-blue-500/30 backdrop-blur-sm rounded-full mb-2">
-                        <Text className="text-yellow-300 text-xs sm:text-sm font-medium">Sri Lanka's Premier Gemstone Marketplace</Text>
+                      <div className="inline-block px-1 xxs:px-2 xs:px-3 py-1 bg-blue-500/30 backdrop-blur-sm rounded-full mb-1 xs:mb-2">
+                        <Text className="text-yellow-300 text-[10px] xxs:text-xs xs:text-xs sm:text-sm font-medium">Sri Lanka's Premier Gemstone Marketplace</Text>
                       </div>
-                      <Title level={1} className="!text-white !text-2xl sm:!text-3xl lg:!text-5xl xl:!text-6xl !font-bold !leading-tight">
+                      <Title level={1} className="!text-white !text-lg xxs:!text-xl xs:!text-2xl sm:!text-3xl lg:!text-5xl xl:!text-6xl !font-bold !leading-tight">
                         Discover Authentic
                         <span className="block text-yellow-400">Sri Lankan Gems</span>
                       </Title>
-                      <Paragraph className="!text-blue-100 !text-sm sm:!text-base lg:!text-lg xl:!text-xl !leading-relaxed max-w-xl mx-auto">
+                      <Paragraph className="!text-blue-100 !text-[10px] xxs:!text-xs xs:!text-sm sm:!text-base lg:!text-lg xl:!text-xl !leading-relaxed max-w-xs xxs:max-w-sm xs:max-w-xl mx-auto px-1 xxs:px-2 xs:px-0">
                         Join the most trusted digital marketplace for authentic gemstones. 
                         Connect with verified sellers and discover rare gems with confidence.
                       </Paragraph>
-                      <Space size="middle" className="flex flex-col sm:flex-row w-full sm:w-auto justify-center pt-2 sm:pt-4">
+                      <Space size="small" className="flex flex-col xs:flex-col sm:flex-row w-full justify-center pt-1 xxs:pt-2 xs:pt-3 sm:pt-4 px-1 xxs:px-2 xs:px-0">
                         <Button 
-                          size="large" 
-                          className="bg-yellow-500 border-yellow-500 text-gray-900 hover:bg-yellow-400 font-semibold px-6 sm:px-8 h-10 sm:h-12 w-full sm:w-auto"
+                          size="middle" 
+                          className="bg-yellow-500 border-yellow-500 text-gray-900 hover:bg-yellow-400 font-semibold px-2 xxs:px-3 xs:px-6 sm:px-8 h-8 xxs:h-9 xs:h-10 sm:h-12 w-full text-xs xxs:text-sm xs:text-base"
                           onClick={() => navigate('/marketplace')}
                         >
                           Explore Marketplace
                         </Button>
                         <Button 
-                          size="large" 
+                          size="middle" 
                           ghost 
-                          className="border-white text-white hover:bg-white hover:text-blue-600 font-semibold px-6 sm:px-8 h-10 sm:h-12 w-full sm:w-auto"
+                          className="border-white text-white hover:bg-white hover:text-blue-600 font-semibold px-2 xxs:px-3 xs:px-6 sm:px-8 h-8 xxs:h-9 xs:h-10 sm:h-12 w-full text-xs xxs:text-sm xs:text-base"
                           onClick={() => navigate('/register')}
                         >
                           Join GemNet
@@ -401,31 +284,30 @@ const handleViewDetails = (gemstoneId: string) => {
                   </Col>
                 </Row>
               </div>              {/* Slide 2: Price Prediction */}
-              <div className="rounded-lg overflow-hidden">
+              <div className="relative rounded-lg xs:rounded-xl lg:rounded-2xl xl:rounded-3xl overflow-hidden">
                 <div className="absolute inset-0 bg-blue-500/20 backdrop-blur-sm"></div>
-                <Row gutter={[16, 24]} align="middle" className="min-h-[350px] sm:min-h-[400px] lg:min-h-[480px] relative z-30">
+                <Row gutter={[2, 4]} xxs:gutter={[4, 6]} xs:gutter={[8, 12]} sm:gutter={[16, 16]} align="middle" className="min-h-[280px] xxs:min-h-[290px] xs:min-h-[310px] sm:min-h-[380px] lg:min-h-[480px] xl:min-h-[560px] relative z-30 rounded-lg xs:rounded-xl lg:rounded-2xl xl:rounded-3xl bg-gradient-to-br from-blue-600/10 to-blue-800/10 backdrop-blur-sm border border-blue-400/20 px-1 xxs:px-2 xs:px-4 sm:px-6 lg:px-12 py-2 xxs:py-3 xs:py-4 sm:py-6 lg:py-8">
                   <Col xs={24} lg={12}>
                     <motion.div
                       initial={{ opacity: 0, y: 30 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.8 }}
-                      className="space-y-4 sm:space-y-6 lg:space-y-8 text-center lg:text-left"
-                    >
-                      <div className="inline-block px-3 py-1 bg-blue-500/30 backdrop-blur-sm rounded-full mb-2">
-                        <Text className="text-yellow-300 text-xs sm:text-sm font-medium">AI-Powered Price Estimation</Text>
+                      className="space-y-3 xs:space-y-4 sm:space-y-6 lg:space-y-8 text-center lg:text-left px-2 xs:px-0">
+                      <div className="inline-block px-1 xxs:px-2 xs:px-3 py-1 bg-blue-500/30 backdrop-blur-sm rounded-full mb-1 xs:mb-2">
+                        <Text className="text-yellow-300 text-[10px] xxs:text-xs xs:text-xs sm:text-sm font-medium">AI-Powered Price Estimation</Text>
                       </div>
-                      <Title level={1} className="!text-white !text-2xl sm:!text-3xl lg:!text-5xl xl:!text-6xl !font-bold !leading-tight">
+                      <Title level={1} className="!text-white !text-lg xxs:!text-xl xs:!text-2xl sm:!text-3xl lg:!text-5xl xl:!text-6xl !font-bold !leading-tight">
                         Smart Pricing
                         <span className="block text-yellow-400">For Fair Trading</span>
                       </Title>
-                      <Paragraph className="!text-blue-100 !text-sm sm:!text-base lg:!text-lg xl:!text-xl !leading-relaxed max-w-xl mx-auto lg:mx-0">
+                      <Paragraph className="!text-blue-100 !text-[10px] xxs:!text-xs xs:!text-sm sm:!text-base lg:!text-lg xl:!text-xl !leading-relaxed max-w-xs xxs:max-w-sm xs:max-w-xl mx-auto lg:mx-0">
                         Our machine learning technology analyzes gem attributes to provide estimated price ranges, 
                         helping both buyers and sellers make informed decisions.
                       </Paragraph>
-                      <Space size="middle" className="flex flex-col sm:flex-row w-full sm:w-auto justify-center lg:justify-start pt-2 sm:pt-4">
+                      <Space size="small" className="flex flex-col xs:flex-col sm:flex-row w-full justify-center lg:justify-start pt-1 xs:pt-2 sm:pt-4">
                         <Button 
-                          size="large" 
-                          className="bg-yellow-500 border-yellow-500 text-gray-900 hover:bg-yellow-400 font-semibold px-6 sm:px-8 h-10 sm:h-12 w-full sm:w-auto"
+                          size="middle" 
+                          className="bg-yellow-500 border-yellow-500 text-gray-900 hover:bg-yellow-400 font-semibold px-2 xxs:px-3 xs:px-6 sm:px-8 h-8 xxs:h-9 xs:h-10 sm:h-12 w-full text-xs xxs:text-sm xs:text-base"
                           onClick={() => navigate('/marketplace')}
                         >
                           Explore Marketplace
@@ -440,56 +322,56 @@ const handleViewDetails = (gemstoneId: string) => {
                       transition={{ duration: 0.8, delay: 0.2 }}
                       className="relative mx-auto max-w-xs sm:max-w-sm lg:max-w-none mt-6 lg:mt-0"
                     >
-                      <div className="relative z-10 bg-gradient-to-br from-blue-900/80 to-blue-800/80 backdrop-blur-sm rounded-2xl p-4 sm:p-6 shadow-[0_15px_50px_-15px_rgba(0,0,0,0.3)]">
-                        <div className="flex items-start mb-4 sm:mb-6">
-                          <div className="w-1/3 pr-2">
+                      <div className="relative z-10 bg-gradient-to-br from-blue-900/80 to-blue-800/80 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 xs:p-4 sm:p-6 shadow-[0_15px_50px_-15px_rgba(0,0,0,0.3)]">
+                        <div className="flex items-start mb-3 xs:mb-4 sm:mb-6">
+                          <div className="w-1/3 pr-1 xs:pr-2">
                             <img 
                               src="https://images.unsplash.com/photo-1599707367072-cd6ada2bc375?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80"
                               alt="Sapphire"
                               className="w-full h-auto rounded-lg"
                             />
                           </div>
-                          <div className="w-2/3 pl-2">
-                            <Title level={4} className="!text-white !text-sm sm:!text-base lg:!text-lg !mb-1">Blue Sapphire</Title>
-                            <Text className="text-blue-200 text-xs sm:text-sm block mb-2">5.2 Carats, Ceylon Origin</Text>
+                          <div className="w-2/3 pl-1 xs:pl-2">
+                            <Title level={4} className="!text-white !text-xs xs:!text-sm sm:!text-base lg:!text-lg !mb-1">Blue Sapphire</Title>
+                            <Text className="text-blue-200 text-xs sm:text-sm block mb-1 xs:mb-2">5.2 Carats, Ceylon Origin</Text>
                             <div className="space-x-1">
-                              <Tag color="blue" className="text-xs">Corundum</Tag>
-                              <Tag color="green" className="text-xs">Certified</Tag>
+                              <Tag color="blue" className="text-[10px] xs:text-xs">Corundum</Tag>
+                              <Tag color="green" className="text-[10px] xs:text-xs">Certified</Tag>
                             </div>
                           </div>
                         </div>
-                        <div className="bg-blue-950/40 rounded-lg p-3 sm:p-4 mb-3 sm:mb-4">
-                          <Title level={5} className="!text-blue-200 !text-xs sm:!text-sm !mb-2 sm:!mb-3">Price Prediction</Title>                          <Row gutter={16}>
+                        <div className="bg-blue-950/40 rounded-lg p-2 xs:p-3 sm:p-4 mb-2 xs:mb-3 sm:mb-4">
+                          <Title level={5} className="!text-blue-200 !text-xs sm:!text-sm !mb-2 sm:!mb-3">Price Prediction</Title>                          <Row gutter={8}>
                             <Col span={12}>
                               <Statistic 
-                                title={<span className="text-blue-300 text-xs">Minimum</span>}
+                                title={<span className="text-blue-300 text-[10px] xs:text-xs">Minimum</span>}
                                 value="LKR 4,785,000"
-                                valueStyle={{ color: '#7dd3fc', fontSize: '0.8rem' }}
+                                valueStyle={{ color: '#7dd3fc', fontSize: 'clamp(0.65rem, 2vw, 0.8rem)' }}
                                 className="mobile-statistic"
                               />
                             </Col>
                             <Col span={12}>
                               <Statistic 
-                                title={<span className="text-blue-300 text-xs">Maximum</span>}
+                                title={<span className="text-blue-300 text-[10px] xs:text-xs">Maximum</span>}
                                 value="LKR 5,544,000"
-                                valueStyle={{ color: '#7dd3fc', fontSize: '0.8rem' }}
+                                valueStyle={{ color: '#7dd3fc', fontSize: 'clamp(0.65rem, 2vw, 0.8rem)' }}
                                 className="mobile-statistic"
                               />
                             </Col>
                           </Row>
                         </div>
-                        <div className="flex justify-between items-center">
-                          <Badge status="processing" text={<span className="text-yellow-300 text-xs">AI Generated Estimate</span>} />
-                          <Text className="text-blue-200 text-xs">Confidence: High</Text>
+                        <div className="flex flex-wrap justify-between items-center gap-1 xs:gap-0">
+                          <Badge status="processing" text={<span className="text-yellow-300 text-[10px] xs:text-xs">AI Generated Estimate</span>} />
+                          <Text className="text-blue-200 text-[10px] xs:text-xs">Confidence: High</Text>
                         </div>
                       </div>
                     </motion.div>
                   </Col>
                 </Row>
               </div>              {/* Slide 3: Verification Process */}
-              <div className="rounded-lg overflow-hidden mx-4 sm:mx-6 lg:mx-8">
+              <div className="relative rounded-lg xs:rounded-xl lg:rounded-2xl xl:rounded-3xl overflow-hidden">
                 <div className="absolute inset-0 bg-blue-500/20 backdrop-blur-sm"></div>
-                <Row gutter={[16, 24]} align="middle" className="min-h-[350px] sm:min-h-[400px] lg:min-h-[480px] relative z-30 px-4 sm:px-6 lg:px-8">
+                <Row gutter={[2, 4]} xxs:gutter={[4, 6]} xs:gutter={[8, 12]} sm:gutter={[16, 16]} align="middle" className="min-h-[280px] xxs:min-h-[290px] xs:min-h-[310px] sm:min-h-[380px] lg:min-h-[480px] xl:min-h-[560px] relative z-30 rounded-lg xs:rounded-xl lg:rounded-2xl xl:rounded-3xl bg-gradient-to-br from-blue-600/10 to-blue-800/10 backdrop-blur-sm border border-blue-400/20 px-1 xxs:px-2 xs:px-4 sm:px-6 lg:px-12 py-2 xxs:py-3 xs:py-4 sm:py-6 lg:py-8">
                   <Col xs={24} lg={12}>
                     <motion.div
                       initial={{ opacity: 0, y: 30 }}
@@ -497,21 +379,21 @@ const handleViewDetails = (gemstoneId: string) => {
                       transition={{ duration: 0.8 }}
                       className="space-y-4 sm:space-y-6 lg:space-y-8 text-center lg:text-left"
                     >
-                      <div className="inline-block px-3 py-1 bg-blue-500/30 backdrop-blur-sm rounded-full mb-2">
-                        <Text className="text-yellow-300 text-xs sm:text-sm font-medium">Trust & Verification</Text>
+                      <div className="inline-block px-1 xxs:px-2 xs:px-3 py-1 bg-blue-500/30 backdrop-blur-sm rounded-full mb-1 xxs:mb-2">
+                        <Text className="text-yellow-300 text-[10px] xxs:text-xs xs:text-xs sm:text-sm font-medium">Trust & Verification</Text>
                       </div>
-                      <Title level={1} className="!text-white !text-2xl sm:!text-3xl lg:!text-5xl xl:!text-6xl !font-bold !leading-tight">
+                      <Title level={1} className="!text-white !text-lg xxs:!text-xl xs:!text-2xl sm:!text-3xl lg:!text-5xl xl:!text-6xl !font-bold !leading-tight">
                         Safety First
                         <span className="block text-yellow-400">Verified Users Only</span>
                       </Title>
-                      <Paragraph className="!text-blue-100 !text-sm sm:!text-base lg:!text-lg xl:!text-xl !leading-relaxed max-w-xl mx-auto lg:mx-0">
+                      <Paragraph className="!text-blue-100 !text-[10px] xxs:!text-xs xs:!text-sm sm:!text-base lg:!text-lg xl:!text-xl !leading-relaxed max-w-xs xxs:max-w-sm xs:max-w-xl mx-auto lg:mx-0">
                         GemNet verifies all buyers and sellers through identity verification, 
                         creating a secure environment for gemstone trading.
                       </Paragraph>
                       <Space size="middle" className="flex flex-col sm:flex-row w-full sm:w-auto justify-center lg:justify-start pt-2 sm:pt-4">
                         <Button 
-                          size="large" 
-                          className="bg-yellow-500 border-yellow-500 text-gray-900 hover:bg-yellow-400 font-semibold px-6 sm:px-8 h-10 sm:h-12 w-full sm:w-auto"
+                          size="middle" 
+                          className="bg-yellow-500 border-yellow-500 text-gray-900 hover:bg-yellow-400 font-semibold px-2 xxs:px-3 xs:px-6 sm:px-8 h-8 xxs:h-9 xs:h-10 sm:h-12 w-full sm:w-auto text-xs xxs:text-sm xs:text-base"
                           onClick={() => navigate('/register')}
                         >
                           Get Verified Today
@@ -526,34 +408,34 @@ const handleViewDetails = (gemstoneId: string) => {
                       transition={{ duration: 0.8, delay: 0.2 }}
                       className="relative mx-auto max-w-xs sm:max-w-sm lg:max-w-none mt-6 lg:mt-0"
                     >
-                      <div className="relative z-10 rounded-2xl overflow-hidden shadow-[0_15px_50px_-15px_rgba(0,0,0,0.3)]">
-                        <div className="bg-gradient-to-br from-blue-900/90 to-blue-800/90 backdrop-blur-sm p-4 sm:p-6">
-                          <div className="flex flex-col space-y-3 sm:space-y-4">
-                            <div className="bg-blue-950/50 rounded-lg p-3 sm:p-4 flex items-center">
-                              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-700 rounded-full flex items-center justify-center mr-3 sm:mr-4">
-                                <CheckCircleOutlined className="text-white text-sm sm:text-lg" />
+                      <div className="relative z-10 rounded-xl sm:rounded-2xl overflow-hidden shadow-[0_15px_50px_-15px_rgba(0,0,0,0.3)]">
+                        <div className="bg-gradient-to-br from-blue-900/90 to-blue-800/90 backdrop-blur-sm p-3 xs:p-4 sm:p-6">
+                          <div className="flex flex-col space-y-2 xs:space-y-3 sm:space-y-4">
+                            <div className="bg-blue-950/50 rounded-lg p-2 xs:p-3 sm:p-4 flex items-center">
+                              <div className="w-6 h-6 xs:w-8 xs:h-8 sm:w-10 sm:h-10 bg-blue-700 rounded-full flex items-center justify-center mr-2 xs:mr-3 sm:mr-4">
+                                <CheckCircleOutlined className="text-white text-xs xs:text-sm sm:text-lg" />
                               </div>
                               <div>
-                                <Text className="text-white font-medium block text-sm sm:text-base">Identity Verification</Text>
-                                <Text className="text-blue-200 text-xs">Government ID validation & facial recognition</Text>
+                                <Text className="text-white font-medium block text-xs xs:text-sm sm:text-base">Identity Verification</Text>
+                                <Text className="text-blue-200 text-[10px] xs:text-xs">Government ID validation & facial recognition</Text>
                               </div>
                             </div>
-                            <div className="bg-blue-950/50 rounded-lg p-4 flex items-center">
-                              <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center mr-4">
-                                <SafetyOutlined className="text-white text-lg" />
+                            <div className="bg-blue-950/50 rounded-lg p-2 xs:p-3 sm:p-4 flex items-center">
+                              <div className="w-6 h-6 xs:w-8 xs:h-8 sm:w-10 sm:h-10 bg-green-600 rounded-full flex items-center justify-center mr-2 xs:mr-3 sm:mr-4">
+                                <SafetyOutlined className="text-white text-xs xs:text-sm sm:text-lg" />
                               </div>
                               <div>
-                                <Text className="text-white font-medium block">Secure Transactions</Text>
-                                <Text className="text-blue-200 text-xs">Escrow service & buyer protection</Text>
+                                <Text className="text-white font-medium block text-xs xs:text-sm sm:text-base">Secure Transactions</Text>
+                                <Text className="text-blue-200 text-[10px] xs:text-xs">Escrow service & buyer protection</Text>
                               </div>
                             </div>
-                            <div className="bg-blue-950/50 rounded-lg p-4 flex items-center">
-                              <div className="w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center mr-4">
-                                <StarFilled className="text-white text-lg" />
+                            <div className="bg-blue-950/50 rounded-lg p-2 xs:p-3 sm:p-4 flex items-center">
+                              <div className="w-6 h-6 xs:w-8 xs:h-8 sm:w-10 sm:h-10 bg-yellow-500 rounded-full flex items-center justify-center mr-2 xs:mr-3 sm:mr-4">
+                                <StarFilled className="text-white text-xs xs:text-sm sm:text-lg" />
                               </div>
                               <div>
-                                <Text className="text-white font-medium block">Seller Ratings</Text>
-                                <Text className="text-blue-200 text-xs">Transparent feedback system</Text>
+                                <Text className="text-white font-medium block text-xs xs:text-sm sm:text-base">Seller Ratings</Text>
+                                <Text className="text-blue-200 text-[10px] xs:text-xs">Transparent feedback system</Text>
                               </div>
                             </div>
                           </div>
@@ -568,9 +450,9 @@ const handleViewDetails = (gemstoneId: string) => {
         </section>
 
         {/* Statistics Section */}
-        <section className="py-10 md:py-16 bg-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12">
-            <Row gutter={[16, 16]} align="middle" justify="center">
+        <section className="py-6 xxs:py-8 xs:py-10 md:py-16 bg-white overflow-x-hidden w-full max-w-[100vw]">
+          <div className="max-w-7xl mx-auto px-2 xxs:px-3 xs:px-4 sm:px-6 lg:px-12">
+            <Row gutter={[4, 12]} xxs:gutter={[6, 14]} xs:gutter={[8, 16]} sm:gutter={[16, 16]} align="middle" justify="center">
               {statistics.map((stat, index) => (
                 <Col xs={24} sm={8} key={index}>
                   <motion.div
@@ -600,8 +482,8 @@ const handleViewDetails = (gemstoneId: string) => {
             </Row>
           </div>
         </section>        {/* Featured Gemstones */}
-        <section className="py-8 sm:py-12 md:py-16 lg:py-20 bg-gray-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12">
+        <section className="py-4 xxs:py-6 xs:py-8 sm:py-12 md:py-16 lg:py-20 bg-gray-50 overflow-x-hidden w-full max-w-[100vw]">
+          <div className="max-w-7xl mx-auto px-2 xxs:px-3 xs:px-4 sm:px-6 lg:px-12">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -613,96 +495,85 @@ const handleViewDetails = (gemstoneId: string) => {
                 Featured Gemstones
               </Title>
               <Paragraph className="!text-sm sm:!text-base lg:!text-lg !text-gray-600 max-w-2xl mx-auto">
-                Discover our handpicked collection of premium gemstones from verified sellers
-              </Paragraph>
-            </motion.div>            <Row gutter={[12, 16]} className="sm:gutter-16 lg:gutter-24">
-              {featuredGemstones.map((gemstone, index) => (
-                <Col xs={24} sm={12} lg={6} key={gemstone.id}>
-                  <motion.div
-                    initial={{ opacity: 0, y: 30 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: index * 0.1 }}
-                    viewport={{ once: true }}
-                    className="gemstone-card-motion-wrapper h-full"
-                  >                    <GemstoneCard 
-                      gemstone={gemstone}
-                      onViewDetails={() => handleViewDetails(gemstone.id)}
-                    />
-                  </motion.div>
-                </Col>
-              ))}
-            </Row>
-
-            <div className="text-center mt-6 sm:mt-8 lg:mt-12">
-              <Button 
-                size="large" 
-                type="primary"
-                className="bg-blue-500 border-blue-500 hover:bg-blue-600 px-6 sm:px-8 h-10 sm:h-12 font-semibold"
-                onClick={() => navigate('/marketplace')}
-              >
-                View All Gemstones
-              </Button>
-            </div>
-          </div>
-        </section>
-
-        {/* Advertisements Section */}
-        <section className="py-8 sm:py-12 md:py-16 lg:py-20 bg-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8 }}
-              viewport={{ once: true }}
-              className="text-center mb-6 sm:mb-8 lg:mb-12"
-            >
-              <Title level={2} className="!text-xl sm:!text-2xl lg:!text-3xl xl:!text-4xl !font-bold !text-gray-800 !mb-2 sm:!mb-3 lg:!mb-4">
-                Featured Advertisements
-              </Title>
-              <Paragraph className="!text-sm sm:!text-base lg:!text-lg !text-gray-600 max-w-2xl mx-auto">
-                Discover quality gemstones and jewelry from verified advertisers
+                Discover our highest-priced premium gemstones from verified sellers
               </Paragraph>
             </motion.div>
 
-            {loadingAds ? (
-              <div className="text-center py-12">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                <p className="mt-4 text-gray-500">Loading advertisements...</p>
-              </div>
-            ) : advertisements.length > 0 ? (
-              <>
-                <Row gutter={[12, 16]} className="sm:gutter-16 lg:gutter-24">
-                  {advertisements.map((advertisement, index) => (
-                    <Col xs={24} sm={12} lg={6} key={advertisement.id}>
-                      <motion.div
-                        initial={{ opacity: 0, y: 30 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6, delay: index * 0.1 }}
-                        viewport={{ once: true }}
-                        className="advertisement-card-motion-wrapper h-full"
-                      >
-                        <AdvertisementCard advertisement={advertisement} />
-                      </motion.div>
-                    </Col>
-                  ))}
-                </Row>
-
-                <div className="text-center mt-6 sm:mt-8 lg:mt-12">
-                  <Button 
-                    size="large" 
-                    type="primary"
-                    className="bg-blue-500 border-blue-500 hover:bg-blue-600 px-6 sm:px-8 h-10 sm:h-12 font-semibold"
-                    onClick={() => navigate('/advertisements')}
-                  >
-                    View All Advertisements
-                  </Button>
+            {/* Loading State */}
+            {featuredLoading && (
+              <div className="text-center py-8">
+                <Spin size="large" />
+                <div className="mt-4">
+                  <Text className="text-gray-600">Loading featured gemstones...</Text>
                 </div>
-              </>
-            ) : (
-              <div className="text-center py-12">
-                <div className="text-4xl text-gray-300 mb-4">📢</div>
-                <h3 className="text-lg font-medium text-gray-600 mb-2">No advertisements available</h3>
-                <p className="text-gray-500">Check back later for new advertisements from our verified sellers.</p>
+              </div>
+            )}
+
+            {/* Error State */}
+            {featuredError && !featuredLoading && (
+              <div className="text-center py-8">
+                <div className="mb-4">
+                  <Text type="secondary" className="text-lg">😔 {featuredError}</Text>
+                </div>
+                <Button 
+                  type="primary" 
+                  onClick={fetchFeaturedGemstones}
+                  className="bg-blue-500 border-blue-500 hover:bg-blue-600"
+                >
+                  Try Again
+                </Button>
+              </div>
+            )}
+
+            {/* Featured Gemstones Grid */}
+            {!featuredLoading && !featuredError && featuredGemstones.length > 0 && (
+              <Row gutter={[16, 16]}>
+                {featuredGemstones.map((gemstone, index) => (
+                  <Col xs={24} sm={12} lg={6} key={gemstone.id}>
+                    <motion.div
+                      initial={{ opacity: 0, y: 30 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.6, delay: index * 0.1 }}
+                      viewport={{ once: true }}
+                      className="gemstone-card-motion-wrapper h-full"
+                    >
+                      <GemstoneCard 
+                        gemstone={gemstone}
+                        onViewDetails={() => handleViewDetails(gemstone.id)}
+                      />
+                    </motion.div>
+                  </Col>
+                ))}
+              </Row>
+            )}
+
+            {/* No Data State */}
+            {!featuredLoading && !featuredError && featuredGemstones.length === 0 && (
+              <div className="text-center py-8">
+                <div className="mb-4">
+                  <Text type="secondary" className="text-lg">No featured gemstones available at the moment</Text>
+                </div>
+                <Button 
+                  type="primary" 
+                  onClick={() => navigate('/marketplace')}
+                  className="bg-blue-500 border-blue-500 hover:bg-blue-600"
+                >
+                  Browse Marketplace
+                </Button>
+              </div>
+            )}
+
+            {/* View All Button - Only show when we have featured gemstones */}
+            {!featuredLoading && !featuredError && featuredGemstones.length > 0 && (
+              <div className="text-center mt-6 sm:mt-8 lg:mt-12">
+                <Button 
+                  size="large" 
+                  type="primary"
+                  className="bg-blue-500 border-blue-500 hover:bg-blue-600 px-6 sm:px-8 h-10 sm:h-12 font-semibold"
+                  onClick={() => navigate('/marketplace')}
+                >
+                  View All Gemstones
+                </Button>
               </div>
             )}
           </div>
@@ -985,19 +856,6 @@ const handleViewDetails = (gemstoneId: string) => {
             </motion.div>
           </div>
         </section>      </Content>      
-      {/* Gemstone Detail Modal */}
-      {selectedGemstone && (
-        <GemstoneDetailModal
-          isOpen={isModalOpen}
-          gemstone={selectedGemstone}
-          onClose={() => {
-            console.log('Closing detail modal');
-            setIsModalOpen(false);
-            setSelectedGemstone(null);
-          }}
-          onPlaceBid={handlePlaceBid}
-        />
-      )}
     </AntLayout>
   );
 };

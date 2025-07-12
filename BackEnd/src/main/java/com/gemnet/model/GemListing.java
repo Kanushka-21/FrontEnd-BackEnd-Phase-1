@@ -36,7 +36,8 @@ public class GemListing {
     @NotNull(message = "Certification status is required")
     private Boolean isCertified;
     
-    // CSL Certificate Information (for non-certified stones)
+    // CSL Certificate Information (ONLY for certified stones)
+    // These fields should be null for non-certified gemstones
     private String cslMemoNo;
     private String issueDate;
     private String authority;
