@@ -7,7 +7,7 @@ export interface Advertisement {
   mobileNo: string;
   email: string;
   images: string[];
-  approved: boolean;
+  approved: string | boolean | null | undefined; // Now supports both string and boolean for backward compatibility
   userId: string;
   createdOn: string;
   modifiedOn: string;

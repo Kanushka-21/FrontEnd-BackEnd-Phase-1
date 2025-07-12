@@ -767,10 +767,10 @@ const extendedAPI = {
     }
   },
 
-  updateAdvertisementApproval: async (id: string, approved: boolean): Promise<ApiResponse> => {
+  updateAdvertisementApproval: async (id: string, approve: boolean): Promise<ApiResponse> => {
     try {
       const response = await api.patch(`/api/advertisements/${id}/approval`, null, {
-        params: { approved }
+        params: { approve }
       });
       return response.data;
     } catch (error) {

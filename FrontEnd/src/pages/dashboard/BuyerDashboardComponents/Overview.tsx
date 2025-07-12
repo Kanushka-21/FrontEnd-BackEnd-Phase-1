@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   CheckCircle, FileText, TrendingUp, ShoppingBag, Package,
   Eye, Edit, Trash2
 } from 'lucide-react';
-import { StatsCard, MOCK_STATS, MOCK_ADVERTISEMENTS, formatLKR } from './shared';
+import { StatsCard, MOCK_STATS, formatLKR, Advertisement } from './shared';
+import { api } from '@/services/api';
+import { authUtils } from '@/utils';
+import toast from 'react-hot-toast';
 
 interface OverviewProps {
   user: any;
@@ -11,6 +14,68 @@ interface OverviewProps {
 }
 
 const Overview: React.FC<OverviewProps> = ({ user, onTabChange }) => {
+  const [latestAds, setLatestAds] = useState<Advertisement[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch latest advertisements
+  const fetchLatestAdvertisements = async () => {
+    try {
+      setLoading(true);
+      const userId = authUtils.getCurrentUserId();
+      
+      if (!userId) {
+        console.error('User ID not found in localStorage');
+        return;
+      }
+      
+      console.log('Fetching latest advertisements for user:', userId);
+      
+      const response = await api.getUserAdvertisements(userId);
+      console.log('Overview - Fetch response:', response);
+      
+      if (response.success && response.data) {
+        // Transform backend data to match UI expectations
+        const transformedData = response.data.map(ad => ({
+          ...ad,
+          status: ad.approved ? 'Approved' : 'Pending Review',
+          dateCreated: new Date(ad.createdOn).toLocaleDateString(),
+          views: 0, // Default values for now
+          inquiries: 0,
+          // Transform image paths if needed
+          images: ad.images ? ad.images.map(imagePath => {
+            // Check if it's already a web URL
+            if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+              return imagePath;
+            }
+            // If it's still a file system path, convert it
+            const fileName = imagePath.split('/').pop() || imagePath.split('\\').pop();
+            return `http://localhost:9092/uploads/advertisement-images/${fileName}`;
+          }) : []
+        }));
+        
+        // Sort by creation date (newest first) and take only the latest 3
+        const sortedAds = transformedData.sort((a, b) => 
+          new Date(b.createdOn).getTime() - new Date(a.createdOn).getTime()
+        );
+        
+        setLatestAds(sortedAds.slice(0, 3));
+        console.log('Overview - Latest 3 advertisements:', sortedAds.slice(0, 3));
+      } else {
+        console.warn('Failed to fetch advertisements:', response);
+        setLatestAds([]);
+      }
+    } catch (error) {
+      console.error('Error fetching latest advertisements:', error);
+      setLatestAds([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load advertisements on component mount
+  useEffect(() => {
+    fetchLatestAdvertisements();
+  }, []);
   return (
     <div className="space-y-6">
       {/* Welcome Header */}
@@ -109,55 +174,112 @@ const Overview: React.FC<OverviewProps> = ({ user, onTabChange }) => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {MOCK_ADVERTISEMENTS.slice(0, 3).map((ad) => (
-                <tr key={ad.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <img className="h-10 w-10 rounded-lg object-cover" src={ad.images[0]} alt={ad.title} />
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">{ad.title}</div>
-                        <div className="text-sm text-gray-500">{ad.description.substring(0, 50)}...</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                      {ad.category}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {ad.price}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      ad.status === 'Approved' 
-                        ? 'bg-green-100 text-green-800'
-                        : ad.status === 'Pending Review'
-                        ? 'bg-yellow-100 text-yellow-800' 
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {ad.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {ad.views}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {ad.dateCreated}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                    <button className="text-blue-600 hover:text-blue-900">
-                      <Eye size={16} />
-                    </button>
-                    <button className="text-green-600 hover:text-green-900">
-                      <Edit size={16} />
-                    </button>
-                    <button className="text-red-600 hover:text-red-900">
-                      <Trash2 size={16} />
-                    </button>
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center">
+                    <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                    <p className="mt-2 text-sm text-gray-500">Loading latest advertisements...</p>
                   </td>
                 </tr>
-              ))}
+              ) : latestAds.length > 0 ? (
+                latestAds.map((ad) => (
+                  <tr key={ad.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        {ad.images && ad.images.length > 0 ? (
+                          <img 
+                            className="h-10 w-10 rounded-lg object-cover" 
+                            src={ad.images[0]} 
+                            alt={ad.title}
+                            onError={(e) => {
+                              // Fallback to placeholder if image fails to load
+                              const target = e.target as HTMLImageElement;
+                              target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yMCAyOEMxNi42ODYzIDI4IDEzLjk5OTkgMjUuMzEzNyAxMy45OTk5IDIyQzEzLjk5OTkgMTguNjg2MyAxNi42ODYzIDE2IDIwIDE2QzIzLjMxMzcgMTYgMjYgMTguNjg2MyAyNiAyMkMyNiAyNS4zMTM3IDIzLjMxMzcgMjggMjAgMjhaTTIwIDI0QzIxLjEwNDYgMjQgMjIgMjMuMTA0NiAyMiAyMkMyMiAyMC44OTU0IDIxLjEwNDYgMjAgMjAgMjBDMTguODk1NCAyMCAxOCAyMC44OTU0IDE4IDIyQzE4IDIzLjEwNDYgMTguODk1NCAyNCAyMCAyNFoiIGZpbGw9IiM5Q0E0QUYiLz4KPC9zdmc+';
+                            }}
+                          />
+                        ) : (
+                          <div className="h-10 w-10 rounded-lg bg-gray-200 flex items-center justify-center">
+                            <FileText className="w-5 h-5 text-gray-400" />
+                          </div>
+                        )}
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">{ad.title}</div>
+                          <div className="text-sm text-gray-500">
+                            {ad.description ? 
+                              (ad.description.length > 50 ? 
+                                ad.description.substring(0, 50) + '...' : 
+                                ad.description
+                              ) : 
+                              'No description'
+                            }
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        {ad.category}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      LKR {ad.price}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        ad.approved
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {ad.approved ? 'Approved' : 'Pending Review'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {ad.views || 0}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(ad.createdOn).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                      <button 
+                        className="text-blue-600 hover:text-blue-900"
+                        onClick={() => onTabChange('advertisements')}
+                        title="View in Advertisements"
+                      >
+                        <Eye size={16} />
+                      </button>
+                      <button 
+                        className="text-green-600 hover:text-green-900"
+                        onClick={() => onTabChange('advertisements')}
+                        title="Edit in Advertisements"
+                      >
+                        <Edit size={16} />
+                      </button>
+                      <button 
+                        className="text-red-600 hover:text-red-900"
+                        onClick={() => onTabChange('advertisements')}
+                        title="Delete in Advertisements"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center">
+                    <div className="text-gray-500">
+                      <FileText className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                      <p className="text-sm">No advertisements yet</p>
+                      <button
+                        onClick={() => onTabChange('advertisements')}
+                        className="mt-2 text-blue-600 hover:text-blue-800 text-sm font-medium"
+                      >
+                        Create your first advertisement
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

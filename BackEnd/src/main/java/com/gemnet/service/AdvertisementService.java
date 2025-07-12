@@ -53,7 +53,7 @@ public class AdvertisementService {
         advertisement.setEmail(requestDto.getEmail().trim());
         advertisement.setUserId(requestDto.getUserId().trim());
         advertisement.setImages(imagePaths);
-        advertisement.setApproved(false); // Default to not approved
+        advertisement.setApproved("pending");
 
 
         Advertisement webImageURLs = transformImagePathsToUrls(advertisement);
@@ -114,7 +114,7 @@ public class AdvertisementService {
     /**
      * Update advertisement
      */
-    public Optional<Advertisement> updateAdvertisement(String id, AdvertisementRequestDto requestDto, List<MultipartFile> images) throws IOException {
+    public Optional<Advertisement> updateAdvertisement(String id, AdvertisementRequestDto requestDto) throws IOException {
         Optional<Advertisement> advertisementOptional = advertisementRepository.findById(id);
         
         if (!advertisementOptional.isPresent()) {
@@ -147,7 +147,7 @@ public class AdvertisementService {
         }
         
         // Handle image updates
-        if (images != null && !images.isEmpty()) {
+        if (requestDto.getImages() != null && !requestDto.getImages().isEmpty()) {
             // Delete old images
             if (advertisement.getImages() != null && !advertisement.getImages().isEmpty()) {
                 for (String imagePath : advertisement.getImages()) {
@@ -156,14 +156,15 @@ public class AdvertisementService {
             }
             
             // Store new images
-            List<String> imagePaths = fileStorageService.storeAdvertisementImages(images, advertisement.getUserId());
+            List<String> imagePaths = fileStorageService.storeAdvertisementImages(requestDto.getImages(), advertisement.getUserId());
             advertisement.setImages(imagePaths);
         }
         
         // Update timestamp
         advertisement.updateTimestamp();
-        
-        // Save updated advertisement
+
+        Advertisement webImageURLs = transformImagePathsToUrls(advertisement);
+        advertisement.setImages(webImageURLs.getImages());
         Advertisement savedAdvertisement = advertisementRepository.save(advertisement);
         return Optional.of(transformImagePathsToUrls(savedAdvertisement));
     }

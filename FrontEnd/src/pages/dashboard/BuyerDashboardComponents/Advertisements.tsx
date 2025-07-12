@@ -9,6 +9,31 @@ interface AdvertisementsProps {
   // Add any props you need from parent component
 }
 
+// Helper function to get status styling and display text
+const getStatusConfig = (status: string) => {
+  switch (status?.toLowerCase()) {
+    case 'approved':
+      return {
+        className: 'bg-green-100 text-green-800',
+        displayText: 'Approved',
+        canEdit: false
+      };
+    case 'rejected':
+      return {
+        className: 'bg-red-100 text-red-800',
+        displayText: 'Rejected',
+        canEdit: true
+      };
+    case 'pending':
+    default:
+      return {
+        className: 'bg-yellow-100 text-yellow-800',
+        displayText: 'Pending Review',
+        canEdit: true
+      };
+  }
+};
+
 const Advertisements: React.FC<AdvertisementsProps> = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingAd, setEditingAd] = useState<Advertisement | null>(null);
@@ -16,6 +41,7 @@ const Advertisements: React.FC<AdvertisementsProps> = () => {
   const [editLoading, setEditLoading] = useState(false);
   const [advertisements, setAdvertisements] = useState<Advertisement[]>([]);
   const [viewingAd, setViewingAd] = useState<Advertisement | null>(null);
+  const [deletingAd, setDeletingAd] = useState<Advertisement | null>(null);
   const [formData, setFormData] = useState<AdvertisementFormData>({
     title: '',
     category: '',
@@ -48,7 +74,7 @@ const Advertisements: React.FC<AdvertisementsProps> = () => {
         // Transform backend data to match UI expectations
         const transformedData = response.data.map(ad => ({
           ...ad,
-          status: ad.approved ? 'Approved' : 'Pending Review',
+          status: ad.approved || 'pending', // Use the string value directly
           dateCreated: new Date(ad.createdOn).toLocaleDateString(),
           views: 0, // Default values for now
           inquiries: 0,
@@ -104,6 +130,18 @@ const Advertisements: React.FC<AdvertisementsProps> = () => {
     setExistingImages(prev => prev.filter((_, i) => i !== index));
   };
 
+  // Helper function to convert URL to File object
+  const urlToFile = async (url: string, filename: string): Promise<File> => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      return new File([blob], filename, { type: blob.type });
+    } catch (error) {
+      console.error('Error converting URL to file:', error);
+      throw error;
+    }
+  };
+
   const handleSubmitAd = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -129,25 +167,107 @@ const Advertisements: React.FC<AdvertisementsProps> = () => {
       submitData.append('email', formData.email);
       submitData.append('userId', userId);
       
-      // Append images
-      formData.images.forEach((file, index) => {
-        submitData.append('images', file);
-      });
-
+      // Handle images for editing
+      if (editingAd) {
+        // For editing: always combine existing images (that weren't removed) with new images
+        const allImagesToSubmit: File[] = [];
+        
+        // Always convert existing images to File objects first
+        if (existingImages.length > 0) {
+          console.log('Edit - Converting existing images to files');
+          try {
+            for (let i = 0; i < existingImages.length; i++) {
+              const imageUrl = existingImages[i];
+              const filename = `existing_image_${i + 1}.jpg`; // Default filename
+              const file = await urlToFile(imageUrl, filename);
+              allImagesToSubmit.push(file);
+            }
+            console.log(`Edit - Converted ${existingImages.length} existing images to files`);
+          } catch (error) {
+            console.error('Error converting existing images:', error);
+            toast.error('Error processing existing images. Please try uploading new images.', { id: toastId });
+            return;
+          }
+        }
+        
+        // Then add any new images that were uploaded
+        if (formData.images.length > 0) {
+          console.log('Edit - Adding new images to existing ones');
+          allImagesToSubmit.push(...formData.images);
+          console.log(`Edit - Added ${formData.images.length} new images`);
+        }
+        
+        // Append all images to FormData
+        allImagesToSubmit.forEach((file, index) => {
+          submitData.append('images', file);
+        });
+        
+        console.log(`Edit - Total images being submitted: ${allImagesToSubmit.length} (${existingImages.length} existing + ${formData.images.length} new)`);
+      } else {
+        // For new advertisements: just append the uploaded images
+        formData.images.forEach((file, index) => {
+          submitData.append('images', file);
+        });
+        console.log(`Create - Submitting ${formData.images.length} images`);
+      }
 
       let response;
       if (editingAd) {
         // Update existing advertisement
         response = await api.updateAdvertisement(editingAd.id, submitData);
         console.log('Update response:', response);
+        console.log('Update response type:', typeof response);
+        console.log('Update response keys:', response ? Object.keys(response) : 'No response');
+        console.log('Update response structure:', JSON.stringify(response, null, 2));
       } else {
         // Create new advertisement
         response = await api.createAdvertisement(submitData);
         console.log('Create response:', response);
+        console.log('Create response type:', typeof response);
+        console.log('Create response keys:', response ? Object.keys(response) : 'No response');
+        console.log('Create response structure:', JSON.stringify(response, null, 2));
       }
 
-      // Handle different response structures
-      if (response && (response.success === true || response.status === 'success' || response.data)) {
+      // More flexible response handling - check for various success indicators
+      let isSuccess = false;
+      let errorMessage = '';
+
+      if (response) {
+        // Check multiple possible success conditions
+        if (
+          response.success === true ||           // { success: true }
+          response.status === 'success' ||       // { status: 'success' }
+          response.status === 200 ||             // { status: 200 }
+          response.statusCode === 200 ||         // { statusCode: 200 }
+          response.code === 200 ||               // { code: 200 }
+          (response.data && !response.error) ||  // { data: {...} } without error
+          (response.message && !response.error && response.success !== false) || // { message: '...' } without error
+          (!response.error && !response.success === false && response.id) || // Direct data with id
+          (!response.error && !response.success === false && Object.keys(response).length > 0) // Any non-error response with data
+        ) {
+          isSuccess = true;
+        } else if (
+          response.success === false ||
+          response.status === 'error' ||
+          response.error ||
+          (response.status && response.status >= 400)
+        ) {
+          // Explicit failure cases
+          isSuccess = false;
+          errorMessage = response.message || response.error || response.errorMessage || 'Unknown error occurred';
+        } else {
+          // Default to success if response exists and doesn't indicate failure
+          isSuccess = true;
+          console.log('Defaulting to success for response:', response);
+        }
+      } else {
+        isSuccess = false;
+        errorMessage = 'No response received from server';
+      }
+
+      console.log('Response evaluation - isSuccess:', isSuccess, 'errorMessage:', errorMessage);
+
+      if (isSuccess) {
         // Success case
         toast.success(
           `Advertisement ${editingAd ? 'updated' : 'created'} successfully! It will be reviewed before publishing.`,
@@ -164,21 +284,17 @@ const Advertisements: React.FC<AdvertisementsProps> = () => {
           email: '',
           images: []
         });
+        setExistingImages([]);
         setShowAddForm(false);
         setEditingAd(null);
         
         // Refresh advertisements list
         await fetchUserAdvertisements();
         
-      } else if (response && response.success === false) {
-        // API returned success: false
-        const errorMessage = response.message || response.error || 'Unknown error occurred';
+      } else {
+        // Error case
         console.error('API Error:', errorMessage);
         toast.error(`Error ${editingAd ? 'updating' : 'creating'} advertisement: ${errorMessage}`, { id: toastId });
-      } else {
-        // Unexpected response structure
-        console.error('Unexpected response:', response);
-        toast.error('Unexpected response format from server', { id: toastId });
       }
     } catch (error: any) {
       console.error('Error submitting advertisement:', error);
@@ -209,7 +325,7 @@ const Advertisements: React.FC<AdvertisementsProps> = () => {
   };
 
   const handleEdit = async (ad: Advertisement) => {
-    const toastId = toast.loading('Loading advertisement details...');
+    
     
     try {
       setEditLoading(true);
@@ -217,9 +333,31 @@ const Advertisements: React.FC<AdvertisementsProps> = () => {
       // Fetch the full advertisement details by ID
       const response = await api.getAdvertisementById(ad.id);
       console.log('Edit - Fetch response:', response);
+      console.log('Edit - Response type:', typeof response);
+      console.log('Edit - Response keys:', response ? Object.keys(response) : 'No response');
       
-      if (response && (response.success === true || response.data)) {
-        const advertisementData = response.data || response;
+      // More flexible response handling
+      let advertisementData = null;
+      
+      // Check different possible response structures
+      if (response) {
+        if (response.success === true && response.data) {
+          // Structure: { success: true, data: {...} }
+          advertisementData = response.data;
+        } else if (response.data) {
+          // Structure: { data: {...} }
+          advertisementData = response.data;
+        } else if (response.id || response.title) {
+          // Direct data structure: { id, title, ... }
+          advertisementData = response;
+        } else if (response.success !== false) {
+          // Any other structure that's not explicitly failed
+          advertisementData = response;
+        }
+      }
+      
+      if (advertisementData && (advertisementData.id || advertisementData.title)) {
+        console.log('Edit - Using advertisement data:', advertisementData);
         
         // Set the editing advertisement
         setEditingAd(advertisementData);
@@ -247,16 +385,37 @@ const Advertisements: React.FC<AdvertisementsProps> = () => {
             return `http://localhost:9092/uploads/advertisement-images/${fileName}`;
           });
           setExistingImages(transformedImages);
+          console.log('Edit - Set existing images:', transformedImages);
         } else {
           setExistingImages([]);
+          console.log('Edit - No existing images found');
         }
         
         setShowAddForm(true);
-        toast.success('Advertisement details loaded successfully!', { id: toastId });
+        
       } else {
-        const errorMessage = response?.message || response?.error || 'Failed to load advertisement details';
-        console.error('Edit - Fetch error:', errorMessage);
+        // Log more details about why it failed
+        console.error('Edit - Failed to extract advertisement data');
+        console.error('Edit - Response structure:', response);
+        
+        const errorMessage = response?.message || response?.error || 'Invalid response structure from server';
         toast.error(`Error loading advertisement: ${errorMessage}`, { id: toastId });
+        
+        // Fallback to using the data from the table
+        console.log('Edit - Using fallback data from table');
+        setEditingAd(ad);
+        setFormData({
+          title: ad.title,
+          category: ad.category,
+          description: ad.description,
+          price: ad.price,
+          mobileNo: ad.mobileNo,
+          email: ad.email,
+          images: []
+        });
+        setExistingImages(ad.images || []);
+        setShowAddForm(true);
+        toast.success('Using cached data (API response was invalid)', { id: toastId });
       }
     } catch (error: any) {
       console.error('Error fetching advertisement for edit:', error);
@@ -275,6 +434,7 @@ const Advertisements: React.FC<AdvertisementsProps> = () => {
       toast.error(errorMessage, { id: toastId });
       
       // Fallback to using the data from the table if API fails
+      console.log('Edit - Using fallback data due to error');
       setEditingAd(ad);
       setFormData({
         title: ad.title,
@@ -300,41 +460,81 @@ const Advertisements: React.FC<AdvertisementsProps> = () => {
     setViewingAd(null);
   };
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this advertisement?')) {
-      const toastId = toast.loading('Deleting advertisement...');
+  const handleDelete = (ad: Advertisement) => {
+    setDeletingAd(ad);
+  };
+
+  const closeDeleteModal = () => {
+    setDeletingAd(null);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingAd) return;
+    
+    const toastId = toast.loading('Deleting advertisement...');
+    
+    try {
+      setLoading(true);
+      const response = await api.deleteAdvertisement(deletingAd.id);
+      console.log('Delete response:', response);
       
-      try {
-        setLoading(true);
-        const response = await api.deleteAdvertisement(id);
-        console.log('Delete response:', response);
-        
-        if (response && (response.success === true || response.status === 'success')) {
-          toast.success('Advertisement deleted successfully!', { id: toastId });
-          await fetchUserAdvertisements();
+      // Use the same flexible response handling as submit
+      let isSuccess = false;
+      let errorMessage = '';
+
+      if (response) {
+        if (
+          response.success === true ||
+          response.status === 'success' ||
+          response.status === 200 ||
+          response.statusCode === 200 ||
+          response.code === 200 ||
+          (response.data && !response.error) ||
+          (response.message && !response.error && response.success !== false) ||
+          (!response.error && !response.success === false && Object.keys(response).length > 0)
+        ) {
+          isSuccess = true;
+        } else if (
+          response.success === false ||
+          response.status === 'error' ||
+          response.error ||
+          (response.status && response.status >= 400)
+        ) {
+          isSuccess = false;
+          errorMessage = response.message || response.error || response.errorMessage || 'Unknown error occurred';
         } else {
-          const errorMessage = response?.message || response?.error || 'Failed to delete advertisement';
-          console.error('Delete error:', errorMessage);
-          toast.error(`Error deleting advertisement: ${errorMessage}`, { id: toastId });
+          isSuccess = true;
         }
-      } catch (error: any) {
-        console.error('Error deleting advertisement:', error);
-        
-        let errorMessage = 'An error occurred while deleting the advertisement';
-        if (error.response) {
-          errorMessage = error.response.data?.message || 
-                        error.response.data?.error || 
-                        `Server error: ${error.response.status}`;
-        } else if (error.request) {
-          errorMessage = 'Network error. Please check your connection and try again.';
-        } else {
-          errorMessage = error.message || errorMessage;
-        }
-        
-        toast.error(errorMessage, { id: toastId });
-      } finally {
-        setLoading(false);
+      } else {
+        isSuccess = false;
+        errorMessage = 'No response received from server';
       }
+
+      if (isSuccess) {
+        toast.success('Advertisement deleted successfully!', { id: toastId });
+        setDeletingAd(null);
+        await fetchUserAdvertisements();
+      } else {
+        console.error('Delete error:', errorMessage);
+        toast.error(`Error deleting advertisement: ${errorMessage}`, { id: toastId });
+      }
+    } catch (error: any) {
+      console.error('Error deleting advertisement:', error);
+      
+      let errorMessage = 'An error occurred while deleting the advertisement';
+      if (error.response) {
+        errorMessage = error.response.data?.message || 
+                      error.response.data?.error || 
+                      `Server error: ${error.response.status}`;
+      } else if (error.request) {
+        errorMessage = 'Network error. Please check your connection and try again.';
+      } else {
+        errorMessage = error.message || errorMessage;
+      }
+      
+      toast.error(errorMessage, { id: toastId });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -355,11 +555,7 @@ const Advertisements: React.FC<AdvertisementsProps> = () => {
 
   return (
     <div className="space-y-6">
-      {loading && (
-        <div className="text-center py-4">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        </div>
-      )}
+     
       
       {showAddForm ? (
         <AdvertisementForm
@@ -406,6 +602,16 @@ const Advertisements: React.FC<AdvertisementsProps> = () => {
         <ViewAdvertisementModal
           advertisement={viewingAd}
           onClose={closeViewModal}
+        />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deletingAd && (
+        <DeleteConfirmationModal
+          advertisement={deletingAd}
+          onConfirm={confirmDelete}
+          onCancel={closeDeleteModal}
+          loading={loading}
         />
       )}
     </div>
@@ -655,7 +861,7 @@ const AdvertisementForm: React.FC<AdvertisementFormProps> = ({
 interface AdvertisementsListProps {
   advertisements: Advertisement[];
   onEdit: (ad: Advertisement) => void;
-  onDelete: (id: string) => void;
+  onDelete: (ad: Advertisement) => void;
   onView: (ad: Advertisement) => void;
   loading: boolean;
   editLoading: boolean;
@@ -759,13 +965,14 @@ const AdvertisementsList: React.FC<AdvertisementsListProps> = ({
                     </div>
                   </td>
                   <td className="px-2 py-3">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                      ad.approved
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {ad.approved ? 'Approved' : 'Pending'}
-                    </span>
+                    {(() => {
+                      const statusConfig = getStatusConfig(ad.approved || ad.status);
+                      return (
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${statusConfig.className}`}>
+                          {statusConfig.displayText}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="px-2 py-3 text-sm text-gray-500">
                     <div className="text-xs">{ad.views || 0} views</div>
@@ -790,17 +997,21 @@ const AdvertisementsList: React.FC<AdvertisementsListProps> = ({
                         <Eye size={14} />
                       </button>
                       <button 
-                        className="text-green-600 hover:text-green-900 p-1 rounded-md hover:bg-green-50"  
-                        title="Edit"
-                        onClick={() => onEdit(ad)}
-                        disabled={loading || editLoading}
+                        className={`p-1 rounded-md ${
+                          !getStatusConfig(ad.approved || ad.status).canEdit
+                            ? 'text-gray-400 cursor-not-allowed' 
+                            : 'text-green-600 hover:text-green-900 hover:bg-green-50'
+                        }`}
+                        title={!getStatusConfig(ad.approved || ad.status).canEdit ? "Cannot edit approved advertisement" : "Edit"}
+                        onClick={() => getStatusConfig(ad.approved || ad.status).canEdit && onEdit(ad)}
+                        disabled={loading || editLoading || !getStatusConfig(ad.approved || ad.status).canEdit}
                       >
                         <Edit size={14} />
                       </button>
                       <button 
                         className="text-red-600 hover:text-red-900 p-1 rounded-md hover:bg-red-50" 
                         title="Delete"
-                        onClick={() => onDelete(ad.id)}
+                        onClick={() => onDelete(ad)}
                         disabled={loading}
                       >
                         <Trash2 size={14} />
@@ -1001,13 +1212,14 @@ const ViewAdvertisementModal: React.FC<ViewAdvertisementModalProps> = ({
               <div className="grid grid-cols-1 gap-4">
                 <div>
                   <label className="block text-m font-medium text-gray-700 mb-1">Status</label>
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                    advertisement.approved
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {advertisement.approved ? 'Approved' : 'Pending Review'}
-                  </span>
+                  {(() => {
+                    const statusConfig = getStatusConfig(advertisement.approved || advertisement.status);
+                    return (
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${statusConfig.className}`}>
+                        {statusConfig.displayText}
+                      </span>
+                    );
+                  })()}
                 </div>
                 <div>
                   <label className="block text-m font-medium  mb-1">Statistics</label>
@@ -1040,6 +1252,100 @@ const ViewAdvertisementModal: React.FC<ViewAdvertisementModalProps> = ({
             className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
           >
             Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Delete Confirmation Modal Component
+interface DeleteConfirmationModalProps {
+  advertisement: Advertisement;
+  onConfirm: () => void;
+  onCancel: () => void;
+  loading: boolean;
+}
+
+const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
+  advertisement,
+  onConfirm,
+  onCancel,
+  loading
+}) => {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg max-w-25  p-6">
+        {/* Modal Header */}
+        <div className="flex items-center mb-4">
+          <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+            <Trash2 className="w-5 h-5 text-red-600" />
+          </div>
+          <div className="ml-3">
+            <h3 className="text-lg font-medium text-gray-900">Delete Advertisement</h3>
+          </div>
+        </div>
+
+        {/* Modal Content */}
+        <div className="mb-6">
+          <p className="text-sm text-gray-500 mb-3">
+            Are you sure you want to delete this advertisement? This action cannot be undone.
+          </p>
+          
+          {/* Advertisement Preview */}
+          <div className="bg-gray-50 rounded-lg p-3 border">
+            <div className="flex items-center">
+              {advertisement.images && advertisement.images.length > 0 ? (
+                <img 
+                  className="h-12 w-12 rounded-lg object-cover flex-shrink-0" 
+                  src={advertisement.images[0]} 
+                  alt={advertisement.title}
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yNCAzMkMxNy4zNzI2IDMyIDEyIDI2LjYyNzQgMTIgMjBDMTIgMTMuMzcyNiAxNy4zNzI2IDggMjQgOEMzMC42Mjc0IDggMzYgMTMuMzcyNiAzNiAyMEMzNiAyNi42Mjc0IDMwLjYyNzQgMzIgMjQgMzJaTTI0IDI4QzI4LjQxODMgMjggMzIgMjQuNDE4MyAzMiAyMEMzMiAxNS41ODE3IDI4LjQxODMgMTIgMjQgMTJDMTkuNTgxNyAxMiAxNiAxNS41ODE3IDE2IDIwQzE2IDI0LjQxODMgMTkuNTgxNyAyOCAyNCAyOFoiIGZpbGw9IiM5Q0E0QUYiLz4KPC9zdmc+';
+                  }}
+                />
+              ) : (
+                <div className="h-12 w-12 rounded-lg bg-gray-200 flex items-center justify-center flex-shrink-0">
+                  <FileText className="w-6 h-6 text-gray-400" />
+                </div>
+              )}
+              <div className="ml-3 min-w-0 flex-1">
+                <p className="text-sm font-medium text-gray-900 truncate">{advertisement.title}</p>
+                <p className="text-sm text-gray-500">{advertisement.category}</p>
+                <p className="text-sm text-gray-500">LKR {advertisement.price}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Modal Footer */}
+        <div className="flex justify-end space-x-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={loading}
+            className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={loading}
+            className="px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+          >
+            {loading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                <span>Deleting...</span>
+              </>
+            ) : (
+              <>
+                <Trash2 size={16} />
+                <span>Delete Advertisement</span>
+              </>
+            )}
           </button>
         </div>
       </div>

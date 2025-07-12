@@ -31,14 +31,14 @@ public class AdvertisementRequestDto {
     @NotNull(message = "Images required")
     private List<MultipartFile> images;
 
-    private Boolean approved;
+    private String approved;
 
     // Constructors
     public AdvertisementRequestDto() {}
 
     public AdvertisementRequestDto(String title, String category, String description,
                                   String price, String mobileNo, String email, String userId,
-                                  List<MultipartFile> images, Boolean approved) {
+                                  List<MultipartFile> images, String approved) {
         this.title = title;
         this.category = category;
         this.description = description;
@@ -113,11 +113,11 @@ public class AdvertisementRequestDto {
         this.images = images; 
     }
     
-    public Boolean getApproved() { 
+    public String getApproved() {
         return approved; 
     }
     
-    public void setApproved(Boolean approved) { 
+    public void setApproved(String approved) {
         this.approved = approved; 
     }
 }

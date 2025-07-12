@@ -183,18 +183,46 @@ public class AdvertisementController {
     @PutMapping("/{id}")
     public ResponseEntity<?> updateAdvertisement(
             @PathVariable String id,
-            @RequestBody AdvertisementRequestDto advertisementRequestDto) {
+            @RequestParam("title") String title,
+            @RequestParam("category") String category,
+            @RequestParam(value = "description", required = false) String description,
+            @RequestParam("price") String price,
+            @RequestParam("email") String email,
+            @RequestParam("mobileNo") String mobileNo,
+            @RequestParam("userId") String userId,
+            @RequestParam("images") List<MultipartFile> image) {
 
         try {
-            // Check if advertisement exists
-            Optional<Advertisement> advertisementOptional = advertisementRepository.findById(id);
 
-            if (!advertisementOptional.isPresent()) {
-                return ResponseEntity.notFound().build();
+            // Validate required parameters
+            if (title == null || title.trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Title is required"));
+            }
+            if (category == null || category.trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Category is required"));
+            }
+            if (userId == null || userId.trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("User ID is required"));
+            }
+            if (image == null || image.isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("At least one image is required"));
             }
 
+            AdvertisementRequestDto advertisementRequestDto = new AdvertisementRequestDto();
+            advertisementRequestDto.setTitle(title);
+            advertisementRequestDto.setCategory(category);
+            advertisementRequestDto.setDescription(description);
+            advertisementRequestDto.setPrice(price);
+            advertisementRequestDto.setEmail(email);
+            advertisementRequestDto.setMobileNo(mobileNo);
+            advertisementRequestDto.setUserId(userId);
+            advertisementRequestDto.setImages(image);
             // Update advertisement using service
-            Optional<Advertisement> updatedAdvertisement = advertisementService.updateAdvertisement(id, advertisementRequestDto, advertisementRequestDto.getImages());
+            Optional<Advertisement> updatedAdvertisement = advertisementService.updateAdvertisement(id, advertisementRequestDto);
 
             if (updatedAdvertisement.isPresent()) {
                 return ResponseEntity.ok(updatedAdvertisement.get());
@@ -259,7 +287,7 @@ public class AdvertisementController {
      */
     @PatchMapping("/{id}/approval")
     public ResponseEntity<?> updateAdvertisementApproval(@PathVariable String id, 
-                                                        @RequestParam Boolean approved) {
+                                                        @RequestParam String approve) {
         try {
             Optional<Advertisement> advertisementOptional = advertisementRepository.findById(id);
             
@@ -268,7 +296,7 @@ public class AdvertisementController {
             }
             
             Advertisement advertisement = advertisementOptional.get();
-            advertisement.setApproved(approved);
+            advertisement.setApproved(approve);
             advertisement.updateTimestamp();
             
             Advertisement savedAdvertisement = advertisementRepository.save(advertisement);

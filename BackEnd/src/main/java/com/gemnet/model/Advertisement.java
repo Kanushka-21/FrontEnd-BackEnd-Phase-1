@@ -43,7 +43,7 @@ public class Advertisement {
     private List<String> images;
     
     @Indexed
-    private Boolean approved = false;
+    private String approved;
     
     @CreatedDate
     private LocalDateTime createdOn;
@@ -141,11 +141,11 @@ public class Advertisement {
         this.images = images;
     }
 
-    public Boolean getApproved() {
+    public String getApproved() {
         return approved;
     }
 
-    public void setApproved(Boolean approved) {
+    public void setApproved(String approved) {
         this.approved = approved;
     }
 
