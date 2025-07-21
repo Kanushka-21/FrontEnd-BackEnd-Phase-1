@@ -116,6 +116,7 @@ const HomePage: React.FC = () => {
     const primaryImage = allImages.length > 0 ? allImages[0] : 'https://via.placeholder.com/400x300?text=Gemstone';
     console.log('🏆 Primary image selected:', primaryImage);
     console.log('📚 All images:', allImages);
+    console.log('👤 Seller information - userName:', listing.userName);
     
     return {
       id: listing.id || listing._id,
@@ -153,7 +154,11 @@ const HomePage: React.FC = () => {
         issuingAuthority: listing.certifyingAuthority || 'Unknown',
         reportNumber: listing.certificateNumber || 'N/A',
         date: listing.issueDate || 'Unknown'
-      } : undefined
+      } : undefined,
+      seller: {
+        name: listing.userName || 'Unknown Seller',
+        rating: 5 // Default rating - can be enhanced later with real rating data
+      }
     };
   };
 

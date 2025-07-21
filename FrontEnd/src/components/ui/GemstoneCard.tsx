@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Gem, Shield } from 'lucide-react';
+import { Gem, Shield, User } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { GemstoneCardProps } from '@/types';
 
@@ -97,6 +97,24 @@ const GemstoneCard: React.FC<GemstoneCardProps> = ({ gemstone, onViewDetails }) 
           <p className="text-xs sm:text-sm text-secondary-600">
             {gemstone.weight} carats · {gemstone.color}
           </p>
+          
+          {gemstone.seller && gemstone.seller.name && (
+            <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
+              <div className="flex items-center space-x-1">
+                <User className="w-3 h-3 text-gray-400" />
+                <span className="text-xs text-gray-500">Seller:</span>
+                <span className="text-xs font-medium text-gray-700 truncate max-w-[120px]" title={gemstone.seller.name}>
+                  {gemstone.seller.name}
+                </span>
+              </div>
+              {gemstone.seller.rating && gemstone.seller.rating > 0 && (
+                <div className="flex items-center space-x-1">
+                  <span className="text-xs text-yellow-500">★</span>
+                  <span className="text-xs text-gray-600">{gemstone.seller.rating.toFixed(1)}</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
         
         <div className="mt-3 sm:mt-4">
