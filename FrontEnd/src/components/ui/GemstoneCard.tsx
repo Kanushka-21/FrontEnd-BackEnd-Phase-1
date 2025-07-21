@@ -15,11 +15,27 @@ const formatLKR = (price: number) => {
 };
 
 const GemstoneCard: React.FC<GemstoneCardProps> = ({ gemstone, onViewDetails }) => {
+  const [imageError, setImageError] = React.useState(false);
+
   const handleViewClick = () => {
     console.log('View details clicked for gemstone:', gemstone.id);
     if (onViewDetails) {
       onViewDetails(gemstone.id);
     }
+  };
+
+  const handleImageError = () => {
+    console.error('❌ Failed to load image:', gemstone.image);
+    console.error('🔍 Gemstone data:', gemstone);
+    console.error('🔍 Gemstone ID:', gemstone.id);
+    console.error('🔍 All images available:', gemstone.images);
+    setImageError(true);
+  };
+
+  const handleImageLoad = () => {
+    console.log('✅ Image loaded successfully:', gemstone.image);
+    console.log('🔍 Gemstone:', gemstone.name);
+    setImageError(false);
   };
 
   return (
@@ -33,14 +49,23 @@ const GemstoneCard: React.FC<GemstoneCardProps> = ({ gemstone, onViewDetails }) 
         borderColor: '#93c5fd'
       }}
       className="bg-white rounded-lg overflow-hidden border border-secondary-200 transition-all duration-300"
-    >      <div className="relative overflow-hidden h-40 sm:h-48">
-        <motion.img
-          src={gemstone.image}
-          alt={gemstone.name}
-          className="w-full h-full object-cover"
-          whileHover={{ scale: 1.05 }}
-          transition={{ duration: 0.3 }}
-        />
+    >      <div className="relative overflow-hidden h-40 sm:h-48 bg-gray-100">
+        {imageError ? (
+          <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
+            <Gem className="w-8 h-8 mb-2" />
+            <span className="text-xs text-center">{gemstone.name || 'Image Not Available'}</span>
+          </div>
+        ) : (
+          <motion.img
+            src={gemstone.image}
+            alt={gemstone.name}
+            className="w-full h-full object-cover"
+            whileHover={{ scale: 1.05 }}
+            transition={{ duration: 0.3 }}
+            onError={handleImageError}
+            onLoad={handleImageLoad}
+          />
+        )}
         {gemstone.certified && (
           <div className="absolute top-2 right-2 bg-primary-600 text-white px-2 py-1 rounded-md text-xs font-medium flex items-center space-x-1">
             <Shield className="w-3 h-3" />
