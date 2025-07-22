@@ -16,6 +16,12 @@ const formatLKR = (price: number) => {
 
 const GemstoneCard: React.FC<GemstoneCardProps> = ({ gemstone, onViewDetails }) => {
   const [imageError, setImageError] = React.useState(false);
+  
+  // Log the gemstone data when the component renders to verify bid price
+  React.useEffect(() => {
+    console.log(`🔍 GemstoneCard rendered for ${gemstone.name}:`, gemstone);
+    console.log(`💰 Gemstone ${gemstone.name} latestBidPrice:`, gemstone.latestBidPrice);
+  }, [gemstone]);
 
   const handleViewClick = () => {
     console.log('View details clicked for gemstone:', gemstone.id);
@@ -75,31 +81,60 @@ const GemstoneCard: React.FC<GemstoneCardProps> = ({ gemstone, onViewDetails }) 
         )}
       </div>
         <div className="p-3 sm:p-4">
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 mb-2">
           <Gem className="w-4 h-4 text-primary-600" />
           <h3 className="font-semibold text-primary-800 text-sm sm:text-base line-clamp-1">{gemstone.name}</h3>
         </div>
         
-        <div className="mt-2 space-y-1 sm:space-y-2">
-          <p className="text-lg sm:text-xl lg:text-2xl font-bold text-secondary-800">
-            {formatLKR(gemstone.price)}
-          </p>
+        <div className="space-y-2">
+          <div>
+            <p className="text-sm text-secondary-600">
+              Starting price:
+            </p>
+            <p className="text-lg sm:text-xl font-bold text-secondary-800">
+              {formatLKR(gemstone.price)}
+            </p>
+          </div>
+          
+          {/* Show highest bid section */}
+          <div className="mt-1">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-secondary-600">
+                Highest bid:
+              </p>
+              {gemstone.totalBids && gemstone.totalBids > 0 && (
+                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
+                  {gemstone.totalBids} {gemstone.totalBids === 1 ? 'bid' : 'bids'}
+                </span>
+              )}
+            </div>
+            
+            {gemstone.latestBidPrice ? (
+              <p className="font-bold text-blue-600">
+                {formatLKR(gemstone.latestBidPrice)}
+              </p>
+            ) : (
+              <p className="font-medium text-gray-500 italic">
+                No bids yet
+              </p>
+            )}
+          </div>
           
           {gemstone.predictedPriceRange && (
-            <div className="flex flex-col text-secondary-600">
-              <span className="text-sm sm:text-base font-semibold">Estimated Range:</span>
-              <span className="text-sm sm:text-base lg:text-lg font-medium">
+            <div className="mt-2">
+              <p className="text-sm font-medium text-secondary-600">Estimated Range:</p>
+              <p className="text-sm font-medium">
                 {formatLKR(gemstone.predictedPriceRange.min)} - {formatLKR(gemstone.predictedPriceRange.max)}
-              </span>
+              </p>
             </div>
           )}
           
-          <p className="text-xs sm:text-sm text-secondary-600">
+          <p className="text-sm text-secondary-600 mt-2">
             {gemstone.weight} carats · {gemstone.color}
           </p>
           
           {gemstone.seller && gemstone.seller.name && (
-            <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
+            <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-100">
               <div className="flex items-center space-x-1">
                 <User className="w-3 h-3 text-gray-400" />
                 <span className="text-xs text-gray-500">Seller:</span>

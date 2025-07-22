@@ -213,7 +213,9 @@ export interface Theme {
 export interface Gemstone {
   id: string;
   name: string;
-  price: number;
+  price: number; // Starting price
+  latestBidPrice?: number; // Latest bid price
+  totalBids?: number; // Total number of bids
   image: string; // Primary image for backward compatibility
   images?: string[]; // Array of all uploaded images
   certified: boolean;

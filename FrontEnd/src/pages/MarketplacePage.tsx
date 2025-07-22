@@ -246,8 +246,84 @@ const MarketplacePage: React.FC = () => {
           setError(null);
           message.info('No approved gemstone listings found in the database');
         } else {
+          // Convert listings to detailed gemstones
           const convertedGemstones = listings.map(convertToDetailedGemstone);
-          setGemstones(convertedGemstones);
+          
+          // Fetch latest bid for each gemstone
+          try {
+            // Fetch latest bids for all gemstones in parallel
+            const bidPromises = convertedGemstones.map(async (gemstone) => {
+              try {
+                console.log(`🔍 Fetching bids for gemstone ${gemstone.id} (${gemstone.name})`);
+                
+                try {
+                  // First try to get detailed bid stats which includes highest bid
+                  const statsResponse = await fetch(`/api/bidding/listing/${gemstone.id}/stats`);
+                  const statsResult = await statsResponse.json();
+                  
+                  if (statsResponse.ok && statsResult.success && statsResult.data) {
+                    console.log(`📊 Bid stats for ${gemstone.name}:`, statsResult.data);
+                    
+                    // Get the highest bid from stats if available
+                    if (statsResult.data.highestBid && statsResult.data.highestBid > 0) {
+                      console.log(`💰 Highest bid for ${gemstone.name} from stats:`, statsResult.data.highestBid);
+                      return {
+                        ...gemstone,
+                        latestBidPrice: statsResult.data.highestBid,
+                        totalBids: statsResult.data.totalBids || 0
+                      };
+                    }
+                  }
+                  
+                  // Fallback to getting individual bids if stats aren't available
+                  const bidResponse = await api.bids.getByGemstoneId(gemstone.id);
+                  console.log(`📊 Bid response for ${gemstone.name}:`, bidResponse);
+                  
+                  if (bidResponse.success && bidResponse.data && bidResponse.data.length > 0) {
+                    // Get highest bid amount
+                    const highestBid = bidResponse.data.reduce((highest, current) => 
+                      current.amount > highest.amount ? current : highest, bidResponse.data[0]);
+                    
+                    console.log(`💰 Highest bid for ${gemstone.name}:`, highestBid.amount);
+                    
+                    return {
+                      ...gemstone,
+                      latestBidPrice: highestBid.amount,
+                      totalBids: bidResponse.data.length
+                    };
+                  }
+                  
+                  console.log(`ℹ️ No bids found for gemstone ${gemstone.name}`);
+                  return gemstone;
+                } catch (error) {
+                  console.error(`Error fetching bids for ${gemstone.name}:`, error);
+                  return gemstone;
+                }
+              } catch (err) {
+                console.error(`Error fetching bids for gemstone ${gemstone.id}:`, err);
+                return gemstone;
+              }
+            });
+            
+            // Wait for all bid requests to complete
+            const gemstonesWithBids = await Promise.all(bidPromises);
+            console.log('✨ Gemstones with bids data:', gemstonesWithBids);
+            
+            // Verify that latestBidPrice is properly set
+            const hasBidData = gemstonesWithBids.some(g => g.latestBidPrice !== undefined);
+            console.log(`🔍 Bid data available: ${hasBidData ? 'Yes' : 'No'}`);
+            
+            if (hasBidData) {
+              console.log('💰 Sample bid price:', gemstonesWithBids[0].latestBidPrice);
+            }
+            
+            setGemstones(gemstonesWithBids);
+          } catch (bidError) {
+            console.error('Error fetching bids:', bidError);
+            // Still display gemstones even if bids couldn't be fetched
+            setGemstones(convertedGemstones);
+          }
+          
           setTotalItems(response.data.totalElements || listings.length);
           setError(null);
           console.log(`✅ Displaying ${listings.length} real approved listings from database`);
