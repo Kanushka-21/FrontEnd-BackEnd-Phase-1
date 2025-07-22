@@ -17,7 +17,7 @@ import java.net.NetworkInterface;
 import java.util.Enumeration;
 
 @SpringBootApplication
-public class GemNetApplication {
+public class GemNetApplcdication {
     
     @Autowired
     private TesseractConfig tesseractConfig;
