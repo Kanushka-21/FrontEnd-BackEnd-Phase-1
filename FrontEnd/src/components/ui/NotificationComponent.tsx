@@ -30,13 +30,13 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({ userId, c
       loadNotifications();
       loadUnreadCount();
       
-      // Set up more frequent polling for real-time updates (every 10 seconds)
+      // Set up more frequent polling for real-time updates (every 5 seconds for better responsiveness)
       const interval = setInterval(() => {
         loadUnreadCount();
         if (isOpen) {
           loadNotifications();
         }
-      }, 10000);
+      }, 5000);
       
       return () => clearInterval(interval);
     } else {
