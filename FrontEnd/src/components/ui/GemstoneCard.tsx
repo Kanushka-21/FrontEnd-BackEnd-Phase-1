@@ -121,9 +121,9 @@ const GemstoneCard: React.FC<GemstoneCardProps> = ({ gemstone, onViewDetails }) 
           </div>
           
           {gemstone.predictedPriceRange && (
-            <div className="mt-2">
-              <p className="text-sm font-medium text-secondary-600">Estimated Range:</p>
-              <p className="text-sm font-medium">
+            <div className="mt-2 py-1 bg-indigo-50 px-3 rounded-md">
+              <p className="text-sm font-semibold text-indigo-800">Estimated Price Range:</p>
+              <p className="text-base sm:text-lg font-bold text-indigo-700">
                 {formatLKR(gemstone.predictedPriceRange.min)} - {formatLKR(gemstone.predictedPriceRange.max)}
               </p>
             </div>
