@@ -29,33 +29,49 @@ const HomePage: React.FC = () => {
 
   // Helper to construct proper image URL
   const constructImageUrl = (imagePath: string): string => {
-    if (!imagePath) return 'https://via.placeholder.com/400x300?text=Gemstone';
+    console.log('🖼️ Constructing image URL for path:', imagePath);
+    
+    if (!imagePath || imagePath.trim() === '') {
+      console.log('🚫 No image path provided, using placeholder');
+      return 'https://via.placeholder.com/400x300?text=Gemstone';
+    }
     
     if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      console.log('✅ Image path is already a full URL:', imagePath);
       return imagePath;
     }
     
     const baseUrl = 'http://localhost:9092';
+    let constructedUrl;
+    
     if (imagePath.startsWith('/')) {
-      return `${baseUrl}${imagePath}`;
+      constructedUrl = `${baseUrl}${imagePath}`;
+    } else {
+      constructedUrl = `${baseUrl}/${imagePath}`;
     }
     
-    return `${baseUrl}/${imagePath}`;
+    console.log('🔗 Constructed image URL:', constructedUrl);
+    return constructedUrl;
   };
 
   // Helper to convert backend GemListing to frontend DetailedGemstone format
   const convertToDetailedGemstone = (listing: any): DetailedGemstone => {
+    console.log('🔄 Converting listing to DetailedGemstone:', listing);
+    
     // Extract all images from the backend listing
     const allImages: string[] = [];
     
     // Add primary image if it exists
     if (listing.primaryImageUrl) {
+      console.log('📷 Found primary image URL:', listing.primaryImageUrl);
       allImages.push(constructImageUrl(listing.primaryImageUrl));
     }
     
     // Add all images from the images array
     if (listing.images && Array.isArray(listing.images)) {
-      listing.images.forEach((img: any) => {
+      console.log('📷 Found images array:', listing.images);
+      listing.images.forEach((img: any, index: number) => {
+        console.log(`📷 Processing image ${index + 1}:`, img);
         let imageUrl = '';
         if (typeof img === 'string') {
           imageUrl = constructImageUrl(img);
@@ -63,9 +79,16 @@ const HomePage: React.FC = () => {
           imageUrl = constructImageUrl(img.imageUrl);
         } else if (img && img.url) {
           imageUrl = constructImageUrl(img.url);
+        } else if (img && img.imagePath) {
+          imageUrl = constructImageUrl(img.imagePath);
+        } else if (img && img.path) {
+          imageUrl = constructImageUrl(img.path);
+        } else {
+          console.log('❓ Unknown image format:', img);
         }
         
         if (imageUrl && !allImages.includes(imageUrl)) {
+          console.log('✅ Added image URL:', imageUrl);
           allImages.push(imageUrl);
         }
       });
@@ -73,11 +96,27 @@ const HomePage: React.FC = () => {
     
     // Fallback to single image property if no images found
     if (allImages.length === 0 && listing.image) {
+      console.log('📷 Using fallback image property:', listing.image);
       allImages.push(constructImageUrl(listing.image));
+    }
+    
+    // Check for other possible image fields
+    if (allImages.length === 0) {
+      const possibleImageFields = ['imageUrl', 'imagePath', 'photo', 'picture'];
+      for (const field of possibleImageFields) {
+        if (listing[field]) {
+          console.log(`📷 Found image in field '${field}':`, listing[field]);
+          allImages.push(constructImageUrl(listing[field]));
+          break;
+        }
+      }
     }
     
     // Use first image as primary, or placeholder if no images
     const primaryImage = allImages.length > 0 ? allImages[0] : 'https://via.placeholder.com/400x300?text=Gemstone';
+    console.log('🏆 Primary image selected:', primaryImage);
+    console.log('📚 All images:', allImages);
+    console.log('👤 Seller information - userName:', listing.userName);
     
     return {
       id: listing.id || listing._id,
@@ -115,7 +154,11 @@ const HomePage: React.FC = () => {
         issuingAuthority: listing.certifyingAuthority || 'Unknown',
         reportNumber: listing.certificateNumber || 'N/A',
         date: listing.issueDate || 'Unknown'
-      } : undefined
+      } : undefined,
+      seller: {
+        name: listing.userName || 'Unknown Seller',
+        rating: 5 // Default rating - can be enhanced later with real rating data
+      }
     };
   };
 

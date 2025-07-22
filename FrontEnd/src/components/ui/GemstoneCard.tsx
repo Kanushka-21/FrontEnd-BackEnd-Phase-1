@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Gem, Shield } from 'lucide-react';
+import { Gem, Shield, User } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { GemstoneCardProps } from '@/types';
 
@@ -15,11 +15,27 @@ const formatLKR = (price: number) => {
 };
 
 const GemstoneCard: React.FC<GemstoneCardProps> = ({ gemstone, onViewDetails }) => {
+  const [imageError, setImageError] = React.useState(false);
+
   const handleViewClick = () => {
     console.log('View details clicked for gemstone:', gemstone.id);
     if (onViewDetails) {
       onViewDetails(gemstone.id);
     }
+  };
+
+  const handleImageError = () => {
+    console.error('❌ Failed to load image:', gemstone.image);
+    console.error('🔍 Gemstone data:', gemstone);
+    console.error('🔍 Gemstone ID:', gemstone.id);
+    console.error('🔍 All images available:', gemstone.images);
+    setImageError(true);
+  };
+
+  const handleImageLoad = () => {
+    console.log('✅ Image loaded successfully:', gemstone.image);
+    console.log('🔍 Gemstone:', gemstone.name);
+    setImageError(false);
   };
 
   return (
@@ -33,14 +49,23 @@ const GemstoneCard: React.FC<GemstoneCardProps> = ({ gemstone, onViewDetails }) 
         borderColor: '#93c5fd'
       }}
       className="bg-white rounded-lg overflow-hidden border border-secondary-200 transition-all duration-300"
-    >      <div className="relative overflow-hidden h-40 sm:h-48">
-        <motion.img
-          src={gemstone.image}
-          alt={gemstone.name}
-          className="w-full h-full object-cover"
-          whileHover={{ scale: 1.05 }}
-          transition={{ duration: 0.3 }}
-        />
+    >      <div className="relative overflow-hidden h-40 sm:h-48 bg-gray-100">
+        {imageError ? (
+          <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
+            <Gem className="w-8 h-8 mb-2" />
+            <span className="text-xs text-center">{gemstone.name || 'Image Not Available'}</span>
+          </div>
+        ) : (
+          <motion.img
+            src={gemstone.image}
+            alt={gemstone.name}
+            className="w-full h-full object-cover"
+            whileHover={{ scale: 1.05 }}
+            transition={{ duration: 0.3 }}
+            onError={handleImageError}
+            onLoad={handleImageLoad}
+          />
+        )}
         {gemstone.certified && (
           <div className="absolute top-2 right-2 bg-primary-600 text-white px-2 py-1 rounded-md text-xs font-medium flex items-center space-x-1">
             <Shield className="w-3 h-3" />
@@ -72,6 +97,24 @@ const GemstoneCard: React.FC<GemstoneCardProps> = ({ gemstone, onViewDetails }) 
           <p className="text-xs sm:text-sm text-secondary-600">
             {gemstone.weight} carats · {gemstone.color}
           </p>
+          
+          {gemstone.seller && gemstone.seller.name && (
+            <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
+              <div className="flex items-center space-x-1">
+                <User className="w-3 h-3 text-gray-400" />
+                <span className="text-xs text-gray-500">Seller:</span>
+                <span className="text-xs font-medium text-gray-700 truncate max-w-[120px]" title={gemstone.seller.name}>
+                  {gemstone.seller.name}
+                </span>
+              </div>
+              {gemstone.seller.rating && gemstone.seller.rating > 0 && (
+                <div className="flex items-center space-x-1">
+                  <span className="text-xs text-yellow-500">★</span>
+                  <span className="text-xs text-gray-600">{gemstone.seller.rating.toFixed(1)}</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
         
         <div className="mt-3 sm:mt-4">

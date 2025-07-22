@@ -11,6 +11,20 @@ import {
   Slider, 
   Checkbox, 
   Pagination,
+    
+    console.log('🔗 Constructed image URL:', constructedUrl);
+    return constructedUrl;
+import { 
+  Layout as AntLayout, 
+  Row, 
+  Col, 
+  Input, 
+  Select, 
+  Button, 
+  Typography, 
+  Slider, 
+  Checkbox, 
+  Pagination,
   Drawer,
   Modal,
   message,
@@ -97,10 +111,25 @@ const MarketplacePage: React.FC = () => {
     const baseUrl = 'http://localhost:9092';
     let constructedUrl;
     
-    if (imagePath.startsWith('/')) {
-      constructedUrl = `${baseUrl}${imagePath}`;
+    // Remove any leading 'uploads' if it's already in the path to avoid duplication
+    let cleanPath = imagePath;
+    if (cleanPath.startsWith('uploads/')) {
+      cleanPath = cleanPath.substring('uploads/'.length);
+    }
+    
+    // Ensure path starts with /uploads/
+    if (cleanPath.startsWith('/')) {
+      // Remove leading slash to avoid double slashes
+      cleanPath = cleanPath.substring(1);
+    }
+    
+    // Special handling for gem images to use the dedicated endpoint
+    if (cleanPath.includes('gems/')) {
+      const gemFilename = cleanPath.split('gems/')[1];
+      constructedUrl = `${baseUrl}/uploads/gems/${gemFilename}`;
+      console.log('💎 Using direct gem image endpoint:', constructedUrl);
     } else {
-      constructedUrl = `${baseUrl}/${imagePath}`;
+      constructedUrl = `${baseUrl}/uploads/${cleanPath}`;
     }
     
     console.log('🔗 Constructed image URL:', constructedUrl);

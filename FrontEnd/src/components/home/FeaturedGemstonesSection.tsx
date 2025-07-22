@@ -34,6 +34,10 @@ const FeaturedGemstonesSection: React.FC<FeaturedGemstonesSectionProps> = ({
         issuingAuthority: 'GIA',
         reportNumber: 'GIA24587963',
         date: '2024-03-15'
+      },
+      seller: {
+        name: 'Rajesh Gem House',
+        rating: 4.8
       }
     },
     {
@@ -58,6 +62,10 @@ const FeaturedGemstonesSection: React.FC<FeaturedGemstonesSectionProps> = ({
         issuingAuthority: 'GRS',
         reportNumber: 'GRS2023-058793',
         date: '2023-11-20'
+      },
+      seller: {
+        name: 'Ceylon Gems Ltd',
+        rating: 4.9
       }
     },
     {
@@ -77,7 +85,11 @@ const FeaturedGemstonesSection: React.FC<FeaturedGemstonesSectionProps> = ({
         width: 6.3,
         height: 4.1
       },
-      transparency: 'translucent'
+      transparency: 'translucent',
+      seller: {
+        name: 'Emerald Palace',
+        rating: 4.5
+      }
     },
     {
       id: '4',
@@ -101,6 +113,10 @@ const FeaturedGemstonesSection: React.FC<FeaturedGemstonesSectionProps> = ({
         issuingAuthority: 'SSEF',
         reportNumber: 'SSEF108743',
         date: '2024-01-05'
+      },
+      seller: {
+        name: 'Star Gems International',
+        rating: 4.7
       }
     }
   ];
