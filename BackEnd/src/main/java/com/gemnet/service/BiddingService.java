@@ -503,11 +503,11 @@ public class BiddingService {
             String sellerMessage;
             
             if (previousHighestBid != null) {
-                sellerMessage = "Buyer " + newBidderName + " bid on your " + gemName + " item of LKR " + 
-                               newBidAmount + " value (Total bids: " + totalBids + ")";
+                sellerMessage = newBidderName + " placed a new highest bid of LKR " + newBidAmount + 
+                               " on your " + gemName + " (Total bids: " + totalBids + ")";
             } else {
-                sellerMessage = "Buyer " + newBidderName + " placed the first bid on your " + gemName + 
-                               " item of LKR " + newBidAmount + " value";
+                sellerMessage = newBidderName + " placed the first bid of LKR " + newBidAmount + 
+                               " on your " + gemName;
             }
             
             createNotification(
@@ -515,7 +515,7 @@ public class BiddingService {
                 listingId,
                 newBid.getId(),
                 "NEW_BID",
-                "New bid on your item",
+                "New bid received",
                 sellerMessage,
                 newBidderId,
                 newBidderName,
