@@ -60,6 +60,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/marketplace/**").permitAll() // Allow access to marketplace endpoints
                 .requestMatchers("/api/public/**").permitAll()
                 .requestMatchers("/api/bidding/**").permitAll() // Allow access to bidding endpoints
+                .requestMatchers("/api/system/**").permitAll() // Allow access to system status endpoints
                 .requestMatchers("/uploads/**").permitAll() // Allow access to uploaded files
                 .requestMatchers("/swagger-ui/**").permitAll()
                 .requestMatchers("/v3/api-docs/**").permitAll()

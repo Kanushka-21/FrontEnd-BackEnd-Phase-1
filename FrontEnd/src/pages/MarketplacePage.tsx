@@ -261,7 +261,30 @@ const MarketplacePage: React.FC = () => {
       }
     } catch (error) {
       console.error('❌ Failed to connect to backend database:', error);
-      setError('Unable to connect to backend. Please ensure the backend server is running on localhost:9092 and connected to MongoDB (localhost:27017).');
+      
+      // Check if it's a network error
+      const isNetworkError = error instanceof Error && 
+        (error.message.includes('Network Error') || error.message.includes('Failed to fetch'));
+      
+      if (isNetworkError) {
+        setError('Cannot Connect to Database\nBackend error: Network Error\n\nTo see real approved gemstone listings:\n1. Make sure MongoDB and Backend server are running\n2. Use the "Fix Connection" button below to automatically fix the issue');
+      } else {
+        setError('Unable to connect to backend. Please ensure the backend server is running on localhost:9092 and connected to MongoDB (localhost:27017).');
+      }
+      
+      // Try to check backend health to get more specific error
+      fetch('http://localhost:9092/api/system/db-status')
+        .then(response => response.json())
+        .then(data => {
+          if (!data.connected) {
+            setError(`MongoDB Connection Error: ${data.error || 'Unable to connect to database'}\n\nPlease use the "Fix Connection" button below to resolve this issue.`);
+          }
+        })
+        .catch(() => {
+          // Backend not even running
+          console.log('Backend server does not appear to be running');
+        });
+        
       setGemstones([]);
       setTotalItems(0);
     } finally {
