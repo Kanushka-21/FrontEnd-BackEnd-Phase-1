@@ -225,40 +225,135 @@ public class GemNetApplication {
                     new org.springframework.data.mongodb.core.index.Index("status", org.springframework.data.domain.Sort.Direction.ASC)
                 );
                 
-                // Insert a sample gemstone listing
-                System.out.println("💎 Adding sample gemstone listing...");
-                java.util.Map<String, Object> seller = new java.util.HashMap<>();
-                seller.put("id", "user123");
-                seller.put("firstName", "John");
-                seller.put("lastName", "Doe");
-                seller.put("email", "john@example.com");
+                // Insert sample gemstone listings with countdown timer fields
+                System.out.println("💎 Adding sample gemstone listings with countdown fields...");
                 
-                java.util.Map<String, Object> gemListing = new java.util.HashMap<>();
-                gemListing.put("title", "Blue Sapphire");
-                gemListing.put("description", "Beautiful blue sapphire from Sri Lanka");
-                gemListing.put("caratWeight", 2.5);
-                gemListing.put("color", "Deep Blue");
-                gemListing.put("clarity", "VS");
-                gemListing.put("cut", "Oval");
-                gemListing.put("origin", "Sri Lanka");
-                gemListing.put("treatment", "Heat Treated");
-                gemListing.put("certificateNumber", "GEM123456");
-                gemListing.put("basePrice", 2000);
-                gemListing.put("currentBid", 2000);
-                gemListing.put("status", "APPROVED");
-                gemListing.put("imageUrls", java.util.Collections.singletonList("IMG_1751571383560_0.jpg"));
-                gemListing.put("certificateUrl", "certificate1.pdf");
-                gemListing.put("dimensions", "8x6x4 mm");
-                gemListing.put("seller", seller);
-                gemListing.put("createdAt", new java.util.Date());
-                gemListing.put("updatedAt", new java.util.Date());
+                // Sample Listing 1: No bidding started yet
+                java.util.Map<String, Object> seller1 = new java.util.HashMap<>();
+                seller1.put("id", "user123");
+                seller1.put("firstName", "John");
+                seller1.put("lastName", "Doe");
+                seller1.put("email", "john@example.com");
+                
+                java.util.Map<String, Object> gemListing1 = new java.util.HashMap<>();
+                gemListing1.put("title", "Blue Sapphire");
+                gemListing1.put("description", "Beautiful blue sapphire from Sri Lanka");
+                gemListing1.put("caratWeight", 2.5);
+                gemListing1.put("color", "Deep Blue");
+                gemListing1.put("clarity", "VS");
+                gemListing1.put("cut", "Oval");
+                gemListing1.put("origin", "Sri Lanka");
+                gemListing1.put("treatment", "Heat Treated");
+                gemListing1.put("certificateNumber", "GEM123456");
+                gemListing1.put("basePrice", 2000);
+                gemListing1.put("currentBid", 2000);
+                gemListing1.put("status", "APPROVED");
+                gemListing1.put("imageUrls", java.util.Collections.singletonList("IMG_1751571383560_0.jpg"));
+                gemListing1.put("certificateUrl", "certificate1.pdf");
+                gemListing1.put("dimensions", "8x6x4 mm");
+                gemListing1.put("seller", seller1);
+                gemListing1.put("createdAt", new java.util.Date());
+                gemListing1.put("updatedAt", new java.util.Date());
+                
+                // Countdown fields - No bidding started
+                gemListing1.put("biddingStartTime", null);
+                gemListing1.put("biddingEndTime", null);
+                gemListing1.put("biddingActive", false);
+                
+                // Set expiration to 7 days from now (different from bidding countdown)
+                java.util.Calendar cal1 = java.util.Calendar.getInstance();
+                cal1.add(java.util.Calendar.DAY_OF_MONTH, 7);
+                gemListing1.put("expiresAt", cal1.getTime());
+                
+                mongoTemplate.insert(gemListing1, "gem_listings");
+                
+                // Sample Listing 2: Active bidding with countdown
+                java.util.Map<String, Object> seller2 = new java.util.HashMap<>();
+                seller2.put("id", "user456");
+                seller2.put("firstName", "Jane");
+                seller2.put("lastName", "Smith");
+                seller2.put("email", "jane@example.com");
+                
+                java.util.Map<String, Object> gemListing2 = new java.util.HashMap<>();
+                gemListing2.put("title", "Ruby Red Star");
+                gemListing2.put("description", "Stunning ruby with excellent color saturation");
+                gemListing2.put("caratWeight", 3.2);
+                gemListing2.put("color", "Pigeon Blood Red");
+                gemListing2.put("clarity", "VS1");
+                gemListing2.put("cut", "Round");
+                gemListing2.put("origin", "Myanmar");
+                gemListing2.put("treatment", "Heat Treated");
+                gemListing2.put("certificateNumber", "GEM789012");
+                gemListing2.put("basePrice", 5000);
+                gemListing2.put("currentBid", 6500);
+                gemListing2.put("status", "APPROVED");
+                gemListing2.put("imageUrls", java.util.Collections.singletonList("ruby_sample.jpg"));
+                gemListing2.put("certificateUrl", "certificate2.pdf");
+                gemListing2.put("dimensions", "9x7x5 mm");
+                gemListing2.put("seller", seller2);
+                gemListing2.put("createdAt", new java.util.Date());
+                gemListing2.put("updatedAt", new java.util.Date());
+                
+                // Countdown fields - Active bidding (started 2 days ago, 2 days remaining)
+                java.util.Calendar bidStart = java.util.Calendar.getInstance();
+                bidStart.add(java.util.Calendar.DAY_OF_MONTH, -2); // Started 2 days ago
+                java.util.Calendar bidEnd = java.util.Calendar.getInstance();
+                bidEnd.add(java.util.Calendar.DAY_OF_MONTH, 2); // Ends in 2 days
+                
+                gemListing2.put("biddingStartTime", bidStart.getTime());
+                gemListing2.put("biddingEndTime", bidEnd.getTime());
+                gemListing2.put("biddingActive", true);
                 
                 // Set expiration to 7 days from now
-                java.util.Calendar cal = java.util.Calendar.getInstance();
-                cal.add(java.util.Calendar.DAY_OF_MONTH, 7);
-                gemListing.put("expiresAt", cal.getTime());
+                java.util.Calendar cal2 = java.util.Calendar.getInstance();
+                cal2.add(java.util.Calendar.DAY_OF_MONTH, 7);
+                gemListing2.put("expiresAt", cal2.getTime());
                 
-                mongoTemplate.insert(gemListing, "gem_listings");
+                mongoTemplate.insert(gemListing2, "gem_listings");
+                
+                // Sample Listing 3: Bidding countdown expired
+                java.util.Map<String, Object> seller3 = new java.util.HashMap<>();
+                seller3.put("id", "user789");
+                seller3.put("firstName", "Michael");
+                seller3.put("lastName", "Johnson");
+                seller3.put("email", "michael@example.com");
+                
+                java.util.Map<String, Object> gemListing3 = new java.util.HashMap<>();
+                gemListing3.put("title", "Emerald Green Beauty");
+                gemListing3.put("description", "Natural emerald with excellent transparency");
+                gemListing3.put("caratWeight", 1.8);
+                gemListing3.put("color", "Vivid Green");
+                gemListing3.put("clarity", "VVS2");
+                gemListing3.put("cut", "Emerald Cut");
+                gemListing3.put("origin", "Colombia");
+                gemListing3.put("treatment", "Minor Oil");
+                gemListing3.put("certificateNumber", "GEM345678");
+                gemListing3.put("basePrice", 3500);
+                gemListing3.put("currentBid", 4200);
+                gemListing3.put("status", "APPROVED");
+                gemListing3.put("imageUrls", java.util.Collections.singletonList("emerald_sample.jpg"));
+                gemListing3.put("certificateUrl", "certificate3.pdf");
+                gemListing3.put("dimensions", "7x5x4 mm");
+                gemListing3.put("seller", seller3);
+                gemListing3.put("createdAt", new java.util.Date());
+                gemListing3.put("updatedAt", new java.util.Date());
+                
+                // Countdown fields - Bidding expired (started 5 days ago, ended 1 day ago)
+                java.util.Calendar bidStart3 = java.util.Calendar.getInstance();
+                bidStart3.add(java.util.Calendar.DAY_OF_MONTH, -5); // Started 5 days ago
+                java.util.Calendar bidEnd3 = java.util.Calendar.getInstance();
+                bidEnd3.add(java.util.Calendar.DAY_OF_MONTH, -1); // Ended 1 day ago
+                
+                gemListing3.put("biddingStartTime", bidStart3.getTime());
+                gemListing3.put("biddingEndTime", bidEnd3.getTime());
+                gemListing3.put("biddingActive", false); // Set to false since bidding has ended
+                
+                // Set expiration to 7 days from now
+                java.util.Calendar cal3 = java.util.Calendar.getInstance();
+                cal3.add(java.util.Calendar.DAY_OF_MONTH, 7);
+                gemListing3.put("expiresAt", cal3.getTime());
+                
+                mongoTemplate.insert(gemListing3, "gem_listings");
             }
             
             System.out.println("✅ Database initialization completed successfully!");
