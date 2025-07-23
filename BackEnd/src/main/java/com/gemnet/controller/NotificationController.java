@@ -50,10 +50,9 @@ public class NotificationController {
     @GetMapping("/{userId}/unread-count")
     public ResponseEntity<ApiResponse<Long>> getUnreadCount(@PathVariable String userId) {
         try {
-            ApiResponse<Map<String, Object>> response = biddingService.getUnreadNotificationCount(userId);
+            ApiResponse<Long> response = biddingService.getUnreadNotificationCount(userId);
             if (response.isSuccess()) {
-                Long count = (Long) response.getData().get("unreadCount");
-                return ResponseEntity.ok(new ApiResponse<>(true, "Unread count retrieved", count));
+                return ResponseEntity.ok(response);
             } else {
                 return ResponseEntity.ok(new ApiResponse<>(false, response.getMessage(), 0L));
             }

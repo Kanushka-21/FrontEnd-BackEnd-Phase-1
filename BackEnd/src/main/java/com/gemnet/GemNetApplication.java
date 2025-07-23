@@ -82,7 +82,7 @@ public class GemNetApplication {
             String dbName = mongoTemplate.getDb().getName();
             
             // Simple test query to verify connection
-            long testCount = mongoTemplate.count(new Query(), "test");
+            mongoTemplate.count(new Query(), "test");
             
             // Verify gem_listings collection existence
             boolean hasGemListings = false;
@@ -191,11 +191,7 @@ public class GemNetApplication {
                 System.out.println("🔧 Creating users collection...");
                 mongoTemplate.createCollection("users");
                 mongoTemplate.indexOps("users").ensureIndex(
-                    org.springframework.data.mongodb.core.index.IndexDefinition.builder()
-                        .named("email_idx")
-                        .on("email", org.springframework.data.domain.Sort.Direction.ASC)
-                        .unique()
-                        .build()
+                    new org.springframework.data.mongodb.core.index.Index("email", org.springframework.data.domain.Sort.Direction.ASC).unique()
                 );
                 
                 // Insert a sample admin user
@@ -226,10 +222,7 @@ public class GemNetApplication {
                 System.out.println("💎 Creating gem_listings collection...");
                 mongoTemplate.createCollection("gem_listings");
                 mongoTemplate.indexOps("gem_listings").ensureIndex(
-                    org.springframework.data.mongodb.core.index.IndexDefinition.builder()
-                        .named("status_idx")
-                        .on("status", org.springframework.data.domain.Sort.Direction.ASC)
-                        .build()
+                    new org.springframework.data.mongodb.core.index.Index("status", org.springframework.data.domain.Sort.Direction.ASC)
                 );
                 
                 // Insert a sample gemstone listing
