@@ -97,6 +97,24 @@ public class BiddingService {
             // Save the bid
             Bid savedBid = bidRepository.save(newBid);
             
+            // Start countdown if this is the first bid on the listing (bidding not yet active)
+            if (!Boolean.TRUE.equals(listing.getBiddingActive())) {
+                // This is the first bid - start the 4-day countdown
+                LocalDateTime now = LocalDateTime.now();
+                LocalDateTime endTime = now.plusDays(4); // 4 days from now
+                
+                listing.setBiddingStartTime(now);
+                listing.setBiddingEndTime(endTime);
+                listing.setBiddingActive(true);
+                
+                // Save the updated listing
+                gemListingRepository.save(listing);
+                
+                System.out.println("🕒 Started 4-day countdown for listing: " + listing.getId());
+                System.out.println("   Start time: " + now);
+                System.out.println("   End time: " + endTime);
+            }
+            
             // Handle notifications for all affected users
             handleBidNotifications(savedBid, listing, currentHighestBid.orElse(null));
             
@@ -115,6 +133,27 @@ public class BiddingService {
             
             response.put("totalBids", totalBids);
             response.put("highestBid", newHighestBid.map(Bid::getBidAmount).orElse(BigDecimal.ZERO));
+            
+            // Add countdown information to response
+            GemListing updatedListing = gemListingRepository.findById(bidRequest.getListingId()).orElse(listing);
+            if (Boolean.TRUE.equals(updatedListing.getBiddingActive())) {
+                response.put("biddingActive", true);
+                response.put("biddingStartTime", updatedListing.getBiddingStartTime());
+                response.put("biddingEndTime", updatedListing.getBiddingEndTime());
+                
+                // Calculate remaining time in seconds
+                LocalDateTime now = LocalDateTime.now();
+                LocalDateTime endTime = updatedListing.getBiddingEndTime();
+                if (endTime != null && endTime.isAfter(now)) {
+                    long remainingSeconds = java.time.Duration.between(now, endTime).getSeconds();
+                    response.put("remainingTimeSeconds", remainingSeconds);
+                } else {
+                    response.put("remainingTimeSeconds", 0);
+                }
+            } else {
+                response.put("biddingActive", false);
+                response.put("remainingTimeSeconds", 0);
+            }
             
             return new ApiResponse<>(true, "Bid placed successfully", response);
             
@@ -169,6 +208,28 @@ public class BiddingService {
             long totalBids = bidRepository.countByListingId(listingId);
             Optional<Bid> highestBid = bidRepository
                 .findTopByListingIdAndStatusOrderByBidAmountDesc(listingId, "ACTIVE");
+            
+            // Check if listing exists and activate countdown if needed
+            Optional<GemListing> listingOpt = gemListingRepository.findById(listingId);
+            if (listingOpt.isPresent()) {
+                GemListing listing = listingOpt.get();
+                
+                // If there are bids but countdown is not active, activate it
+                if (totalBids > 0 && !Boolean.TRUE.equals(listing.getBiddingActive())) {
+                    LocalDateTime now = LocalDateTime.now();
+                    LocalDateTime endTime = now.plusDays(4); // 4 days from now
+                    
+                    listing.setBiddingStartTime(now);
+                    listing.setBiddingEndTime(endTime);
+                    listing.setBiddingActive(true);
+                    
+                    gemListingRepository.save(listing);
+                    
+                    System.out.println("🕒 Activated countdown for existing listing with bids: " + listing.getId());
+                    System.out.println("   Start time: " + now);
+                    System.out.println("   End time: " + endTime);
+                }
+            }
             
             Map<String, Object> stats = new HashMap<>();
             stats.put("totalBids", totalBids);
@@ -576,6 +637,122 @@ public class BiddingService {
             System.err.println("Error deleting notification: " + e.getMessage());
             e.printStackTrace();
             return new ApiResponse<>(false, "Failed to delete notification: " + e.getMessage(), null);
+        }
+    }
+    
+    /**
+     * Get countdown status for a listing
+     */
+    public ApiResponse<Map<String, Object>> getCountdownStatus(String listingId) {
+        try {
+            Optional<GemListing> listingOpt = gemListingRepository.findById(listingId);
+            
+            if (listingOpt.isEmpty()) {
+                return new ApiResponse<>(false, "Listing not found", null);
+            }
+            
+            GemListing listing = listingOpt.get();
+            Map<String, Object> countdownData = new HashMap<>();
+            
+            if (Boolean.TRUE.equals(listing.getBiddingActive())) {
+                LocalDateTime now = LocalDateTime.now();
+                LocalDateTime endTime = listing.getBiddingEndTime();
+                
+                countdownData.put("biddingActive", true);
+                countdownData.put("biddingStartTime", listing.getBiddingStartTime());
+                countdownData.put("biddingEndTime", endTime);
+                
+                if (endTime != null && endTime.isAfter(now)) {
+                    long remainingSeconds = java.time.Duration.between(now, endTime).getSeconds();
+                    countdownData.put("remainingTimeSeconds", remainingSeconds);
+                    
+                    // Calculate days, hours, minutes, seconds
+                    long days = remainingSeconds / (24 * 3600);
+                    long hours = (remainingSeconds % (24 * 3600)) / 3600;
+                    long minutes = (remainingSeconds % 3600) / 60;
+                    long seconds = remainingSeconds % 60;
+                    
+                    countdownData.put("remainingDays", days);
+                    countdownData.put("remainingHours", hours);
+                    countdownData.put("remainingMinutes", minutes);
+                    countdownData.put("remainingSeconds", seconds);
+                    countdownData.put("isExpired", false);
+                } else {
+                    // Countdown has expired
+                    countdownData.put("remainingTimeSeconds", 0);
+                    countdownData.put("remainingDays", 0);
+                    countdownData.put("remainingHours", 0);
+                    countdownData.put("remainingMinutes", 0);
+                    countdownData.put("remainingSeconds", 0);
+                    countdownData.put("isExpired", true);
+                    
+                    // Mark bidding as inactive if expired
+                    listing.setBiddingActive(false);
+                    gemListingRepository.save(listing);
+                }
+            } else {
+                countdownData.put("biddingActive", false);
+                countdownData.put("remainingTimeSeconds", 0);
+                countdownData.put("isExpired", false);
+            }
+            
+            return new ApiResponse<>(true, "Countdown status retrieved successfully", countdownData);
+            
+        } catch (Exception e) {
+            System.err.println("Error getting countdown status: " + e.getMessage());
+            e.printStackTrace();
+            return new ApiResponse<>(false, "Failed to get countdown status: " + e.getMessage(), null);
+        }
+    }
+    
+    /**
+     * Utility method to activate countdown for all listings that have bids but no active countdown
+     */
+    public ApiResponse<Map<String, Object>> activateCountdownForExistingListings() {
+        try {
+            System.out.println("🛠️ [UTILITY] Starting countdown activation for existing listings");
+            
+            // Get all gem listings
+            List<GemListing> allListings = gemListingRepository.findAll();
+            int activatedCount = 0;
+            int processedCount = 0;
+            
+            for (GemListing listing : allListings) {
+                processedCount++;
+                
+                // Check if listing has bids but no active countdown
+                long bidCount = bidRepository.countByListingId(listing.getId());
+                
+                if (bidCount > 0 && !Boolean.TRUE.equals(listing.getBiddingActive())) {
+                    // Activate countdown
+                    LocalDateTime now = LocalDateTime.now();
+                    LocalDateTime endTime = now.plusDays(4); // 4 days from now
+                    
+                    listing.setBiddingStartTime(now);
+                    listing.setBiddingEndTime(endTime);
+                    listing.setBiddingActive(true);
+                    
+                    gemListingRepository.save(listing);
+                    activatedCount++;
+                    
+                    System.out.println("🕒 Activated countdown for listing: " + listing.getId() + 
+                                     " (has " + bidCount + " bids)");
+                }
+            }
+            
+            Map<String, Object> result = new HashMap<>();
+            result.put("processedListings", processedCount);
+            result.put("activatedCountdowns", activatedCount);
+            result.put("message", "Activated countdown for " + activatedCount + " listings out of " + processedCount + " processed");
+            
+            System.out.println("✅ [UTILITY] Countdown activation completed: " + activatedCount + "/" + processedCount);
+            
+            return new ApiResponse<>(true, "Countdown activation completed successfully", result);
+            
+        } catch (Exception e) {
+            System.err.println("Error activating countdown for existing listings: " + e.getMessage());
+            e.printStackTrace();
+            return new ApiResponse<>(false, "Failed to activate countdown: " + e.getMessage(), null);
         }
     }
 }

@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Gem, Shield, User } from 'lucide-react';
 import Button from '@/components/ui/Button';
+import CountdownTimer from '@/components/CountdownTimer';
 import { GemstoneCardProps } from '@/types';
 
 // Helper function to format price in LKR
@@ -21,6 +22,11 @@ const GemstoneCard: React.FC<GemstoneCardProps> = ({ gemstone, onViewDetails }) 
   React.useEffect(() => {
     console.log(`🔍 GemstoneCard rendered for ${gemstone.name}:`, gemstone);
     console.log(`💰 Gemstone ${gemstone.name} latestBidPrice:`, gemstone.latestBidPrice);
+    console.log(`⏰ Gemstone ${gemstone.name} countdown data:`, {
+      biddingActive: gemstone.biddingActive,
+      remainingTimeSeconds: gemstone.remainingTimeSeconds,
+      isExpired: gemstone.isExpired
+    });
   }, [gemstone]);
 
   const handleViewClick = () => {
@@ -118,6 +124,18 @@ const GemstoneCard: React.FC<GemstoneCardProps> = ({ gemstone, onViewDetails }) 
                 No bids yet
               </p>
             )}
+          </div>
+          
+          {/* Countdown Timer */}
+          <div className="mt-3 p-2 bg-red-50 rounded-lg border border-red-200">
+            <CountdownTimer
+              listingId={gemstone.id}
+              initialRemainingSeconds={gemstone.remainingTimeSeconds}
+              biddingActive={gemstone.biddingActive}
+              isExpired={gemstone.isExpired}
+              className="justify-center"
+              showIcon={true}
+            />
           </div>
           
           {gemstone.predictedPriceRange && (

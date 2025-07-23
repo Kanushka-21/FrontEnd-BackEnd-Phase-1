@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Shield, TrendingUp, Clock, Users } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { DetailedGemstone, BidInfo } from '@/types';
+import CountdownTimer from '../CountdownTimer';
 
 // Helper function to format price in LKR
 const formatLKR = (price: number) => {
@@ -34,6 +35,11 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
     totalBids: 0,
     highestBid: 0,
     highestBidder: ''
+  });
+  const [countdownData, setCountdownData] = useState({
+    remainingTimeSeconds: 0,
+    biddingActive: false,
+    isExpired: false
   });
   const [loadingBids, setLoadingBids] = useState(false);
 
@@ -69,6 +75,18 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
           totalBids: statsResult.data.totalBids || 0,
           highestBid: statsResult.data.highestBid || 0,
           highestBidder: statsResult.data.highestBidder || ''
+        });
+      }
+
+      // Load countdown data
+      const countdownResponse = await fetch(`/api/bidding/listing/${gemstone.id}/countdown`);
+      const countdownResult = await countdownResponse.json();
+      
+      if (countdownResult.success) {
+        setCountdownData({
+          remainingTimeSeconds: countdownResult.data.remainingTimeSeconds || 0,
+          biddingActive: countdownResult.data.biddingActive || false,
+          isExpired: countdownResult.data.isExpired || false
         });
       }
 
@@ -311,6 +329,22 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
                       </div>
                       <div className="text-sm text-purple-700">Highest Bidder</div>
                     </div>
+                  </div>
+                  
+                  {/* Countdown Timer */}
+                  <div className="mt-4 bg-gradient-to-r from-red-50 to-orange-50 p-4 rounded-xl border border-red-200">
+                    <div className="flex items-center space-x-2 mb-3">
+                      <Clock className="w-5 h-5 text-red-600" />
+                      <h4 className="text-lg font-semibold text-red-800">Bidding Ends In</h4>
+                    </div>
+                    <CountdownTimer 
+                      listingId={gemstone.id}
+                      initialRemainingSeconds={countdownData.remainingTimeSeconds}
+                      biddingActive={countdownData.biddingActive}
+                      isExpired={countdownData.isExpired}
+                      className="text-center"
+                      showIcon={true}
+                    />
                   </div>
                 </div>
 

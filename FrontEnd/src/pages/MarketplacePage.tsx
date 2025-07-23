@@ -251,10 +251,12 @@ const MarketplacePage: React.FC = () => {
           
           // Fetch latest bid for each gemstone
           try {
-            // Fetch latest bids for all gemstones in parallel
+            // Fetch latest bids and countdown data for all gemstones in parallel
             const bidPromises = convertedGemstones.map(async (gemstone) => {
               try {
-                console.log(`🔍 Fetching bids for gemstone ${gemstone.id} (${gemstone.name})`);
+                console.log(`🔍 Fetching bids and countdown for gemstone ${gemstone.id} (${gemstone.name})`);
+                
+                let gemstoneWithBids = gemstone;
                 
                 try {
                   // First try to get detailed bid stats which includes highest bid
@@ -267,8 +269,8 @@ const MarketplacePage: React.FC = () => {
                     // Get the highest bid from stats if available
                     if (statsResult.data.highestBid && statsResult.data.highestBid > 0) {
                       console.log(`💰 Highest bid for ${gemstone.name} from stats:`, statsResult.data.highestBid);
-                      return {
-                        ...gemstone,
+                      gemstoneWithBids = {
+                        ...gemstoneWithBids,
                         latestBidPrice: statsResult.data.highestBid,
                         totalBids: statsResult.data.totalBids || 0
                       };
@@ -276,25 +278,52 @@ const MarketplacePage: React.FC = () => {
                   }
                   
                   // Fallback to getting individual bids if stats aren't available
-                  const bidResponse = await api.bids.getByGemstoneId(gemstone.id);
-                  console.log(`📊 Bid response for ${gemstone.name}:`, bidResponse);
-                  
-                  if (bidResponse.success && bidResponse.data && bidResponse.data.length > 0) {
-                    // Get highest bid amount
-                    const highestBid = bidResponse.data.reduce((highest, current) => 
-                      current.amount > highest.amount ? current : highest, bidResponse.data[0]);
+                  if (!gemstoneWithBids.latestBidPrice) {
+                    const bidResponse = await api.bids.getByGemstoneId(gemstone.id);
+                    console.log(`📊 Bid response for ${gemstone.name}:`, bidResponse);
                     
-                    console.log(`💰 Highest bid for ${gemstone.name}:`, highestBid.amount);
-                    
-                    return {
-                      ...gemstone,
-                      latestBidPrice: highestBid.amount,
-                      totalBids: bidResponse.data.length
-                    };
+                    if (bidResponse.success && bidResponse.data && bidResponse.data.length > 0) {
+                      // Get highest bid amount
+                      const highestBid = bidResponse.data.reduce((highest, current) => 
+                        current.amount > highest.amount ? current : highest, bidResponse.data[0]);
+                      
+                      console.log(`💰 Highest bid for ${gemstone.name}:`, highestBid.amount);
+                      
+                      gemstoneWithBids = {
+                        ...gemstoneWithBids,
+                        latestBidPrice: highestBid.amount,
+                        totalBids: bidResponse.data.length
+                      };
+                    }
                   }
                   
-                  console.log(`ℹ️ No bids found for gemstone ${gemstone.name}`);
-                  return gemstone;
+                  // Fetch countdown data
+                  try {
+                    const countdownResponse = await fetch(`/api/bidding/listing/${gemstone.id}/countdown`);
+                    const countdownResult = await countdownResponse.json();
+                    
+                    if (countdownResponse.ok && countdownResult.success && countdownResult.data) {
+                      console.log(`⏰ Countdown data for ${gemstone.name}:`, countdownResult.data);
+                      
+                      gemstoneWithBids = {
+                        ...gemstoneWithBids,
+                        biddingActive: countdownResult.data.biddingActive,
+                        biddingStartTime: countdownResult.data.biddingStartTime,
+                        biddingEndTime: countdownResult.data.biddingEndTime,
+                        remainingTimeSeconds: countdownResult.data.remainingTimeSeconds,
+                        remainingDays: countdownResult.data.remainingDays,
+                        remainingHours: countdownResult.data.remainingHours,
+                        remainingMinutes: countdownResult.data.remainingMinutes,
+                        remainingSeconds: countdownResult.data.remainingSeconds,
+                        isExpired: countdownResult.data.isExpired
+                      };
+                    }
+                  } catch (countdownError) {
+                    console.warn(`⚠️ Failed to fetch countdown for ${gemstone.name}:`, countdownError);
+                  }
+                  
+                  console.log(`ℹ️ Final data for ${gemstone.name}:`, gemstoneWithBids);
+                  return gemstoneWithBids;
                 } catch (error) {
                   console.error(`Error fetching bids for ${gemstone.name}:`, error);
                   return gemstone;

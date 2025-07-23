@@ -239,6 +239,16 @@ export interface Gemstone {
     name: string;
     rating: number;
   };
+  // Bidding countdown fields
+  biddingActive?: boolean;
+  biddingStartTime?: string;
+  biddingEndTime?: string;
+  remainingTimeSeconds?: number;
+  remainingDays?: number;
+  remainingHours?: number;
+  remainingMinutes?: number;
+  remainingSeconds?: number;
+  isExpired?: boolean;
 }
 
 export interface Dimension {
