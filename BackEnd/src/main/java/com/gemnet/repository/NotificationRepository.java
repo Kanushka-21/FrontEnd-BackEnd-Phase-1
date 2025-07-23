@@ -34,6 +34,12 @@ public interface NotificationRepository extends MongoRepository<Notification, St
     // Count unread notifications for a user
     long countByUserIdAndIsReadFalse(String userId);
     
+    // Count unread notifications for a user (alternative method name)
+    long countByUserIdAndIsRead(String userId, boolean isRead);
+    
+    // Find notifications by user and read status
+    List<Notification> findByUserIdAndIsRead(String userId, boolean isRead);
+    
     // Find recent notifications (last 24 hours)
     @Query("{ 'userId': ?0, 'createdAt': { $gte: ?1 } }")
     List<Notification> findRecentByUserId(String userId, LocalDateTime since);

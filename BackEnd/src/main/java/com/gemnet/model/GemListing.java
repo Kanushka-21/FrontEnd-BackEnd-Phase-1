@@ -114,6 +114,11 @@ public class GemListing {
     @LastModifiedDate
     private LocalDateTime updatedAt;
     
+    // Bidding countdown fields
+    private LocalDateTime biddingStartTime; // When the first bid was placed
+    private LocalDateTime biddingEndTime;   // When bidding ends (4 days after first bid)
+    private Boolean biddingActive = false;  // Whether bidding countdown is active
+    
     // Constructors
     public GemListing() {
         this.createdAt = LocalDateTime.now();
@@ -414,6 +419,30 @@ public class GemListing {
     
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+    
+    public LocalDateTime getBiddingStartTime() {
+        return biddingStartTime;
+    }
+    
+    public void setBiddingStartTime(LocalDateTime biddingStartTime) {
+        this.biddingStartTime = biddingStartTime;
+    }
+    
+    public LocalDateTime getBiddingEndTime() {
+        return biddingEndTime;
+    }
+    
+    public void setBiddingEndTime(LocalDateTime biddingEndTime) {
+        this.biddingEndTime = biddingEndTime;
+    }
+    
+    public Boolean getBiddingActive() {
+        return biddingActive;
+    }
+    
+    public void setBiddingActive(Boolean biddingActive) {
+        this.biddingActive = biddingActive;
     }
     
     // Helper methods

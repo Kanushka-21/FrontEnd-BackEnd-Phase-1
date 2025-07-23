@@ -246,8 +246,113 @@ const MarketplacePage: React.FC = () => {
           setError(null);
           message.info('No approved gemstone listings found in the database');
         } else {
+          // Convert listings to detailed gemstones
           const convertedGemstones = listings.map(convertToDetailedGemstone);
-          setGemstones(convertedGemstones);
+          
+          // Fetch latest bid for each gemstone
+          try {
+            // Fetch latest bids and countdown data for all gemstones in parallel
+            const bidPromises = convertedGemstones.map(async (gemstone) => {
+              try {
+                console.log(`🔍 Fetching bids and countdown for gemstone ${gemstone.id} (${gemstone.name})`);
+                
+                let gemstoneWithBids = gemstone;
+                
+                try {
+                  // First try to get detailed bid stats which includes highest bid
+                  const statsResponse = await fetch(`/api/bidding/listing/${gemstone.id}/stats`);
+                  const statsResult = await statsResponse.json();
+                  
+                  if (statsResponse.ok && statsResult.success && statsResult.data) {
+                    console.log(`📊 Bid stats for ${gemstone.name}:`, statsResult.data);
+                    
+                    // Get the highest bid from stats if available
+                    if (statsResult.data.highestBid && statsResult.data.highestBid > 0) {
+                      console.log(`💰 Highest bid for ${gemstone.name} from stats:`, statsResult.data.highestBid);
+                      gemstoneWithBids = {
+                        ...gemstoneWithBids,
+                        latestBidPrice: statsResult.data.highestBid,
+                        totalBids: statsResult.data.totalBids || 0
+                      };
+                    }
+                  }
+                  
+                  // Fallback to getting individual bids if stats aren't available
+                  if (!gemstoneWithBids.latestBidPrice) {
+                    const bidResponse = await api.bids.getByGemstoneId(gemstone.id);
+                    console.log(`📊 Bid response for ${gemstone.name}:`, bidResponse);
+                    
+                    if (bidResponse.success && bidResponse.data && bidResponse.data.length > 0) {
+                      // Get highest bid amount
+                      const highestBid = bidResponse.data.reduce((highest, current) => 
+                        current.amount > highest.amount ? current : highest, bidResponse.data[0]);
+                      
+                      console.log(`💰 Highest bid for ${gemstone.name}:`, highestBid.amount);
+                      
+                      gemstoneWithBids = {
+                        ...gemstoneWithBids,
+                        latestBidPrice: highestBid.amount,
+                        totalBids: bidResponse.data.length
+                      };
+                    }
+                  }
+                  
+                  // Fetch countdown data
+                  try {
+                    const countdownResponse = await fetch(`/api/bidding/listing/${gemstone.id}/countdown`);
+                    const countdownResult = await countdownResponse.json();
+                    
+                    if (countdownResponse.ok && countdownResult.success && countdownResult.data) {
+                      console.log(`⏰ Countdown data for ${gemstone.name}:`, countdownResult.data);
+                      
+                      gemstoneWithBids = {
+                        ...gemstoneWithBids,
+                        biddingActive: countdownResult.data.biddingActive,
+                        biddingStartTime: countdownResult.data.biddingStartTime,
+                        biddingEndTime: countdownResult.data.biddingEndTime,
+                        remainingTimeSeconds: countdownResult.data.remainingTimeSeconds,
+                        remainingDays: countdownResult.data.remainingDays,
+                        remainingHours: countdownResult.data.remainingHours,
+                        remainingMinutes: countdownResult.data.remainingMinutes,
+                        remainingSeconds: countdownResult.data.remainingSeconds,
+                        isExpired: countdownResult.data.isExpired
+                      };
+                    }
+                  } catch (countdownError) {
+                    console.warn(`⚠️ Failed to fetch countdown for ${gemstone.name}:`, countdownError);
+                  }
+                  
+                  console.log(`ℹ️ Final data for ${gemstone.name}:`, gemstoneWithBids);
+                  return gemstoneWithBids;
+                } catch (error) {
+                  console.error(`Error fetching bids for ${gemstone.name}:`, error);
+                  return gemstone;
+                }
+              } catch (err) {
+                console.error(`Error fetching bids for gemstone ${gemstone.id}:`, err);
+                return gemstone;
+              }
+            });
+            
+            // Wait for all bid requests to complete
+            const gemstonesWithBids = await Promise.all(bidPromises);
+            console.log('✨ Gemstones with bids data:', gemstonesWithBids);
+            
+            // Verify that latestBidPrice is properly set
+            const hasBidData = gemstonesWithBids.some(g => g.latestBidPrice !== undefined);
+            console.log(`🔍 Bid data available: ${hasBidData ? 'Yes' : 'No'}`);
+            
+            if (hasBidData) {
+              console.log('💰 Sample bid price:', gemstonesWithBids[0].latestBidPrice);
+            }
+            
+            setGemstones(gemstonesWithBids);
+          } catch (bidError) {
+            console.error('Error fetching bids:', bidError);
+            // Still display gemstones even if bids couldn't be fetched
+            setGemstones(convertedGemstones);
+          }
+          
           setTotalItems(response.data.totalElements || listings.length);
           setError(null);
           console.log(`✅ Displaying ${listings.length} real approved listings from database`);
@@ -261,7 +366,30 @@ const MarketplacePage: React.FC = () => {
       }
     } catch (error) {
       console.error('❌ Failed to connect to backend database:', error);
-      setError('Unable to connect to backend. Please ensure the backend server is running on localhost:9092 and connected to MongoDB (localhost:27017).');
+      
+      // Check if it's a network error
+      const isNetworkError = error instanceof Error && 
+        (error.message.includes('Network Error') || error.message.includes('Failed to fetch'));
+      
+      if (isNetworkError) {
+        setError('Cannot Connect to Database\nBackend error: Network Error\n\nTo see real approved gemstone listings:\n1. Make sure MongoDB and Backend server are running\n2. Use the "Fix Connection" button below to automatically fix the issue');
+      } else {
+        setError('Unable to connect to backend. Please ensure the backend server is running on localhost:9092 and connected to MongoDB (localhost:27017).');
+      }
+      
+      // Try to check backend health to get more specific error
+      fetch('http://localhost:9092/api/system/db-status')
+        .then(response => response.json())
+        .then(data => {
+          if (!data.connected) {
+            setError(`MongoDB Connection Error: ${data.error || 'Unable to connect to database'}\n\nPlease use the "Fix Connection" button below to resolve this issue.`);
+          }
+        })
+        .catch(() => {
+          // Backend not even running
+          console.log('Backend server does not appear to be running');
+        });
+        
       setGemstones([]);
       setTotalItems(0);
     } finally {

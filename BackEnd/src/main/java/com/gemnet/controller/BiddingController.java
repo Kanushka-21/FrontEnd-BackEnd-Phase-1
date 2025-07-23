@@ -106,6 +106,32 @@ public class BiddingController {
     }
     
     /**
+     * Get countdown status for a listing
+     */
+    @GetMapping("/listing/{listingId}/countdown")
+    @Operation(summary = "Get countdown status", description = "Get bidding countdown status for a gem listing")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getCountdownStatus(@PathVariable String listingId) {
+        System.out.println("⏰ Get countdown status for listing: " + listingId);
+        
+        try {
+            ApiResponse<Map<String, Object>> response = biddingService.getCountdownStatus(listingId);
+            
+            if (response.isSuccess()) {
+                return ResponseEntity.ok(response);
+            } else {
+                System.err.println("❌ Failed to get countdown: " + response.getMessage());
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("❌ Error in get countdown endpoint: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError()
+                .body(new ApiResponse<>(false, "Failed to get countdown: " + e.getMessage(), null));
+        }
+    }
+    
+    /**
      * Get user notifications
      */
     @GetMapping("/notifications/{userId}")
@@ -244,6 +270,33 @@ public class BiddingController {
             e.printStackTrace();
             return ResponseEntity.internalServerError()
                 .body(new ApiResponse<>(false, "Failed to get user bids: " + e.getMessage(), null));
+        }
+    }
+    
+    /**
+     * Utility endpoint to activate countdown for all listings that have bids but no active countdown
+     */
+    @PostMapping("/utility/activate-countdown")
+    @Operation(summary = "Activate countdown for existing listings", description = "Utility to activate countdown for listings with bids")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> activateCountdownForExistingListings() {
+        System.out.println("🛠️ Utility: Activating countdown for existing listings with bids");
+        
+        try {
+            ApiResponse<Map<String, Object>> response = biddingService.activateCountdownForExistingListings();
+            
+            if (response.isSuccess()) {
+                System.out.println("✅ Countdown activation completed");
+                return ResponseEntity.ok(response);
+            } else {
+                System.err.println("❌ Failed to activate countdown: " + response.getMessage());
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("❌ Error in activate countdown utility: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError()
+                .body(new ApiResponse<>(false, "Failed to activate countdown: " + e.getMessage(), null));
         }
     }
 }

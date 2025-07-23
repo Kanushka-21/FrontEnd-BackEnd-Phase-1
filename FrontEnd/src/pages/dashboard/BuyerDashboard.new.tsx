@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
-  ShoppingBag, User, Search, 
+  ShoppingBag, User, 
   TrendingUp, Menu, Home, FileText
 } from 'lucide-react';
 import RoleAwareDashboardLayout from '@/components/layout/RoleAwareDashboardLayout';
@@ -12,7 +12,6 @@ import {
   Advertisements,
   Purchases,
   Bids,
-  Searches,
   Profile
 } from './BuyerDashboardComponents';
 
@@ -38,7 +37,6 @@ const BuyerDashboard = () => {
     { id: 'advertisements', label: 'Advertisements', icon: <FileText size={24} /> },
     { id: 'purchases', label: 'Purchases', icon: <ShoppingBag size={24} /> },
     { id: 'bids', label: 'My Bids', icon: <TrendingUp size={24} /> },
-    { id: 'searches', label: 'Saved Searches', icon: <Search size={24} /> },
     { id: 'profile', label: 'Profile', icon: <User size={24} /> }
   ];
 
@@ -52,9 +50,7 @@ const BuyerDashboard = () => {
       case 'purchases':
         return <Purchases user={user} />;
       case 'bids':
-        return <Bids user={user} />;
-      case 'searches':
-        return <Searches user={user} />;
+        return <Bids />;
       case 'profile':
         return <Profile user={user} />;
       default:

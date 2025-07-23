@@ -408,9 +408,14 @@ const extendedAPI = {
   // Dashboard-specific methods
 
   // Buyer Dashboard APIs
-  getUserBids: async (): Promise<ApiResponse<any[]>> => {
-    const response = await api.get('/api/bids/user');
-    return response.data;
+  getUserBids: async (userId: string, page = 0, size = 10): Promise<ApiResponse<any>> => {
+    try {
+      const response = await api.get(`/api/bidding/user/${userId}/bids?page=${page}&size=${size}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching user bids:', error);
+      return { success: false, message: apiUtils.formatErrorMessage(error) };
+    }
   },
 
   getUserMeetings: async (): Promise<ApiResponse<any[]>> => {
