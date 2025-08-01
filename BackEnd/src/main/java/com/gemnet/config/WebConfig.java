@@ -2,6 +2,7 @@ package com.gemnet.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.lang.NonNull;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -38,5 +39,25 @@ public class WebConfig implements WebMvcConfigurer {
         System.out.println("✅ Static resource handler configured for /uploads/**");
         System.out.println("🌐 Files will be served from multiple locations");
         System.out.println("=====================================");
+    }
+    
+    @Override
+    public void addCorsMappings(@NonNull CorsRegistry registry) {
+        registry.addMapping("/**")
+                .allowedOrigins("*")
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                .allowedHeaders("*")
+                .allowCredentials(false)
+                .maxAge(3600);
+        
+        // Specific CORS configuration for static resources
+        registry.addMapping("/uploads/**")
+                .allowedOrigins("*")
+                .allowedMethods("GET", "OPTIONS")
+                .allowedHeaders("*")
+                .allowCredentials(false)
+                .maxAge(3600);
+                
+        System.out.println("✅ CORS configuration applied for all endpoints including static resources");
     }
 }

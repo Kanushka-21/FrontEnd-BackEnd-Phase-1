@@ -113,22 +113,23 @@ const MarketplacePage: React.FC = () => {
     
     // Extract all images from the backend listing
     const allImages: string[] = [];
+    let primaryImage = '';
     
-    // Add primary image if it exists
-    if (listing.primaryImageUrl) {
-      console.log('📷 Found primary image URL:', listing.primaryImageUrl);
-      allImages.push(constructImageUrl(listing.primaryImageUrl));
-    }
-    
-    // Add all images from the images array
+    // First, prioritize images from the images array (which are more reliable)
     if (listing.images && Array.isArray(listing.images)) {
       console.log('📷 Found images array:', listing.images);
-      listing.images.forEach((img: any, index: number) => {
+      
+      // Sort images by displayOrder and find primary image
+      const sortedImages = listing.images.sort((a: any, b: any) => {
+        return (a.displayOrder || 0) - (b.displayOrder || 0);
+      });
+      
+      sortedImages.forEach((img: any, index: number) => {
         console.log(`📷 Processing image ${index + 1}:`, img);
         let imageUrl = '';
-        if (typeof img === 'string') {
-          imageUrl = constructImageUrl(img);
-        } else if (img && img.imageUrl) {
+        
+        // Extract imageUrl from the image object
+        if (img && img.imageUrl) {
           imageUrl = constructImageUrl(img.imageUrl);
         } else if (img && img.url) {
           imageUrl = constructImageUrl(img.url);
@@ -136,37 +137,64 @@ const MarketplacePage: React.FC = () => {
           imageUrl = constructImageUrl(img.imagePath);
         } else if (img && img.path) {
           imageUrl = constructImageUrl(img.path);
+        } else if (typeof img === 'string') {
+          imageUrl = constructImageUrl(img);
         } else {
           console.log('❓ Unknown image format:', img);
         }
         
-        if (imageUrl && !allImages.includes(imageUrl)) {
-          console.log('✅ Added image URL:', imageUrl);
+        if (imageUrl) {
           allImages.push(imageUrl);
+          console.log('✅ Added image URL:', imageUrl);
+          
+          // Set as primary if it's marked as primary or if it's the first image
+          if ((img.isPrimary === true || index === 0) && !primaryImage) {
+            primaryImage = imageUrl;
+            console.log('🏆 Set as primary image:', imageUrl);
+          }
         }
       });
+    }
+    
+    // Fallback to primaryImageUrl only if no images found in array
+    if (allImages.length === 0 && listing.primaryImageUrl) {
+      console.log('📷 Using fallback primaryImageUrl:', listing.primaryImageUrl);
+      const fallbackUrl = constructImageUrl(listing.primaryImageUrl);
+      allImages.push(fallbackUrl);
+      primaryImage = fallbackUrl;
     }
     
     // Fallback to single image property if no images found
     if (allImages.length === 0 && listing.image) {
       console.log('📷 Using fallback image property:', listing.image);
-      allImages.push(constructImageUrl(listing.image));
+      const fallbackUrl = constructImageUrl(listing.image);
+      allImages.push(fallbackUrl);
+      primaryImage = fallbackUrl;
     }
     
-    // Check for other possible image fields
+    // Check for other possible image fields if still no images
     if (allImages.length === 0) {
       const possibleImageFields = ['imageUrl', 'imagePath', 'photo', 'picture'];
       for (const field of possibleImageFields) {
         if (listing[field]) {
           console.log(`📷 Found image in field '${field}':`, listing[field]);
-          allImages.push(constructImageUrl(listing[field]));
+          const fallbackUrl = constructImageUrl(listing[field]);
+          allImages.push(fallbackUrl);
+          primaryImage = fallbackUrl;
           break;
         }
       }
     }
     
-    // Use first image as primary, or placeholder if no images
-    const primaryImage = allImages.length > 0 ? allImages[0] : 'https://via.placeholder.com/400x300?text=Gemstone';
+    // Use primary image or first image, or placeholder if no images
+    if (!primaryImage && allImages.length > 0) {
+      primaryImage = allImages[0];
+    }
+    
+    if (!primaryImage) {
+      primaryImage = 'https://via.placeholder.com/400x300?text=Gemstone';
+    }
+    
     console.log('🏆 Primary image selected:', primaryImage);
     console.log('📚 All images:', allImages);
     console.log('👤 Seller information - userName:', listing.userName);
