@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, AlertCircle } from 'lucide-react';
+import CountdownTester from './CountdownTester';
 
 interface CountdownTimerProps {
   listingId: string;
@@ -9,6 +10,9 @@ interface CountdownTimerProps {
   onCountdownComplete?: () => void;
   showIcon?: boolean;
   className?: string;
+  showTester?: boolean; // New prop to show/hide testing tools
+  biddingEndTime?: string; // Current end time for testing component
+  onCountdownUpdate?: () => void; // New callback for when countdown is updated by testing
 }
 
 interface CountdownTime {
@@ -18,6 +22,29 @@ interface CountdownTime {
   seconds: number;
 }
 
+// Function to process expired bids
+const processExpiredBid = async (listingId: string) => {
+  try {
+    console.log(`🔄 Processing expired bid for listing: ${listingId}`);
+    
+    const response = await fetch('http://localhost:9092/api/bidding/process-expired', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (response.ok) {
+      const result = await response.json();
+      console.log('✅ Expired bids processed successfully:', result);
+    } else {
+      console.error('❌ Failed to process expired bids:', response.statusText);
+    }
+  } catch (error) {
+    console.error('❌ Error processing expired bids:', error);
+  }
+};
+
 const CountdownTimer: React.FC<CountdownTimerProps> = ({
   listingId,
   initialRemainingSeconds = 0,
@@ -25,11 +52,35 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
   isExpired = false,
   onCountdownComplete,
   showIcon = true,
-  className = ""
+  className = "",
+  showTester = false,
+  biddingEndTime,
+  onCountdownUpdate
 }) => {
   const [remainingSeconds, setRemainingSeconds] = useState(initialRemainingSeconds);
   const [isActive, setIsActive] = useState(biddingActive && !isExpired);
   const [countdown, setCountdown] = useState<CountdownTime>({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+
+  // Function to refresh countdown data
+  const refreshCountdown = async () => {
+    try {
+      const response = await fetch(`http://localhost:9092/api/bidding/listing/${listingId}/countdown`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data) {
+          setRemainingSeconds(data.data.remainingTimeSeconds || 0);
+          setIsActive(data.data.biddingActive && !data.data.isExpired);
+          
+          // Notify parent component that countdown was updated
+          if (onCountdownUpdate) {
+            onCountdownUpdate();
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error refreshing countdown:', error);
+    }
+  };
 
   // Function to calculate countdown components
   const calculateCountdown = (totalSeconds: number): CountdownTime => {
@@ -52,7 +103,7 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
 
   // Timer effect
   useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
+    let interval: ReturnType<typeof setInterval> | null = null;
 
     if (isActive && remainingSeconds > 0) {
       interval = setInterval(() => {
@@ -61,6 +112,8 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
           
           if (newSeconds <= 0) {
             setIsActive(false);
+            // Process expired bid when countdown completes
+            processExpiredBid(listingId);
             if (onCountdownComplete) {
               onCountdownComplete();
             }
@@ -77,7 +130,7 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
         clearInterval(interval);
       }
     };
-  }, [isActive, remainingSeconds, onCountdownComplete]);
+  }, [isActive, remainingSeconds, onCountdownComplete, listingId]);
 
   // Update initial values when props change
   useEffect(() => {
@@ -117,33 +170,44 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
 
   // Active countdown
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
-      {showIcon && <Clock className="w-4 h-4 text-red-500" />}
-      <div className="flex items-center gap-1">
-        {countdown.days > 0 && (
-          <>
-            <div className="flex flex-col items-center">
-              <span className="text-lg font-bold text-red-600">{formatNumber(countdown.days)}</span>
-              <span className="text-xs text-gray-500">days</span>
-            </div>
-            <span className="text-red-600 font-bold">:</span>
-          </>
-        )}
-        <div className="flex flex-col items-center">
-          <span className="text-lg font-bold text-red-600">{formatNumber(countdown.hours)}</span>
-          <span className="text-xs text-gray-500">hrs</span>
-        </div>
-        <span className="text-red-600 font-bold">:</span>
-        <div className="flex flex-col items-center">
-          <span className="text-lg font-bold text-red-600">{formatNumber(countdown.minutes)}</span>
-          <span className="text-xs text-gray-500">min</span>
-        </div>
-        <span className="text-red-600 font-bold">:</span>
-        <div className="flex flex-col items-center">
-          <span className="text-lg font-bold text-red-600">{formatNumber(countdown.seconds)}</span>
-          <span className="text-xs text-gray-500">sec</span>
+    <div className="space-y-4">
+      <div className={`flex items-center gap-2 ${className}`}>
+        {showIcon && <Clock className="w-4 h-4 text-red-500" />}
+        <div className="flex items-center gap-1">
+          {countdown.days > 0 && (
+            <>
+              <div className="flex flex-col items-center">
+                <span className="text-lg font-bold text-red-600">{formatNumber(countdown.days)}</span>
+                <span className="text-xs text-gray-500">days</span>
+              </div>
+              <span className="text-red-600 font-bold">:</span>
+            </>
+          )}
+          <div className="flex flex-col items-center">
+            <span className="text-lg font-bold text-red-600">{formatNumber(countdown.hours)}</span>
+            <span className="text-xs text-gray-500">hrs</span>
+          </div>
+          <span className="text-red-600 font-bold">:</span>
+          <div className="flex flex-col items-center">
+            <span className="text-lg font-bold text-red-600">{formatNumber(countdown.minutes)}</span>
+            <span className="text-xs text-gray-500">min</span>
+          </div>
+          <span className="text-red-600 font-bold">:</span>
+          <div className="flex flex-col items-center">
+            <span className="text-lg font-bold text-red-600">{formatNumber(countdown.seconds)}</span>
+            <span className="text-xs text-gray-500">sec</span>
+          </div>
         </div>
       </div>
+      
+      {/* Testing Tools - Only show if enabled */}
+      {showTester && (
+        <CountdownTester 
+          listingId={listingId}
+          currentEndTime={biddingEndTime}
+          onCountdownReduced={refreshCountdown}
+        />
+      )}
     </div>
   );
 };

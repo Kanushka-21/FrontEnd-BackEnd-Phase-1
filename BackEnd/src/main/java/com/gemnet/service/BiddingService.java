@@ -225,7 +225,7 @@ public class BiddingService {
                     
                     gemListingRepository.save(listing);
                     
-                    System.out.println("🕒 Activated countdown for existing listing with bids: " + listing.getId());
+                    System.out.println("🕒 Activated 4-day countdown for existing listing with bids: " + listing.getId());
                     System.out.println("   Start time: " + now);
                     System.out.println("   End time: " + endTime);
                 }
@@ -735,7 +735,7 @@ public class BiddingService {
                     gemListingRepository.save(listing);
                     activatedCount++;
                     
-                    System.out.println("🕒 Activated countdown for listing: " + listing.getId() + 
+                    System.out.println("🕒 Activated 4-day countdown for listing: " + listing.getId() + 
                                      " (has " + bidCount + " bids)");
                 }
             }
@@ -753,6 +753,314 @@ public class BiddingService {
             System.err.println("Error activating countdown for existing listings: " + e.getMessage());
             e.printStackTrace();
             return new ApiResponse<>(false, "Failed to activate countdown: " + e.getMessage(), null);
+        }
+    }
+
+    /**
+     * Process expired bids and complete transactions
+     */
+    public ApiResponse<Map<String, Object>> processExpiredBids() {
+        try {
+            System.out.println("🔄 Processing expired bids...");
+            
+            LocalDateTime now = LocalDateTime.now();
+            List<GemListing> expiredListings = gemListingRepository.findByBiddingActiveTrueAndBiddingEndTimeBefore(now);
+            
+            int processedCount = 0;
+            int completedCount = 0;
+            List<String> completedListingIds = new ArrayList<>();
+            
+            for (GemListing listing : expiredListings) {
+                processedCount++;
+                System.out.println("🕒 Processing expired listing: " + listing.getId());
+                
+                // Find the highest bid for this listing
+                Optional<Bid> highestBidOpt = bidRepository.findTopByListingIdOrderByBidAmountDesc(listing.getId());
+                
+                if (highestBidOpt.isPresent()) {
+                    Bid winningBid = highestBidOpt.get();
+                    
+                    // Complete the bidding process
+                    boolean completed = completeBidding(listing, winningBid);
+                    if (completed) {
+                        completedCount++;
+                        completedListingIds.add(listing.getId());
+                    }
+                } else {
+                    // No bids found, just deactivate the listing
+                    listing.setBiddingActive(false);
+                    listing.setListingStatus("expired_no_bids");
+                    gemListingRepository.save(listing);
+                    System.out.println("⚠️ No bids found for expired listing: " + listing.getId());
+                }
+            }
+            
+            Map<String, Object> result = new HashMap<>();
+            result.put("processedCount", processedCount);
+            result.put("completedCount", completedCount);
+            result.put("completedListings", completedListingIds);
+            
+            System.out.println("✅ Expired bids processing completed: " + completedCount + "/" + processedCount);
+            return new ApiResponse<>(true, "Expired bids processed successfully", result);
+            
+        } catch (Exception e) {
+            System.err.println("Error processing expired bids: " + e.getMessage());
+            e.printStackTrace();
+            return new ApiResponse<>(false, "Failed to process expired bids: " + e.getMessage(), null);
+        }
+    }
+
+    /**
+     * Complete a bidding transaction
+     */
+    private boolean completeBidding(GemListing listing, Bid winningBid) {
+        try {
+            System.out.println("🎯 Completing bidding for listing: " + listing.getId() + 
+                             " Winner: " + winningBid.getBidderId() + 
+                             " Amount: $" + winningBid.getBidAmount());
+
+            // Update listing status
+            listing.setBiddingActive(false);
+            listing.setListingStatus("sold");
+            listing.setBiddingCompletedAt(LocalDateTime.now());
+            listing.setWinningBidderId(winningBid.getBidderId());
+            listing.setFinalPrice(winningBid.getBidAmount());
+
+            // Save the updated listing
+            gemListingRepository.save(listing);
+
+            // Create purchase history entry
+            createPurchaseHistoryEntry(listing, winningBid);
+
+            // Send notifications
+            sendBiddingCompletionNotifications(listing, winningBid);
+
+            System.out.println("✅ Bidding completed successfully for listing: " + listing.getId());
+            return true;
+
+        } catch (Exception e) {
+            System.err.println("Error completing bidding for listing " + listing.getId() + ": " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * Create purchase history entry
+     */
+    private void createPurchaseHistoryEntry(GemListing listing, Bid winningBid) {
+        try {
+            // For now, we'll use the notification system to track purchases
+            // Later this can be expanded to a dedicated PurchaseHistory entity
+            
+            System.out.println("📝 Creating purchase history entry for listing: " + listing.getId());
+            
+            // We can add purchase history logic here when the entity is created
+            // For now, the completed listing with winner info serves as the record
+            
+        } catch (Exception e) {
+            System.err.println("Error creating purchase history entry: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Send notifications for completed bidding
+     */
+    private void sendBiddingCompletionNotifications(GemListing listing, Bid winningBid) {
+        try {
+            System.out.println("📤 Sending completion notifications for listing: " + listing.getId());
+
+            // Notification to the winner (buyer)
+            Notification winnerNotification = new Notification();
+            winnerNotification.setUserId(winningBid.getBidderId());
+            winnerNotification.setType("bid_won");
+            winnerNotification.setTitle("🎉 Congratulations! You won the bid!");
+            winnerNotification.setMessage(
+                "You successfully won the bid for " + listing.getGemName() + 
+                " with a winning bid of $" + String.format("%.2f", winningBid.getBidAmount()) + 
+                ". The item has been added to your Purchase History."
+            );
+            winnerNotification.setListingId(listing.getId());
+            winnerNotification.setCreatedAt(LocalDateTime.now());
+            winnerNotification.setRead(false);
+            notificationRepository.save(winnerNotification);
+
+            // Notification to the seller
+            Notification sellerNotification = new Notification();
+            sellerNotification.setUserId(listing.getUserId()); // Use userId as sellerId
+            sellerNotification.setType("item_sold");
+            sellerNotification.setTitle("💰 Your item has been sold!");
+            sellerNotification.setMessage(
+                "Your " + listing.getGemName() + " has been sold for $" + 
+                String.format("%.2f", winningBid.getBidAmount()) + 
+                ". A buyer has won the bidding and the transaction is now complete."
+            );
+            sellerNotification.setListingId(listing.getId());
+            sellerNotification.setCreatedAt(LocalDateTime.now());
+            sellerNotification.setRead(false);
+            notificationRepository.save(sellerNotification);
+
+            System.out.println("✅ Completion notifications sent successfully");
+
+        } catch (Exception e) {
+            System.err.println("Error sending completion notifications: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Get completed/purchased items for a user (for Purchase History)
+     */
+    public ApiResponse<List<Map<String, Object>>> getPurchaseHistory(String userId) {
+        try {
+            System.out.println("📋 Getting purchase history for user: " + userId);
+
+            // Find all listings where this user was the winning bidder
+            List<GemListing> purchasedListings = gemListingRepository
+                .findByWinningBidderIdAndListingStatus(userId, "sold");
+
+            List<Map<String, Object>> purchaseHistory = new ArrayList<>();
+
+            for (GemListing listing : purchasedListings) {
+                Map<String, Object> purchaseItem = new HashMap<>();
+                purchaseItem.put("id", listing.getId());
+                purchaseItem.put("gemType", listing.getVariety()); // Using variety as gem type
+                purchaseItem.put("gemName", listing.getGemName());
+                purchaseItem.put("finalPrice", listing.getFinalPrice());
+                purchaseItem.put("purchaseDate", listing.getBiddingCompletedAt());
+                purchaseItem.put("sellerId", listing.getUserId()); // Use userId as sellerId
+                purchaseItem.put("images", listing.getImages());
+                purchaseItem.put("primaryImageUrl", listing.getPrimaryImageUrl());
+                purchaseItem.put("weight", listing.getWeight());
+                purchaseItem.put("clarity", listing.getClarity());
+                purchaseItem.put("color", listing.getColor());
+                purchaseItem.put("cut", listing.getCut());
+
+                purchaseHistory.add(purchaseItem);
+            }
+
+            System.out.println("✅ Found " + purchaseHistory.size() + " purchased items for user: " + userId);
+            return new ApiResponse<>(true, "Purchase history retrieved successfully", purchaseHistory);
+
+        } catch (Exception e) {
+            System.err.println("Error getting purchase history: " + e.getMessage());
+            e.printStackTrace();
+            return new ApiResponse<>(false, "Failed to get purchase history: " + e.getMessage(), null);
+        }
+    }
+
+    /**
+     * Reduce countdown time for testing purposes
+     * @param listingId The listing ID to reduce countdown for
+     * @param reduceByMinutes The number of minutes to reduce the countdown by
+     */
+    public ApiResponse<Map<String, Object>> reduceCountdownForTesting(String listingId, long reduceByMinutes) {
+        try {
+            System.out.println("🧪 [TESTING] Reducing countdown for listing: " + listingId + " by " + reduceByMinutes + " minutes");
+
+            Optional<GemListing> listingOpt = gemListingRepository.findById(listingId);
+            if (listingOpt.isEmpty()) {
+                return new ApiResponse<>(false, "Listing not found", null);
+            }
+
+            GemListing listing = listingOpt.get();
+            
+            if (!Boolean.TRUE.equals(listing.getBiddingActive())) {
+                return new ApiResponse<>(false, "Bidding is not active for this listing", null);
+            }
+
+            LocalDateTime currentEndTime = listing.getBiddingEndTime();
+            if (currentEndTime == null) {
+                return new ApiResponse<>(false, "No countdown is set for this listing", null);
+            }
+
+            // Reduce the countdown by the specified minutes
+            LocalDateTime newEndTime = currentEndTime.minusMinutes(reduceByMinutes);
+            LocalDateTime now = LocalDateTime.now();
+
+            // Ensure the new end time is not in the past (minimum 30 seconds from now)
+            if (newEndTime.isBefore(now.plusSeconds(30))) {
+                newEndTime = now.plusSeconds(30);
+                System.out.println("⚠️ [TESTING] Adjusted minimum time to 30 seconds from now");
+            }
+
+            listing.setBiddingEndTime(newEndTime);
+            gemListingRepository.save(listing);
+
+            // Calculate remaining time
+            long remainingSeconds = java.time.Duration.between(now, newEndTime).getSeconds();
+            long days = remainingSeconds / (24 * 3600);
+            long hours = (remainingSeconds % (24 * 3600)) / 3600;
+            long minutes = (remainingSeconds % 3600) / 60;
+            long seconds = remainingSeconds % 60;
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("listingId", listingId);
+            result.put("originalEndTime", currentEndTime);
+            result.put("newEndTime", newEndTime);
+            result.put("reducedByMinutes", reduceByMinutes);
+            result.put("remainingTimeSeconds", remainingSeconds);
+            result.put("remainingDays", days);
+            result.put("remainingHours", hours);
+            result.put("remainingMinutes", minutes);
+            result.put("remainingSeconds", seconds);
+
+            System.out.println("✅ [TESTING] Countdown reduced successfully");
+            System.out.println("   Original end time: " + currentEndTime);
+            System.out.println("   New end time: " + newEndTime);
+            System.out.println("   Remaining time: " + days + "d " + hours + "h " + minutes + "m " + seconds + "s");
+
+            return new ApiResponse<>(true, "Countdown reduced successfully for testing", result);
+
+        } catch (Exception e) {
+            System.err.println("Error reducing countdown: " + e.getMessage());
+            e.printStackTrace();
+            return new ApiResponse<>(false, "Failed to reduce countdown: " + e.getMessage(), null);
+        }
+    }
+
+    /**
+     * Create test purchase data for development/testing purposes
+     * @param userId The user ID who will be the buyer
+     * @param listingId The listing ID to mark as sold
+     */
+    public ApiResponse<String> createTestPurchase(String userId, String listingId) {
+        try {
+            System.out.println("🧪 [TESTING] Creating test purchase for user: " + userId + ", listing: " + listingId);
+
+            Optional<GemListing> listingOpt = gemListingRepository.findById(listingId);
+            if (listingOpt.isEmpty()) {
+                return new ApiResponse<>(false, "Listing not found", null);
+            }
+
+            GemListing listing = listingOpt.get();
+            
+            // Create a mock winning bid amount (10% higher than listing price)
+            BigDecimal mockBidAmount = listing.getPrice().multiply(new BigDecimal("1.10"));
+            
+            // Update listing to mark as sold
+            listing.setBiddingActive(false);
+            listing.setListingStatus("sold");
+            listing.setBiddingCompletedAt(LocalDateTime.now());
+            listing.setWinningBidderId(userId);
+            listing.setFinalPrice(mockBidAmount);
+
+            // Save the updated listing
+            gemListingRepository.save(listing);
+
+            System.out.println("✅ [TESTING] Test purchase created successfully");
+            System.out.println("   Listing: " + listing.getGemName() + " (ID: " + listingId + ")");
+            System.out.println("   Buyer: " + userId);
+            System.out.println("   Final Price: $" + mockBidAmount);
+            System.out.println("   Status: " + listing.getListingStatus());
+
+            return new ApiResponse<>(true, "Test purchase created successfully", "Purchase created for " + listing.getGemName());
+
+        } catch (Exception e) {
+            System.err.println("Error creating test purchase: " + e.getMessage());
+            e.printStackTrace();
+            return new ApiResponse<>(false, "Failed to create test purchase: " + e.getMessage(), null);
         }
     }
 }

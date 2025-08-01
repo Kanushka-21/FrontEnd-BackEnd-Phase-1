@@ -8,6 +8,7 @@ import org.springframework.data.mongodb.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -202,5 +203,22 @@ public interface GemListingRepository extends MongoRepository<GemListing, String
     // Count certified listings in marketplace
     @Query(value = "{'listingStatus': {$in: ['APPROVED', 'ACTIVE']}, 'isActive': true, 'isCertified': ?0}", count = true)
     long countByCertificationInMarketplace(Boolean isCertified);
+    
+    // ===== BIDDING AND COUNTDOWN RELATED METHODS =====
+    
+    // Find expired bidding listings
+    List<GemListing> findByBiddingActiveTrueAndBiddingEndTimeBefore(LocalDateTime dateTime);
+    
+    // Find active bidding listings
+    List<GemListing> findByBiddingActiveTrue();
+    
+    // Find listings by winning bidder (for purchase history)
+    List<GemListing> findByWinningBidderIdAndListingStatus(String winningBidderId, String listingStatus);
+    
+    // Find seller's sold listings
+    List<GemListing> findBySellerId(String sellerId);
+    
+    // Find seller's sold listings with status
+    List<GemListing> findBySellerIdAndListingStatus(String sellerId, String listingStatus);
 }
 

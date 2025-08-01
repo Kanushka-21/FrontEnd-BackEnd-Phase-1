@@ -299,4 +299,121 @@ public class BiddingController {
                 .body(new ApiResponse<>(false, "Failed to activate countdown: " + e.getMessage(), null));
         }
     }
+
+    /**
+     * Process expired bids and complete transactions
+     */
+    @PostMapping("/process-expired")
+    @Operation(summary = "Process expired bids", description = "Process expired bids and complete transactions")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> processExpiredBids() {
+        System.out.println("🔄 Processing expired bids...");
+        
+        try {
+            ApiResponse<Map<String, Object>> response = biddingService.processExpiredBids();
+            
+            if (response.isSuccess()) {
+                System.out.println("✅ Expired bids processed successfully");
+                return ResponseEntity.ok(response);
+            } else {
+                System.err.println("❌ Failed to process expired bids: " + response.getMessage());
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("❌ Error in process expired bids endpoint: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError()
+                .body(new ApiResponse<>(false, "Failed to process expired bids: " + e.getMessage(), null));
+        }
+    }
+
+    /**
+     * Get purchase history for a user
+     */
+    @GetMapping("/purchase-history/{userId}")
+    @Operation(summary = "Get purchase history", description = "Get purchase history for a user")
+    public ResponseEntity<ApiResponse<java.util.List<Map<String, Object>>>> getPurchaseHistory(
+            @PathVariable String userId) {
+        
+        System.out.println("📋 Get purchase history request for user: " + userId);
+        
+        try {
+            ApiResponse<java.util.List<Map<String, Object>>> response = biddingService.getPurchaseHistory(userId);
+            
+            if (response.isSuccess()) {
+                System.out.println("✅ Purchase history retrieved successfully");
+                return ResponseEntity.ok(response);
+            } else {
+                System.err.println("❌ Failed to get purchase history: " + response.getMessage());
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("❌ Error in get purchase history endpoint: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError()
+                .body(new ApiResponse<>(false, "Failed to get purchase history: " + e.getMessage(), null));
+        }
+    }
+
+    /**
+     * Reduce countdown time for testing purposes
+     */
+    @PostMapping("/testing/reduce-countdown/{listingId}")
+    @Operation(summary = "Reduce countdown for testing", description = "Reduce countdown time for testing bid completion")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> reduceCountdownForTesting(
+            @PathVariable String listingId,
+            @RequestParam long reduceByMinutes) {
+        
+        System.out.println("🧪 [TESTING] Reduce countdown request for listing: " + listingId + 
+                          " by " + reduceByMinutes + " minutes");
+        
+        try {
+            ApiResponse<Map<String, Object>> response = biddingService.reduceCountdownForTesting(listingId, reduceByMinutes);
+            
+            if (response.isSuccess()) {
+                System.out.println("✅ [TESTING] Countdown reduced successfully");
+                return ResponseEntity.ok(response);
+            } else {
+                System.err.println("❌ [TESTING] Failed to reduce countdown: " + response.getMessage());
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("❌ [TESTING] Error in reduce countdown endpoint: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError()
+                .body(new ApiResponse<>(false, "Failed to reduce countdown: " + e.getMessage(), null));
+        }
+    }
+
+    /**
+     * Create test purchase history data for development/testing
+     */
+    @PostMapping("/testing/create-test-purchase/{userId}/{listingId}")
+    @Operation(summary = "Create test purchase data", description = "Create test purchase data for testing purposes")
+    public ResponseEntity<ApiResponse<String>> createTestPurchase(
+            @PathVariable String userId,
+            @PathVariable String listingId) {
+        
+        System.out.println("🧪 [TESTING] Creating test purchase for user: " + userId + ", listing: " + listingId);
+        
+        try {
+            ApiResponse<String> response = biddingService.createTestPurchase(userId, listingId);
+            
+            if (response.isSuccess()) {
+                System.out.println("✅ [TESTING] Test purchase created successfully");
+                return ResponseEntity.ok(response);
+            } else {
+                System.err.println("❌ [TESTING] Failed to create test purchase: " + response.getMessage());
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("❌ [TESTING] Error in create test purchase endpoint: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError()
+                .body(new ApiResponse<>(false, "Failed to create test purchase: " + e.getMessage(), null));
+        }
+    }
 }

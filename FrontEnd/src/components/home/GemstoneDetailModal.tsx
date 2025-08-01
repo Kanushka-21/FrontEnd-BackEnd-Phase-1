@@ -19,13 +19,15 @@ interface GemstoneModalProps {
   gemstone: DetailedGemstone | null;
   onClose: () => void;
   onPlaceBid: (amount: number) => void;
+  onCountdownUpdated?: () => void; // New callback for countdown updates
 }
 
 const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
   isOpen,
   gemstone,
   onClose,
-  onPlaceBid
+  onPlaceBid,
+  onCountdownUpdated
 }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [bidAmount, setBidAmount] = useState<string>('');
@@ -39,7 +41,8 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
   const [countdownData, setCountdownData] = useState({
     remainingTimeSeconds: 0,
     biddingActive: false,
-    isExpired: false
+    isExpired: false,
+    biddingEndTime: undefined as string | undefined
   });
   const [loadingBids, setLoadingBids] = useState(false);
 
@@ -86,7 +89,8 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
         setCountdownData({
           remainingTimeSeconds: countdownResult.data.remainingTimeSeconds || 0,
           biddingActive: countdownResult.data.biddingActive || false,
-          isExpired: countdownResult.data.isExpired || false
+          isExpired: countdownResult.data.isExpired || false,
+          biddingEndTime: countdownResult.data.biddingEndTime
         });
       }
 
@@ -344,6 +348,9 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
                       isExpired={countdownData.isExpired}
                       className="text-center"
                       showIcon={true}
+                      showTester={true}  // Enable testing tools
+                      biddingEndTime={countdownData.biddingEndTime}
+                      onCountdownUpdate={onCountdownUpdated} // Pass the callback to notify marketplace
                     />
                   </div>
                 </div>

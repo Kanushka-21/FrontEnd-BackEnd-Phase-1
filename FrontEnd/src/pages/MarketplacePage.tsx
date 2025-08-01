@@ -243,6 +243,49 @@ const MarketplacePage: React.FC = () => {
     };
   };
 
+  // Function to refresh countdown data for all current gemstones
+  const refreshAllCountdowns = async () => {
+    try {
+      console.log('🔄 Refreshing countdown data for all marketplace items...');
+      
+      // Update countdown data for all gemstones in parallel
+      const updatedGemstones = await Promise.all(
+        gemstones.map(async (gemstone) => {
+          try {
+            const countdownResponse = await fetch(`/api/bidding/listing/${gemstone.id}/countdown`);
+            const countdownResult = await countdownResponse.json();
+            
+            if (countdownResponse.ok && countdownResult.success && countdownResult.data) {
+              console.log(`⏰ Updated countdown for ${gemstone.name}:`, countdownResult.data);
+              
+              return {
+                ...gemstone,
+                biddingActive: countdownResult.data.biddingActive,
+                biddingStartTime: countdownResult.data.biddingStartTime,
+                biddingEndTime: countdownResult.data.biddingEndTime,
+                remainingTimeSeconds: countdownResult.data.remainingTimeSeconds,
+                remainingDays: countdownResult.data.remainingDays,
+                remainingHours: countdownResult.data.remainingHours,
+                remainingMinutes: countdownResult.data.remainingMinutes,
+                remainingSeconds: countdownResult.data.remainingSeconds,
+                isExpired: countdownResult.data.isExpired
+              };
+            }
+          } catch (error) {
+            console.warn(`⚠️ Failed to refresh countdown for ${gemstone.name}:`, error);
+          }
+          
+          return gemstone; // Return unchanged if refresh failed
+        })
+      );
+      
+      setGemstones(updatedGemstones);
+      console.log('✅ All countdown data refreshed');
+    } catch (error) {
+      console.error('❌ Error refreshing countdown data:', error);
+    }
+  };
+
   // Function to fetch marketplace listings from real database
   const fetchMarketplaceListings = async () => {
     setLoading(true);
@@ -280,7 +323,7 @@ const MarketplacePage: React.FC = () => {
           // Fetch latest bid for each gemstone
           try {
             // Fetch latest bids and countdown data for all gemstones in parallel
-            const bidPromises = convertedGemstones.map(async (gemstone) => {
+            const bidPromises = convertedGemstones.map(async (gemstone: DetailedGemstone) => {
               try {
                 console.log(`🔍 Fetching bids and countdown for gemstone ${gemstone.id} (${gemstone.name})`);
                 
@@ -307,12 +350,12 @@ const MarketplacePage: React.FC = () => {
                   
                   // Fallback to getting individual bids if stats aren't available
                   if (!gemstoneWithBids.latestBidPrice) {
-                    const bidResponse = await api.bids.getByGemstoneId(gemstone.id);
+                    const bidResponse = await api.getByGemstoneId(gemstone.id);
                     console.log(`📊 Bid response for ${gemstone.name}:`, bidResponse);
                     
                     if (bidResponse.success && bidResponse.data && bidResponse.data.length > 0) {
                       // Get highest bid amount
-                      const highestBid = bidResponse.data.reduce((highest, current) => 
+                      const highestBid = bidResponse.data.reduce((highest: any, current: any) => 
                         current.amount > highest.amount ? current : highest, bidResponse.data[0]);
                       
                       console.log(`💰 Highest bid for ${gemstone.name}:`, highestBid.amount);
@@ -829,6 +872,7 @@ const MarketplacePage: React.FC = () => {
             setSelectedGemstone(null);
           }}
           onPlaceBid={handlePlaceBid}
+          onCountdownUpdated={refreshAllCountdowns} // Pass countdown refresh callback
         />
       )}
 
