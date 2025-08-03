@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Bid Win Flow Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .step {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+        .step-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 10px;
+        }
+        .step-description {
+            color: #6b7280;
+            margin-bottom: 15px;
+        }
+        .test-btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+        .test-btn:hover {
+            background: #2563eb;
+        }
+        .test-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+        .test-result {
+            background: #f0f9f4;
+            border: 1px solid #bbf7d0;
+            border-radius: 6px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .test-result.error {
+            background: #fef2f2;
+            border-color: #fecaca;
+            color: #dc2626;
+        }
+        .flow-diagram {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 20px 0;
+            padding: 20px;
+            background: linear-gradient(90deg, #eff6ff 0%, #f0fdf4 100%);
+            border-radius: 8px;
+        }
+        .flow-step {
+            text-align: center;
+            flex: 1;
+            position: relative;
+        }
+        .flow-step:not(:last-child)::after {
+            content: '→';
+            position: absolute;
+            right: -20px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 20px;
+            color: #6b7280;
+        }
+        .flow-icon {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        .flow-label {
+            font-size: 12px;
+            color: #374151;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Complete Bid Win Flow Test</h1>
+        <p>This page tests the entire bid win workflow from bidding to purchase history display.</p>
+        
+        <div class="flow-diagram">
+            <div class="flow-step">
+                <div class="flow-icon">💰</div>
+                <div class="flow-label">Place Bid</div>
+            </div>
+            <div class="flow-step">
+                <div class="flow-icon">⏰</div>
+                <div class="flow-label">Win Bid</div>
+            </div>
+            <div class="flow-step">
+                <div class="flow-icon">🔔</div>
+                <div class="flow-label">Get Notification</div>
+            </div>
+            <div class="flow-step">
+                <div class="flow-icon">🛒</div>
+                <div class="flow-label">View Purchases</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="step">
+            <div class="step-title">Step 1: Create Test Bid & Win</div>
+            <div class="step-description">
+                This will place a bid on a random listing and immediately complete the bidding to simulate a win.
+            </div>
+            <button class="test-btn" onclick="createTestBidWin()" id="bidBtn">
+                🎯 Create Test Bid & Win
+            </button>
+            <div id="bidResult"></div>
+        </div>
+
+        <div class="step">
+            <div class="step-title">Step 2: Check BID_WON Notification</div>
+            <div class="step-description">
+                Verify that a BID_WON notification was created for the test user.
+            </div>
+            <button class="test-btn" onclick="checkNotification()" id="notificationBtn">
+                🔔 Check Notifications
+            </button>
+            <div id="notificationResult"></div>
+        </div>
+
+        <div class="step">
+            <div class="step-title">Step 3: Verify Purchase History</div>
+            <div class="step-description">
+                Check that the won item appears in the user's purchase history.
+            </div>
+            <button class="test-btn" onclick="checkPurchaseHistory()" id="purchaseBtn">
+                🛒 Check Purchase History
+            </button>
+            <div id="purchaseResult"></div>
+        </div>
+
+        <div class="step">
+            <div class="step-title">Step 4: Test Navigation</div>
+            <div class="step-description">
+                Test the notification click navigation to purchase history page.
+            </div>
+            <button class="test-btn" onclick="testNavigation()">
+                🧭 Test BID_WON Navigation
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const BASE_URL = 'http://localhost:9092';
+        const TEST_USER_ID = 'bid-test-user-' + Date.now(); // Unique user for each test
+        
+        async function createTestBidWin() {
+            const btn = document.getElementById('bidBtn');
+            const result = document.getElementById('bidResult');
+            
+            btn.disabled = true;
+            btn.textContent = 'Creating...';
+            result.innerHTML = '<div class="test-result">🔄 Creating test bid and win scenario...</div>';
+            
+            try {
+                // Step 1: Get available listings
+                const listingsResponse = await fetch(`${BASE_URL}/api/marketplace/listings`);
+                const listingsData = await listingsResponse.json();
+                
+                if (!listingsData.success || !listingsData.data.listings.length) {
+                    throw new Error('No listings available');
+                }
+                
+                const listing = listingsData.data.listings[0];
+                result.innerHTML += `<div class="test-result">✅ Found listing: ${listing.gemName} (ID: ${listing.id.substring(0, 8)}...)</div>`;
+                
+                // Step 2: Place bid
+                const bidData = {
+                    listingId: listing.id,
+                    bidderId: TEST_USER_ID,
+                    bidderName: "Test Winner",
+                    bidderEmail: "testwinner@example.com",
+                    bidAmount: listing.price + 50000,
+                    currency: "LKR",
+                    message: "Flow test bid"
+                };
+                
+                const bidResponse = await fetch(`${BASE_URL}/api/bidding/place-bid`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(bidData)
+                });
+                
+                const bidResult = await bidResponse.json();
+                if (!bidResult.success) {
+                    throw new Error('Failed to place bid: ' + bidResult.message);
+                }
+                
+                result.innerHTML += `<div class="test-result">✅ Bid placed successfully: LKR ${bidData.bidAmount.toLocaleString()}</div>`;
+                
+                // Step 3: Complete bidding (simulate win)
+                const completeResponse = await fetch(`${BASE_URL}/api/bidding/testing/complete-bidding/${listing.id}`, {
+                    method: 'POST'
+                });
+                
+                const completeResult = await completeResponse.json();
+                if (!completeResult.success) {
+                    throw new Error('Failed to complete bidding: ' + completeResult.message);
+                }
+                
+                result.innerHTML += `<div class="test-result">🎉 Bidding completed! Winner: ${completeResult.data}</div>`;
+                result.innerHTML += `<div class="test-result">✅ Test User ID: ${TEST_USER_ID}</div>`;
+                
+                // Enable next steps
+                document.getElementById('notificationBtn').disabled = false;
+                document.getElementById('purchaseBtn').disabled = false;
+                
+            } catch (error) {
+                result.innerHTML += `<div class="test-result error">❌ Error: ${error.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🎯 Create Test Bid & Win';
+            }
+        }
+        
+        async function checkNotification() {
+            const btn = document.getElementById('notificationBtn');
+            const result = document.getElementById('notificationResult');
+            
+            btn.disabled = true;
+            btn.textContent = 'Checking...';
+            result.innerHTML = '<div class="test-result">🔄 Checking for BID_WON notifications...</div>';
+            
+            try {
+                const response = await fetch(`${BASE_URL}/api/bidding/notifications/${TEST_USER_ID}?page=0&size=10`);
+                const data = await response.json();
+                
+                if (!data.success) {
+                    throw new Error('Failed to fetch notifications: ' + data.message);
+                }
+                
+                const notifications = data.data.notifications || [];
+                const bidWonNotifications = notifications.filter(n => n.type === 'BID_WON');
+                
+                result.innerHTML = `<div class="test-result">📊 Total notifications: ${notifications.length}</div>`;
+                result.innerHTML += `<div class="test-result">🎉 BID_WON notifications: ${bidWonNotifications.length}</div>`;
+                
+                if (bidWonNotifications.length > 0) {
+                    const notification = bidWonNotifications[0];
+                    result.innerHTML += `<div class="test-result">✅ Latest BID_WON: "${notification.title}"</div>`;
+                    result.innerHTML += `<div class="test-result">📝 Message: "${notification.message}"</div>`;
+                } else {
+                    result.innerHTML += `<div class="test-result error">❌ No BID_WON notifications found</div>`;
+                }
+                
+            } catch (error) {
+                result.innerHTML += `<div class="test-result error">❌ Error: ${error.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔔 Check Notifications';
+            }
+        }
+        
+        async function checkPurchaseHistory() {
+            const btn = document.getElementById('purchaseBtn');
+            const result = document.getElementById('purchaseResult');
+            
+            btn.disabled = true;
+            btn.textContent = 'Checking...';
+            result.innerHTML = '<div class="test-result">🔄 Checking purchase history...</div>';
+            
+            try {
+                const response = await fetch(`${BASE_URL}/api/bidding/purchase-history/${TEST_USER_ID}`);
+                const data = await response.json();
+                
+                if (!data.success) {
+                    throw new Error('Failed to fetch purchase history: ' + data.message);
+                }
+                
+                const purchases = data.data || [];
+                
+                result.innerHTML = `<div class="test-result">📊 Total purchases: ${purchases.length}</div>`;
+                
+                if (purchases.length > 0) {
+                    purchases.forEach((purchase, index) => {
+                        result.innerHTML += `<div class="test-result">✅ Purchase ${index + 1}: ${purchase.gemName}</div>`;
+                        result.innerHTML += `<div class="test-result">💰 Final Price: LKR ${purchase.finalPrice?.toLocaleString() || 'N/A'}</div>`;
+                        result.innerHTML += `<div class="test-result">📅 Purchase Date: ${new Date(purchase.purchaseDate).toLocaleString()}</div>`;
+                    });
+                } else {
+                    result.innerHTML += `<div class="test-result error">❌ No purchases found in history</div>`;
+                }
+                
+            } catch (error) {
+                result.innerHTML += `<div class="test-result error">❌ Error: ${error.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🛒 Check Purchase History';
+            }
+        }
+        
+        function testNavigation() {
+            alert(`🧭 Navigation Test\\n\\nWhen a user clicks a BID_WON notification:\\n\\n1. The notification is marked as read\\n2. User is redirected to: /buyer-dashboard?section=purchases\\n3. Purchase history page loads with won items\\n\\nThis ensures users can easily access their purchased items!`);
+            
+            // Open our test pages to demonstrate
+            window.open('file:///c:/Users/ASUS/OneDrive/Desktop/frontend+backend-phase 1/FrontEnd-BackEnd-Phase-1/test-notification-navigation.html', '_blank');
+            setTimeout(() => {
+                window.open('file:///c:/Users/ASUS/OneDrive/Desktop/frontend+backend-phase 1/FrontEnd-BackEnd-Phase-1/test-purchase-history.html', '_blank');
+            }, 1000);
+        }
+        
+        // Initialize
+        window.onload = () => {
+            document.getElementById('notificationBtn').disabled = true;
+            document.getElementById('purchaseBtn').disabled = true;
+        };
+    </script>
+</body>
+</html>

@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLocation } from 'react-router-dom';
 import { 
   ShoppingBag, User, 
   TrendingUp, Menu, Home, FileText
@@ -19,8 +20,22 @@ import { SidebarItem } from './BuyerDashboardComponents/shared';
 
 const BuyerDashboard = () => {
   const { user, loading } = useAuth();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState('overview');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+
+  // Check URL parameters on component mount and when location changes
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const section = urlParams.get('section');
+    
+    console.log('🔧 BuyerDashboard URL params:', { section, pathname: location.pathname });
+    
+    if (section && ['overview', 'advertisements', 'purchases', 'bids', 'profile'].includes(section)) {
+      console.log('🔧 Setting active tab from URL parameter:', section);
+      setActiveTab(section);
+    }
+  }, [location]);
 
   // Show loading state
   if (loading) {

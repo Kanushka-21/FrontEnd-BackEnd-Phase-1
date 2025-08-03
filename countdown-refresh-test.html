@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Countdown Refresh Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .api-test {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .success {
+            color: green;
+        }
+        .error {
+            color: red;
+        }
+        .info {
+            color: blue;
+        }
+        .warning {
+            color: orange;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Countdown Refresh Test</h1>
+    <p>This page tests the countdown reduction and refresh functionality for the marketplace cards.</p>
+
+    <div class="container">
+        <h2>Step 1: Get Available Listings</h2>
+        <button onclick="getListings()">Get Marketplace Listings</button>
+        <div id="listings-result"></div>
+    </div>
+
+    <div class="container">
+        <h2>Step 2: Check Current Countdown</h2>
+        <div>
+            <label>Listing ID: </label>
+            <input type="text" id="listingId" placeholder="Enter listing ID" style="width: 300px; padding: 5px;">
+            <button onclick="getCurrentCountdown()">Get Current Countdown</button>
+        </div>
+        <div id="countdown-result"></div>
+    </div>
+
+    <div class="container">
+        <h2>Step 3: Reduce Countdown for Testing</h2>
+        <div>
+            <label>Reduce by minutes: </label>
+            <input type="number" id="reduceMinutes" value="60" min="0.5" step="0.5" style="padding: 5px;">
+            <button onclick="reduceCountdown()">Reduce Countdown</button>
+        </div>
+        <div id="reduce-result"></div>
+    </div>
+
+    <div class="container">
+        <h2>Step 4: Verify Updated Countdown</h2>
+        <button onclick="verifyCountdown()">Check Updated Countdown</button>
+        <div id="verify-result"></div>
+    </div>
+
+    <div class="container">
+        <h2>Test Summary</h2>
+        <div id="test-summary">
+            <p>🔄 <strong>Expected Flow:</strong></p>
+            <ol>
+                <li>Get marketplace listings and select one with active bidding</li>
+                <li>Check the current countdown time</li>
+                <li>Use the testing API to reduce the countdown</li>
+                <li>Verify the countdown was reduced</li>
+                <li>In the actual marketplace, when you reduce countdown in the modal, it should refresh all cards</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:9092';
+        let selectedListingId = '';
+
+        async function makeApiCall(url, method = 'GET') {
+            try {
+                const response = await fetch(url, { method });
+                const data = await response.json();
+                return { success: response.ok, data, status: response.status };
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+
+        async function getListings() {
+            const resultDiv = document.getElementById('listings-result');
+            resultDiv.innerHTML = '<p class="info">🔄 Fetching listings...</p>';
+
+            const result = await makeApiCall(`${API_BASE}/api/marketplace/listings`);
+            
+            if (result.success && result.data.success) {
+                const listings = result.data.data.listings;
+                const listingsWithBids = listings.filter(listing => listing.biddingActive);
+                
+                if (listingsWithBids.length > 0) {
+                    selectedListingId = listingsWithBids[0].id;
+                    document.getElementById('listingId').value = selectedListingId;
+                    
+                    resultDiv.innerHTML = `
+                        <div class="success">✅ Found ${listings.length} listings (${listingsWithBids.length} with active bidding)</div>
+                        <p><strong>Selected listing:</strong> ${listingsWithBids[0].gemName} (ID: ${selectedListingId})</p>
+                        <p><strong>Bidding Active:</strong> ${listingsWithBids[0].biddingActive ? 'Yes' : 'No'}</p>
+                        <details>
+                            <summary>All Listings (click to expand)</summary>
+                            <pre>${JSON.stringify(listings, null, 2)}</pre>
+                        </details>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="warning">⚠️ Found ${listings.length} listings but none have active bidding</div>
+                        <p>You may need to place a bid on a listing first to activate its countdown.</p>
+                        <details>
+                            <summary>Available Listings</summary>
+                            <pre>${JSON.stringify(listings, null, 2)}</pre>
+                        </details>
+                    `;
+                }
+            } else {
+                resultDiv.innerHTML = `<div class="error">❌ Failed to fetch listings: ${result.error || result.data?.message}</div>`;
+            }
+        }
+
+        async function getCurrentCountdown() {
+            const listingId = document.getElementById('listingId').value;
+            const resultDiv = document.getElementById('countdown-result');
+            
+            if (!listingId) {
+                resultDiv.innerHTML = '<div class="error">❌ Please enter a listing ID</div>';
+                return;
+            }
+
+            resultDiv.innerHTML = '<p class="info">🔄 Fetching countdown...</p>';
+
+            const result = await makeApiCall(`${API_BASE}/api/bidding/listing/${listingId}/countdown`);
+            
+            if (result.success && result.data.success) {
+                const countdown = result.data.data;
+                const endTime = new Date(countdown.biddingEndTime);
+                
+                resultDiv.innerHTML = `
+                    <div class="success">✅ Current Countdown Status</div>
+                    <p><strong>Bidding Active:</strong> ${countdown.biddingActive ? 'Yes' : 'No'}</p>
+                    <p><strong>Remaining Time:</strong> ${countdown.remainingTimeSeconds} seconds 
+                       (${countdown.remainingDays}d ${countdown.remainingHours}h ${countdown.remainingMinutes}m ${countdown.remainingSeconds}s)</p>
+                    <p><strong>End Time:</strong> ${endTime.toLocaleString()}</p>
+                    <p><strong>Is Expired:</strong> ${countdown.isExpired ? 'Yes' : 'No'}</p>
+                `;
+            } else {
+                resultDiv.innerHTML = `<div class="error">❌ Failed to fetch countdown: ${result.error || result.data?.message}</div>`;
+            }
+        }
+
+        async function reduceCountdown() {
+            const listingId = document.getElementById('listingId').value;
+            const reduceMinutes = document.getElementById('reduceMinutes').value;
+            const resultDiv = document.getElementById('reduce-result');
+            
+            if (!listingId) {
+                resultDiv.innerHTML = '<div class="error">❌ Please enter a listing ID</div>';
+                return;
+            }
+
+            if (!reduceMinutes || reduceMinutes <= 0) {
+                resultDiv.innerHTML = '<div class="error">❌ Please enter a valid number of minutes</div>';
+                return;
+            }
+
+            resultDiv.innerHTML = '<p class="info">🔄 Reducing countdown...</p>';
+
+            const result = await makeApiCall(`${API_BASE}/api/bidding/testing/reduce-countdown/${listingId}?reduceByMinutes=${reduceMinutes}`, 'POST');
+            
+            if (result.success && result.data.success) {
+                const reduction = result.data.data;
+                const newEndTime = new Date(reduction.newEndTime);
+                const originalEndTime = new Date(reduction.originalEndTime);
+                
+                resultDiv.innerHTML = `
+                    <div class="success">✅ Countdown Reduced Successfully</div>
+                    <p><strong>Reduced By:</strong> ${reduction.reducedByMinutes} minutes</p>
+                    <p><strong>Original End Time:</strong> ${originalEndTime.toLocaleString()}</p>
+                    <p><strong>New End Time:</strong> ${newEndTime.toLocaleString()}</p>
+                    <p><strong>Remaining Time:</strong> ${reduction.remainingTimeSeconds} seconds 
+                       (${reduction.remainingDays}d ${reduction.remainingHours}h ${reduction.remainingMinutes}m ${reduction.remainingSeconds}s)</p>
+                    <div class="info">💡 Now the marketplace cards should reflect this updated time when refreshed!</div>
+                `;
+            } else {
+                resultDiv.innerHTML = `<div class="error">❌ Failed to reduce countdown: ${result.error || result.data?.message}</div>`;
+            }
+        }
+
+        async function verifyCountdown() {
+            await getCurrentCountdown();
+            
+            const verifyDiv = document.getElementById('verify-result');
+            verifyDiv.innerHTML = `
+                <div class="info">✅ Countdown verified - check the result above</div>
+                <p><strong>Next Steps:</strong></p>
+                <ul>
+                    <li>Open the marketplace page in your browser</li>
+                    <li>Find the gemstone card for listing ID: ${document.getElementById('listingId').value}</li>
+                    <li>Click "View Details" to open the modal</li>
+                    <li>Use the testing tools in the modal to reduce countdown further</li>
+                    <li>Close the modal and verify that the card's countdown is updated</li>
+                </ul>
+            `;
+        }
+
+        // Auto-load listings when page loads
+        window.onload = () => {
+            getListings();
+        };
+    </script>
+</body>
+</html>

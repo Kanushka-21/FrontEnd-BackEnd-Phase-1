@@ -19,13 +19,15 @@ interface GemstoneModalProps {
   gemstone: DetailedGemstone | null;
   onClose: () => void;
   onPlaceBid: (amount: number) => void;
+  onCountdownUpdated?: () => void; // New callback for countdown updates
 }
 
 const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
   isOpen,
   gemstone,
   onClose,
-  onPlaceBid
+  onPlaceBid,
+  onCountdownUpdated
 }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [bidAmount, setBidAmount] = useState<string>('');
@@ -39,7 +41,8 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
   const [countdownData, setCountdownData] = useState({
     remainingTimeSeconds: 0,
     biddingActive: false,
-    isExpired: false
+    isExpired: false,
+    biddingEndTime: undefined as string | undefined
   });
   const [loadingBids, setLoadingBids] = useState(false);
 
@@ -54,12 +57,28 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
       ? [gemstone.image] 
       : ['https://via.placeholder.com/400x300?text=No+Image+Available'];
 
+  console.log('🖼️ Modal Images Debug Info:');
+  console.log('🖼️ Gemstone object:', gemstone);
+  console.log('🖼️ Gemstone.images:', gemstone?.images);
+  console.log('🖼️ Gemstone.image:', gemstone?.image);
+  console.log('🖼️ Final images array:', images);
+  console.log('🖼️ Images count:', images.length);
+
   // Load bid data when modal opens
   useEffect(() => {
     if (isOpen && gemstone?.id) {
+      console.log('🔄 Modal opened, loading bid data for gemstone:', gemstone.id);
       loadBidData();
     }
   }, [isOpen, gemstone?.id]);
+
+  // Reset image index when gemstone changes
+  useEffect(() => {
+    if (gemstone) {
+      setCurrentImageIndex(0);
+      console.log('🖼️ Gemstone changed, reset image index to 0');
+    }
+  }, [gemstone?.id]);
 
   const loadBidData = async () => {
     if (!gemstone?.id) return;
@@ -86,7 +105,8 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
         setCountdownData({
           remainingTimeSeconds: countdownResult.data.remainingTimeSeconds || 0,
           biddingActive: countdownResult.data.biddingActive || false,
-          isExpired: countdownResult.data.isExpired || false
+          isExpired: countdownResult.data.isExpired || false,
+          biddingEndTime: countdownResult.data.biddingEndTime
         });
       }
 
@@ -153,11 +173,40 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
                 <div className="max-w-md mx-auto h-[300px] rounded-2xl overflow-hidden border bg-gray-50">
                   <img
                     src={images[currentImageIndex]}
-                    alt={gemstone.name}
+                    alt={`${gemstone.name} - Image ${currentImageIndex + 1}`}
                     className="w-full h-full object-contain"
                     onError={(e) => {
-                      console.error('Failed to load image:', images[currentImageIndex]);
-                      e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Image+Not+Found';
+                      console.error('🚫 Failed to load image:', images[currentImageIndex]);
+                      console.error('🚫 Error event:', e);
+                      
+                      // Try to construct a different URL format as fallback
+                      const currentSrc = e.currentTarget.src;
+                      if (!currentSrc.includes('placeholder') && !currentSrc.includes('Not+Found')) {
+                        // Try alternative image URL formats
+                        const originalPath = images[currentImageIndex];
+                        let fallbackUrl = originalPath;
+                        
+                        // If it's a relative path, try different base URLs
+                        if (!originalPath.startsWith('http')) {
+                          if (originalPath.startsWith('/uploads/')) {
+                            fallbackUrl = `http://localhost:9092${originalPath}`;
+                          } else if (originalPath.startsWith('uploads/')) {
+                            fallbackUrl = `http://localhost:9092/${originalPath}`;
+                          } else {
+                            fallbackUrl = `http://localhost:9092/uploads/${originalPath}`;
+                          }
+                        }
+                        
+                        console.log('🔄 Trying fallback URL:', fallbackUrl);
+                        e.currentTarget.src = fallbackUrl;
+                      } else {
+                        // Final fallback to placeholder
+                        console.log('🔄 Using final placeholder fallback');
+                        e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Image+Not+Available';
+                      }
+                    }}
+                    onLoad={() => {
+                      console.log('✅ Successfully loaded image:', images[currentImageIndex]);
                     }}
                   />
                 </div>
@@ -184,8 +233,31 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
                           alt={`${gemstone.name} view ${index + 1}`} 
                           className="w-full h-full object-cover"
                           onError={(e) => {
-                            console.error('Failed to load thumbnail:', img);
-                            e.currentTarget.src = 'https://via.placeholder.com/100x100?text=Error';
+                            console.error('🚫 Failed to load thumbnail:', img);
+                            
+                            // Try alternative URL formats for thumbnails too
+                            const currentSrc = e.currentTarget.src;
+                            if (!currentSrc.includes('placeholder') && !currentSrc.includes('Error')) {
+                              let fallbackUrl = img;
+                              
+                              if (!img.startsWith('http')) {
+                                if (img.startsWith('/uploads/')) {
+                                  fallbackUrl = `http://localhost:9092${img}`;
+                                } else if (img.startsWith('uploads/')) {
+                                  fallbackUrl = `http://localhost:9092/${img}`;
+                                } else {
+                                  fallbackUrl = `http://localhost:9092/uploads/${img}`;
+                                }
+                              }
+                              
+                              console.log('🔄 Trying thumbnail fallback URL:', fallbackUrl);
+                              e.currentTarget.src = fallbackUrl;
+                            } else {
+                              e.currentTarget.src = 'https://via.placeholder.com/100x100?text=No+Image';
+                            }
+                          }}
+                          onLoad={() => {
+                            console.log('✅ Successfully loaded thumbnail:', img);
                           }}
                         />
                       </button>
@@ -342,8 +414,12 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
                       initialRemainingSeconds={countdownData.remainingTimeSeconds}
                       biddingActive={countdownData.biddingActive}
                       isExpired={countdownData.isExpired}
+                      listingStatus={gemstone.listingStatus}
                       className="text-center"
                       showIcon={true}
+                      showTester={true}  // Enable testing tools
+                      biddingEndTime={countdownData.biddingEndTime}
+                      onCountdownUpdate={onCountdownUpdated} // Pass the callback to notify marketplace
                     />
                   </div>
                 </div>

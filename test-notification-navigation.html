@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notification Navigation Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .notification-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #f9fafb;
+        }
+        .notification-card:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+        }
+        .notification-card.bid-won {
+            border-left: 4px solid #10b981;
+            background: #f0fdf4;
+        }
+        .notification-title {
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 5px;
+        }
+        .notification-message {
+            color: #6b7280;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+        .notification-type {
+            font-size: 12px;
+            color: #9ca3af;
+            font-family: monospace;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6b7280;
+        }
+        .simulate-section {
+            background: #eff6ff;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border: 1px solid #bfdbfe;
+        }
+        .simulate-btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+        .simulate-btn:hover {
+            background: #059669;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔔 Notification Navigation Test</h1>
+        
+        <div class="simulate-section">
+            <h3>Simulate Navigation</h3>
+            <p>Click these buttons to test different navigation scenarios:</p>
+            <button class="simulate-btn" onclick="simulateBidWonClick()">
+                🎉 Simulate BID_WON Notification Click
+            </button>
+            <button class="simulate-btn" onclick="simulateOtherNotificationClick()">
+                📢 Simulate Other Notification Click
+            </button>
+        </div>
+        
+        <h2>Recent Notifications for Test User</h2>
+        <div id="notifications">
+            <div class="loading">Loading notifications...</div>
+        </div>
+    </div>
+
+    <script>
+        const BASE_URL = 'http://localhost:9092';
+        const TEST_USER_ID = 'buyer-test-123';
+        
+        async function loadNotifications() {
+            const container = document.getElementById('notifications');
+            
+            try {
+                console.log('🔔 Loading notifications for user:', TEST_USER_ID);
+                
+                const response = await fetch(`${BASE_URL}/api/bidding/notifications/${TEST_USER_ID}?page=0&size=10`);
+                const result = await response.json();
+                
+                console.log('🔔 Notifications response:', result);
+                
+                if (result.success && result.data && result.data.notifications) {
+                    const notifications = result.data.notifications;
+                    
+                    if (notifications.length === 0) {
+                        container.innerHTML = '<div class="loading">No notifications found</div>';
+                        return;
+                    }
+                    
+                    const notificationCards = notifications.map(notification => {
+                        const cardClass = notification.type === 'BID_WON' ? 'notification-card bid-won' : 'notification-card';
+                        
+                        return `
+                            <div class="${cardClass}" onclick="handleNotificationClick('${notification.type}', '${notification.listingId || ''}')">
+                                <div class="notification-title">${notification.title}</div>
+                                <div class="notification-message">${notification.message}</div>
+                                <div class="notification-type">Type: ${notification.type} | ${notification.isRead ? 'READ' : 'UNREAD'}</div>
+                            </div>
+                        `;
+                    }).join('');
+                    
+                    container.innerHTML = `
+                        <div style="margin-bottom: 15px; color: #374151;">
+                            <strong>Found ${notifications.length} notification(s)</strong> 
+                            <span style="color: #ef4444;">(${result.data.unreadCount} unread)</span>
+                        </div>
+                        ${notificationCards}
+                    `;
+                } else {
+                    container.innerHTML = '<div class="loading">Failed to load notifications</div>';
+                }
+            } catch (error) {
+                console.error('🔔 Error loading notifications:', error);
+                container.innerHTML = '<div class="loading">Error loading notifications</div>';
+            }
+        }
+        
+        function handleNotificationClick(type, listingId) {
+            console.log('🔔 Notification clicked:', { type, listingId });
+            
+            // Simulate the actual notification navigation logic
+            if (type === 'BID_WON' || type === 'ITEM_SOLD') {
+                console.log('🔔 BID_WON/ITEM_SOLD clicked - would navigate to Purchase History');
+                alert('✅ BID_WON Navigation Test\\n\\nThis would redirect to:\\n/buyer-dashboard?section=purchases\\n\\n(In real app, this opens the Purchase History page)');
+                
+                // In a real app, this would be:
+                // window.location.href = '/buyer-dashboard?section=purchases';
+                
+                // For testing, let's open our test purchase history page
+                const purchaseHistoryUrl = 'file:///c:/Users/ASUS/OneDrive/Desktop/frontend+backend-phase 1/FrontEnd-BackEnd-Phase-1/test-purchase-history.html';
+                window.open(purchaseHistoryUrl, '_blank');
+                
+            } else if (listingId) {
+                console.log('🔔 Other notification with listingId clicked - would navigate to marketplace');
+                alert(`📢 Other Notification Navigation Test\\n\\nThis would redirect to:\\n/marketplace?viewGemstone=${listingId}\\n\\n(In real app, this opens the specific gemstone details)`);
+                
+                // In a real app, this would be:
+                // window.location.href = `/marketplace?viewGemstone=${listingId}`;
+                
+            } else {
+                console.log('🔔 Notification without specific navigation');
+                alert('ℹ️ No specific navigation for this notification type');
+            }
+        }
+        
+        function simulateBidWonClick() {
+            console.log('🎉 Simulating BID_WON click');
+            handleNotificationClick('BID_WON', '6867894f52772b2dff3510d3');
+        }
+        
+        function simulateOtherNotificationClick() {
+            console.log('📢 Simulating other notification click');
+            handleNotificationClick('BID_PLACED', '6867894f52772b2dff3510d3');
+        }
+        
+        // Load notifications on page load
+        window.onload = () => loadNotifications();
+    </script>
+</body>
+</html>

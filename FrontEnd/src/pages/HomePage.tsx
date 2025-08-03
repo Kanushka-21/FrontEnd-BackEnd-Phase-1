@@ -27,7 +27,32 @@ const HomePage: React.FC = () => {
   const [featuredLoading, setFeaturedLoading] = useState<boolean>(true);
   const [featuredError, setFeaturedError] = useState<string | null>(null);
 
-  // Helper to construct proper image URL
+  // Helper to fetch countdown data for a gemstone
+  const fetchGemstoneCountdown = async (listingId: string) => {
+    try {
+      const response = await fetch(`http://localhost:9092/api/bidding/listing/${listingId}/countdown`);
+      if (response.ok) {
+        const result = await response.json();
+        console.log(`⏰ Countdown API response for listing ${listingId}:`, result);
+        
+        // Extract the actual countdown data from the API response
+        if (result.success && result.data) {
+          const countdownData = {
+            remainingSeconds: result.data.remainingTimeSeconds || 0,
+            active: result.data.biddingActive || false,
+            expired: result.data.isExpired || false,
+            biddingStartTime: result.data.biddingStartTime,
+            biddingEndTime: result.data.biddingEndTime
+          };
+          console.log(`⏰ Processed countdown data for listing ${listingId}:`, countdownData);
+          return countdownData;
+        }
+      }
+    } catch (error) {
+      console.error(`❌ Error fetching countdown for listing ${listingId}:`, error);
+    }
+    return null;
+  };
   const constructImageUrl = (imagePath: string): string => {
     console.log('🖼️ Constructing image URL for path:', imagePath);
     
@@ -55,27 +80,29 @@ const HomePage: React.FC = () => {
   };
 
   // Helper to convert backend GemListing to frontend DetailedGemstone format
-  const convertToDetailedGemstone = (listing: any): DetailedGemstone => {
+  const convertToDetailedGemstone = (listing: any, countdownData?: any): DetailedGemstone => {
     console.log('🔄 Converting listing to DetailedGemstone:', listing);
+    console.log('⏰ With countdown data:', countdownData);
     
     // Extract all images from the backend listing
     const allImages: string[] = [];
+    let primaryImage = '';
     
-    // Add primary image if it exists
-    if (listing.primaryImageUrl) {
-      console.log('📷 Found primary image URL:', listing.primaryImageUrl);
-      allImages.push(constructImageUrl(listing.primaryImageUrl));
-    }
-    
-    // Add all images from the images array
+    // First, prioritize images from the images array (which are more reliable)
     if (listing.images && Array.isArray(listing.images)) {
       console.log('📷 Found images array:', listing.images);
-      listing.images.forEach((img: any, index: number) => {
+      
+      // Sort images by displayOrder and find primary image
+      const sortedImages = listing.images.sort((a: any, b: any) => {
+        return (a.displayOrder || 0) - (b.displayOrder || 0);
+      });
+      
+      sortedImages.forEach((img: any, index: number) => {
         console.log(`📷 Processing image ${index + 1}:`, img);
         let imageUrl = '';
-        if (typeof img === 'string') {
-          imageUrl = constructImageUrl(img);
-        } else if (img && img.imageUrl) {
+        
+        // Extract imageUrl from the image object
+        if (img && img.imageUrl) {
           imageUrl = constructImageUrl(img.imageUrl);
         } else if (img && img.url) {
           imageUrl = constructImageUrl(img.url);
@@ -83,40 +110,87 @@ const HomePage: React.FC = () => {
           imageUrl = constructImageUrl(img.imagePath);
         } else if (img && img.path) {
           imageUrl = constructImageUrl(img.path);
+        } else if (typeof img === 'string') {
+          imageUrl = constructImageUrl(img);
         } else {
           console.log('❓ Unknown image format:', img);
         }
         
-        if (imageUrl && !allImages.includes(imageUrl)) {
-          console.log('✅ Added image URL:', imageUrl);
+        if (imageUrl) {
           allImages.push(imageUrl);
+          console.log('✅ Added image URL:', imageUrl);
+          
+          // Set as primary if it's marked as primary or if it's the first image
+          if ((img.isPrimary === true || index === 0) && !primaryImage) {
+            primaryImage = imageUrl;
+            console.log('🏆 Set as primary image:', imageUrl);
+          }
         }
       });
+    }
+    
+    // Fallback to primaryImageUrl only if no images found in array
+    if (allImages.length === 0 && listing.primaryImageUrl) {
+      console.log('📷 Using fallback primaryImageUrl:', listing.primaryImageUrl);
+      const fallbackUrl = constructImageUrl(listing.primaryImageUrl);
+      allImages.push(fallbackUrl);
+      primaryImage = fallbackUrl;
     }
     
     // Fallback to single image property if no images found
     if (allImages.length === 0 && listing.image) {
       console.log('📷 Using fallback image property:', listing.image);
-      allImages.push(constructImageUrl(listing.image));
+      const fallbackUrl = constructImageUrl(listing.image);
+      allImages.push(fallbackUrl);
+      primaryImage = fallbackUrl;
     }
     
-    // Check for other possible image fields
+    // Check for other possible image fields if still no images
     if (allImages.length === 0) {
       const possibleImageFields = ['imageUrl', 'imagePath', 'photo', 'picture'];
       for (const field of possibleImageFields) {
         if (listing[field]) {
           console.log(`📷 Found image in field '${field}':`, listing[field]);
-          allImages.push(constructImageUrl(listing[field]));
+          const fallbackUrl = constructImageUrl(listing[field]);
+          allImages.push(fallbackUrl);
+          primaryImage = fallbackUrl;
           break;
         }
       }
     }
     
-    // Use first image as primary, or placeholder if no images
-    const primaryImage = allImages.length > 0 ? allImages[0] : 'https://via.placeholder.com/400x300?text=Gemstone';
+    // Use primary image or first image, or placeholder if no images
+    if (!primaryImage && allImages.length > 0) {
+      primaryImage = allImages[0];
+    }
+    
+    if (!primaryImage) {
+      primaryImage = 'https://via.placeholder.com/400x300?text=Gemstone';
+    }
+    
+    // Use countdown data if provided, otherwise use listing data
+    let remainingTimeSeconds = 0;
+    let biddingActive = false;
+    let isExpired = false;
+
+    if (countdownData) {
+      // Use countdown data from API
+      remainingTimeSeconds = countdownData.remainingSeconds || 0;
+      biddingActive = countdownData.active !== undefined ? countdownData.active : false;
+      isExpired = countdownData.expired !== undefined ? countdownData.expired : false;
+      console.log(`⏰ Using countdown API data - remainingSeconds: ${remainingTimeSeconds}, active: ${biddingActive}, expired: ${isExpired}`);
+    } else {
+      // Fallback to listing data
+      remainingTimeSeconds = listing.remainingTimeSeconds || 0;
+      biddingActive = listing.biddingActive || false;
+      isExpired = listing.isExpired || false;
+      console.log(`⏰ Using listing data - remainingSeconds: ${remainingTimeSeconds}, active: ${biddingActive}, expired: ${isExpired}`);
+    }
+    
     console.log('🏆 Primary image selected:', primaryImage);
     console.log('📚 All images:', allImages);
     console.log('👤 Seller information - userName:', listing.userName);
+    console.log('⏰ Countdown info - remainingSeconds:', remainingTimeSeconds, 'biddingActive:', biddingActive, 'isExpired:', isExpired);
     
     return {
       id: listing.id || listing._id,
@@ -127,7 +201,7 @@ const HomePage: React.FC = () => {
         max: listing.price ? Math.floor(Number(listing.price) * 1.2) : 0
       },
       image: primaryImage,
-      images: allImages,
+      images: allImages, // Include all uploaded images
       certified: listing.isCertified || false,
       weight: listing.weight ? parseFloat(listing.weight) : 0,
       color: listing.color || 'Unknown',
@@ -142,6 +216,13 @@ const HomePage: React.FC = () => {
         height: parseFloat(listing.measurements?.split('x')[2] || '0') || 0
       },
       transparency: 'transparent' as const,
+      // Add bidding-related fields with countdown data priority
+      currentBid: listing.latestBidPrice || 0,
+      latestBidPrice: listing.latestBidPrice || 0,
+      totalBids: listing.totalBids || 0,
+      biddingActive,
+      remainingTimeSeconds,
+      isExpired,
       specifications: {
         species: listing.species || 'Unknown',
         variety: listing.variety || 'Unknown',
@@ -162,19 +243,20 @@ const HomePage: React.FC = () => {
     };
   };
 
-  // Function to fetch top 4 highest-priced gemstones
+  // Function to fetch top 4 most recently bidded gemstones
   const fetchFeaturedGemstones = async () => {
     setFeaturedLoading(true);
     setFeaturedError(null);
     
     try {
-      console.log('🔍 Fetching top 4 highest-priced gemstones for featured section...');
+      console.log('🔍 Fetching top 4 most recently bidded gemstones for featured section...');
       
-      // Fetch gemstones sorted by price descending, limit to 4
+      // Fetch gemstones sorted by biddingStartTime descending (most recently bidded first)
+      // Only include items that have active bidding
       const response = await api.marketplace.getListings({
         page: 0,
         size: 4,
-        sortBy: 'price',
+        sortBy: 'biddingStartTime',
         sortDir: 'desc'
       });
       
@@ -182,15 +264,53 @@ const HomePage: React.FC = () => {
         const listings = response.data.listings || [];
         console.log('✅ Successfully fetched featured gemstones:', listings);
         
-        if (listings.length === 0) {
-          console.log('📋 No approved listings found for featured section');
-          setFeaturedGemstones([]);
-          setFeaturedError('No featured gemstones available at the moment');
+        // Filter to only show items with active bidding
+        const activeBiddingListings = listings.filter(listing => 
+          listing.biddingActive === true && listing.biddingStartTime
+        );
+        
+        if (activeBiddingListings.length === 0) {
+          console.log('📋 No active bidding listings found, falling back to highest-priced items');
+          
+          // Fallback to highest-priced items if no active bidding
+          const fallbackResponse = await api.marketplace.getListings({
+            page: 0,
+            size: 4,
+            sortBy: 'price',
+            sortDir: 'desc'
+          });
+          
+          if (fallbackResponse.success && fallbackResponse.data) {
+            const fallbackListings = fallbackResponse.data.listings || [];
+            // Also fetch countdown data for fallback listings
+            const convertedGemstones = await Promise.all(
+              fallbackListings.map(async (listing, index) => {
+                console.log(`🔄 Converting fallback listing ${index + 1}/${fallbackListings.length}: ${listing.gemName} (ID: ${listing.id})`);
+                const countdownData = await fetchGemstoneCountdown(listing.id);
+                const converted = convertToDetailedGemstone(listing, countdownData);
+                console.log(`✅ Converted fallback gemstone ${index + 1}: ${converted.name} - remainingTimeSeconds: ${converted.remainingTimeSeconds}`);
+                return converted;
+              })
+            );
+            setFeaturedGemstones(convertedGemstones);
+            console.log('✅ Featured gemstones set with fallback data and countdown:', convertedGemstones);
+          } else {
+            setFeaturedError('No featured gemstones available at the moment');
+          }
         } else {
-          // Convert listings to DetailedGemstone format
-          const convertedGemstones = listings.map(convertToDetailedGemstone);
+          // Convert listings to DetailedGemstone format with countdown data
+          const convertedGemstones = await Promise.all(
+            activeBiddingListings.map(async (listing, index) => {
+              console.log(`🔄 Converting listing ${index + 1}/${activeBiddingListings.length}: ${listing.gemName} (ID: ${listing.id})`);
+              // Fetch countdown data for each listing
+              const countdownData = await fetchGemstoneCountdown(listing.id);
+              const converted = convertToDetailedGemstone(listing, countdownData);
+              console.log(`✅ Converted gemstone ${index + 1}: ${converted.name} - remainingTimeSeconds: ${converted.remainingTimeSeconds}`);
+              return converted;
+            })
+          );
           setFeaturedGemstones(convertedGemstones);
-          console.log('✅ Featured gemstones converted and set:', convertedGemstones);
+          console.log('✅ Featured gemstones with active bidding and countdown data set:', convertedGemstones);
         }
       } else {
         console.error('❌ Failed to fetch featured gemstones:', response.message);
@@ -206,8 +326,17 @@ const HomePage: React.FC = () => {
 
   // Fetch featured gemstones on component mount
   useEffect(() => {
+    console.log('🚀 HomePage mounted, fetching featured gemstones...');
     fetchFeaturedGemstones();
   }, []);
+
+  // Add a second useEffect to log when featured gemstones change
+  useEffect(() => {
+    console.log('📊 Featured gemstones state updated:', featuredGemstones.length, 'items');
+    featuredGemstones.forEach((gemstone, index) => {
+      console.log(`📋 Gemstone ${index + 1}: ${gemstone.name} - remainingTimeSeconds: ${gemstone.remainingTimeSeconds}, biddingActive: ${gemstone.biddingActive}`);
+    });
+  }, [featuredGemstones]);
   const statistics = [
     { title: 'Verified Gems', value: 2847, icon: <CheckCircleOutlined className="text-blue-500" /> },
     { title: 'Active Traders', value: 1230, icon: <UserOutlined className="text-green-500" /> },
@@ -538,8 +667,13 @@ const HomePage: React.FC = () => {
                 Featured Gemstones
               </Title>
               <Paragraph className="!text-sm sm:!text-base lg:!text-lg !text-gray-600 max-w-2xl mx-auto">
-                Discover our highest-priced premium gemstones from verified sellers
+                Discover our most engaging gemstones with active bidding and countdown timers
               </Paragraph>
+              <div className="mt-4">
+                <Text className="text-xs text-gray-500">
+                  💡 Tip: Click "Refresh Featured Gemstones" below to reload countdown data
+                </Text>
+              </div>
             </motion.div>
 
             {/* Loading State */}
@@ -564,6 +698,19 @@ const HomePage: React.FC = () => {
                   className="bg-blue-500 border-blue-500 hover:bg-blue-600"
                 >
                   Try Again
+                </Button>
+              </div>
+            )}
+
+            {/* Refresh Button for Featured Gemstones */}
+            {!featuredLoading && !featuredError && featuredGemstones.length > 0 && (
+              <div className="text-center mb-6">
+                <Button 
+                  onClick={fetchFeaturedGemstones}
+                  className="bg-green-500 border-green-500 hover:bg-green-600 text-white"
+                  size="middle"
+                >
+                  🔄 Refresh Featured Gemstones
                 </Button>
               </div>
             )}

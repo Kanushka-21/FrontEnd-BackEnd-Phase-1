@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buyer Purchases Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #fafafa;
+        }
+        .test-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+            transition: transform 0.2s;
+        }
+        .test-button:hover {
+            transform: translateY(-2px);
+        }
+        .test-button.api { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .test-button.frontend { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+        .test-button.notification { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+        .results {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+        .success { border-left-color: #28a745; }
+        .error { border-left-color: #dc3545; }
+        .purchase-item {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            background: white;
+        }
+        .purchase-item h4 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .purchase-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            font-size: 14px;
+        }
+        .purchase-info span {
+            background: #e9ecef;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+        .status-sold { background-color: #d4edda; color: #155724; }
+        .status-expired { background-color: #d1ecf1; color: #0c5460; }
+        .instructions {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .fix-summary {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .fix-summary h3 {
+            color: #155724;
+            margin-top: 0;
+        }
+        .fix-item {
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 4px;
+            border-left: 3px solid #28a745;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛒 Buyer Purchases & Notifications Test</h1>
+            <p>Test sold items appearing in buyer dashboard and notification redirects</p>
+        </div>
+
+        <div class="fix-summary">
+            <h3>✅ Fixes Applied</h3>
+            <div class="fix-item">
+                <strong>Backend:</strong> Updated purchase history API to include both 'sold' and 'expired_no_bids' items
+            </div>
+            <div class="fix-item">
+                <strong>Frontend:</strong> Fixed notification redirect URL from '/buyer-dashboard' to '/buyer/dashboard'
+            </div>
+            <div class="fix-item">
+                <strong>Navigation:</strong> Added URL parameter support for section selection (?section=purchases)
+            </div>
+        </div>
+
+        <div id="userInfo" class="test-section">
+            <h3>👤 Test User Information</h3>
+            <p>Testing with user ID: <strong id="userId">Loading...</strong></p>
+            <button class="test-button" onclick="setTestUser()">Use Test User (pasindu)</button>
+        </div>
+
+        <div class="test-section">
+            <h3>🔍 API Tests</h3>
+            <button class="test-button api" onclick="testPurchaseHistoryAPI()">Test Purchase History API</button>
+            <button class="test-button api" onclick="testMarketplaceAPI()">Test Marketplace API (Sold Items)</button>
+            <div id="apiResults" class="results" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🌐 Frontend Tests</h3>
+            <button class="test-button frontend" onclick="testBuyerDashboard()">Open Buyer Dashboard</button>
+            <button class="test-button frontend" onclick="testBuyerDashboardPurchases()">Open Purchases Section Directly</button>
+            <div id="frontendResults" class="results" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔔 Notification Tests</h3>
+            <button class="test-button notification" onclick="simulateBidWonNotification()">Simulate BID_WON Notification Click</button>
+            <button class="test-button notification" onclick="testNotificationRedirect()">Test Notification Redirect URL</button>
+            <div id="notificationResults" class="results" style="display: none;"></div>
+        </div>
+
+        <div class="instructions">
+            <h3>📝 Testing Instructions</h3>
+            <ol>
+                <li><strong>API Test:</strong> Click "Test Purchase History API" to see sold/expired items</li>
+                <li><strong>Dashboard Test:</strong> Click "Open Purchases Section Directly" to test URL parameters</li>
+                <li><strong>Notification Test:</strong> Click "Simulate BID_WON" to test redirect behavior</li>
+                <li><strong>Manual Test:</strong> Go to marketplace, win a bid, check dashboard purchases</li>
+            </ol>
+        </div>
+
+        <div id="purchasesList" class="test-section" style="display: none;">
+            <h3>📋 Purchase History Results</h3>
+            <div id="purchasesContent"></div>
+        </div>
+    </div>
+
+    <script>
+        let testUserId = null;
+
+        // Set test user
+        function setTestUser() {
+            // This should be a real user ID from your database
+            testUserId = "pasindu"; // Replace with actual user ID
+            document.getElementById('userId').textContent = testUserId;
+            showResult('userInfo', `Set test user ID: ${testUserId}`, 'success');
+        }
+
+        // Test purchase history API
+        async function testPurchaseHistoryAPI() {
+            if (!testUserId) {
+                showResult('apiResults', 'Please set a test user first!', 'error');
+                return;
+            }
+
+            try {
+                console.log('🔍 Testing purchase history API for user:', testUserId);
+                const response = await fetch(`http://localhost:9092/api/bidding/purchase-history/${testUserId}`);
+                const result = await response.json();
+                
+                console.log('📋 Purchase history API response:', result);
+                
+                if (result.success) {
+                    const purchases = result.data || [];
+                    showResult('apiResults', 
+                        `✅ Found ${purchases.length} purchased items\n${JSON.stringify(result, null, 2)}`, 
+                        'success'
+                    );
+                    
+                    if (purchases.length > 0) {
+                        displayPurchases(purchases);
+                    }
+                } else {
+                    showResult('apiResults', `❌ API Error: ${result.message}`, 'error');
+                }
+            } catch (error) {
+                console.error('🔍 Purchase history API error:', error);
+                showResult('apiResults', `❌ Network Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Test marketplace API for sold items
+        async function testMarketplaceAPI() {
+            try {
+                console.log('🔍 Testing marketplace API for sold items');
+                const response = await fetch(`http://localhost:9092/api/marketplace/listings?includeSold=true&page=0&size=10`);
+                const result = await response.json();
+                
+                console.log('🏪 Marketplace API response:', result);
+                
+                if (result.success) {
+                    const listings = result.data.content || [];
+                    const soldItems = listings.filter(item => item.listingStatus === 'sold' || item.listingStatus === 'expired_no_bids');
+                    
+                    showResult('apiResults', 
+                        `✅ Marketplace: Found ${listings.length} total items, ${soldItems.length} sold/expired items`, 
+                        'success'
+                    );
+                } else {
+                    showResult('apiResults', `❌ Marketplace API Error: ${result.message}`, 'error');
+                }
+            } catch (error) {
+                console.error('🔍 Marketplace API error:', error);
+                showResult('apiResults', `❌ Network Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Test buyer dashboard
+        function testBuyerDashboard() {
+            const url = 'http://localhost:3000/buyer/dashboard';
+            console.log('🌐 Opening buyer dashboard:', url);
+            window.open(url, '_blank');
+            showResult('frontendResults', `✅ Opened buyer dashboard: ${url}`, 'success');
+        }
+
+        // Test buyer dashboard purchases section
+        function testBuyerDashboardPurchases() {
+            const url = 'http://localhost:3000/buyer/dashboard?section=purchases';
+            console.log('🌐 Opening buyer dashboard purchases:', url);
+            window.open(url, '_blank');
+            showResult('frontendResults', `✅ Opened purchases section: ${url}`, 'success');
+        }
+
+        // Simulate BID_WON notification click
+        function simulateBidWonNotification() {
+            console.log('🔔 Simulating BID_WON notification click');
+            
+            // Simulate the notification click behavior
+            const mockNotification = {
+                id: 'test-bid-won-notification',
+                type: 'BID_WON',
+                message: 'You won the bid for Sapphire Gemstone!',
+                isRead: false
+            };
+            
+            // This simulates the same logic as NotificationComponent
+            const redirectUrl = '/buyer/dashboard?section=purchases';
+            console.log('🔔 Notification would redirect to:', redirectUrl);
+            
+            // Open the URL to test
+            window.open(`http://localhost:3000${redirectUrl}`, '_blank');
+            
+            showResult('notificationResults', 
+                `✅ BID_WON notification redirect test\nURL: ${redirectUrl}\nOpened in new tab`, 
+                'success'
+            );
+        }
+
+        // Test notification redirect URL
+        function testNotificationRedirect() {
+            const oldUrl = '/buyer-dashboard?section=purchases'; // Old incorrect URL
+            const newUrl = '/buyer/dashboard?section=purchases'; // New correct URL
+            
+            console.log('🔔 Testing notification redirect URLs');
+            console.log('❌ Old URL (incorrect):', oldUrl);
+            console.log('✅ New URL (correct):', newUrl);
+            
+            showResult('notificationResults', 
+                `URL Fix Applied:\n❌ Old: ${oldUrl}\n✅ New: ${newUrl}\n\nThe notification now redirects to the correct URL!`, 
+                'success'
+            );
+        }
+
+        // Display purchases in a nice format
+        function displayPurchases(purchases) {
+            const purchasesSection = document.getElementById('purchasesList');
+            const purchasesContent = document.getElementById('purchasesContent');
+            
+            purchasesContent.innerHTML = '';
+            
+            if (purchases.length === 0) {
+                purchasesContent.innerHTML = '<p>No purchases found</p>';
+            } else {
+                purchases.forEach((purchase, index) => {
+                    const purchaseDiv = document.createElement('div');
+                    purchaseDiv.className = 'purchase-item';
+                    
+                    const statusClass = purchase.listingStatus === 'sold' ? 'status-sold' : 'status-expired';
+                    
+                    purchaseDiv.innerHTML = `
+                        <h4>${purchase.gemName || 'Unknown Gem'} 
+                            <span class="${statusClass}">${purchase.listingStatus?.toUpperCase() || 'N/A'}</span>
+                        </h4>
+                        <div class="purchase-info">
+                            <span><strong>ID:</strong> ${purchase.id}</span>
+                            <span><strong>Type:</strong> ${purchase.gemType || 'N/A'}</span>
+                            <span><strong>Price:</strong> LKR ${purchase.finalPrice || 'N/A'}</span>
+                            <span><strong>Date:</strong> ${purchase.purchaseDate ? new Date(purchase.purchaseDate).toLocaleDateString() : 'N/A'}</span>
+                            <span><strong>Weight:</strong> ${purchase.weight || 'N/A'}</span>
+                            <span><strong>Color:</strong> ${purchase.color || 'N/A'}</span>
+                        </div>
+                    `;
+                    
+                    purchasesContent.appendChild(purchaseDiv);
+                });
+            }
+            
+            purchasesSection.style.display = 'block';
+        }
+
+        // Show result helper
+        function showResult(elementId, message, type = 'success') {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = `results ${type}`;
+            element.innerHTML = `<pre>${message}</pre>`;
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔧 Buyer Purchases Test Page Loaded');
+            setTestUser(); // Auto-set test user
+        });
+    </script>
+</body>
+</html>

@@ -113,22 +113,23 @@ const MarketplacePage: React.FC = () => {
     
     // Extract all images from the backend listing
     const allImages: string[] = [];
+    let primaryImage = '';
     
-    // Add primary image if it exists
-    if (listing.primaryImageUrl) {
-      console.log('📷 Found primary image URL:', listing.primaryImageUrl);
-      allImages.push(constructImageUrl(listing.primaryImageUrl));
-    }
-    
-    // Add all images from the images array
+    // First, prioritize images from the images array (which are more reliable)
     if (listing.images && Array.isArray(listing.images)) {
       console.log('📷 Found images array:', listing.images);
-      listing.images.forEach((img: any, index: number) => {
+      
+      // Sort images by displayOrder and find primary image
+      const sortedImages = listing.images.sort((a: any, b: any) => {
+        return (a.displayOrder || 0) - (b.displayOrder || 0);
+      });
+      
+      sortedImages.forEach((img: any, index: number) => {
         console.log(`📷 Processing image ${index + 1}:`, img);
         let imageUrl = '';
-        if (typeof img === 'string') {
-          imageUrl = constructImageUrl(img);
-        } else if (img && img.imageUrl) {
+        
+        // Extract imageUrl from the image object
+        if (img && img.imageUrl) {
           imageUrl = constructImageUrl(img.imageUrl);
         } else if (img && img.url) {
           imageUrl = constructImageUrl(img.url);
@@ -136,37 +137,64 @@ const MarketplacePage: React.FC = () => {
           imageUrl = constructImageUrl(img.imagePath);
         } else if (img && img.path) {
           imageUrl = constructImageUrl(img.path);
+        } else if (typeof img === 'string') {
+          imageUrl = constructImageUrl(img);
         } else {
           console.log('❓ Unknown image format:', img);
         }
         
-        if (imageUrl && !allImages.includes(imageUrl)) {
-          console.log('✅ Added image URL:', imageUrl);
+        if (imageUrl) {
           allImages.push(imageUrl);
+          console.log('✅ Added image URL:', imageUrl);
+          
+          // Set as primary if it's marked as primary or if it's the first image
+          if ((img.isPrimary === true || index === 0) && !primaryImage) {
+            primaryImage = imageUrl;
+            console.log('🏆 Set as primary image:', imageUrl);
+          }
         }
       });
+    }
+    
+    // Fallback to primaryImageUrl only if no images found in array
+    if (allImages.length === 0 && listing.primaryImageUrl) {
+      console.log('📷 Using fallback primaryImageUrl:', listing.primaryImageUrl);
+      const fallbackUrl = constructImageUrl(listing.primaryImageUrl);
+      allImages.push(fallbackUrl);
+      primaryImage = fallbackUrl;
     }
     
     // Fallback to single image property if no images found
     if (allImages.length === 0 && listing.image) {
       console.log('📷 Using fallback image property:', listing.image);
-      allImages.push(constructImageUrl(listing.image));
+      const fallbackUrl = constructImageUrl(listing.image);
+      allImages.push(fallbackUrl);
+      primaryImage = fallbackUrl;
     }
     
-    // Check for other possible image fields
+    // Check for other possible image fields if still no images
     if (allImages.length === 0) {
       const possibleImageFields = ['imageUrl', 'imagePath', 'photo', 'picture'];
       for (const field of possibleImageFields) {
         if (listing[field]) {
           console.log(`📷 Found image in field '${field}':`, listing[field]);
-          allImages.push(constructImageUrl(listing[field]));
+          const fallbackUrl = constructImageUrl(listing[field]);
+          allImages.push(fallbackUrl);
+          primaryImage = fallbackUrl;
           break;
         }
       }
     }
     
-    // Use first image as primary, or placeholder if no images
-    const primaryImage = allImages.length > 0 ? allImages[0] : 'https://via.placeholder.com/400x300?text=Gemstone';
+    // Use primary image or first image, or placeholder if no images
+    if (!primaryImage && allImages.length > 0) {
+      primaryImage = allImages[0];
+    }
+    
+    if (!primaryImage) {
+      primaryImage = 'https://via.placeholder.com/400x300?text=Gemstone';
+    }
+    
     console.log('🏆 Primary image selected:', primaryImage);
     console.log('📚 All images:', allImages);
     console.log('👤 Seller information - userName:', listing.userName);
@@ -215,6 +243,49 @@ const MarketplacePage: React.FC = () => {
     };
   };
 
+  // Function to refresh countdown data for all current gemstones
+  const refreshAllCountdowns = async () => {
+    try {
+      console.log('🔄 Refreshing countdown data for all marketplace items...');
+      
+      // Update countdown data for all gemstones in parallel
+      const updatedGemstones = await Promise.all(
+        gemstones.map(async (gemstone) => {
+          try {
+            const countdownResponse = await fetch(`/api/bidding/listing/${gemstone.id}/countdown`);
+            const countdownResult = await countdownResponse.json();
+            
+            if (countdownResponse.ok && countdownResult.success && countdownResult.data) {
+              console.log(`⏰ Updated countdown for ${gemstone.name}:`, countdownResult.data);
+              
+              return {
+                ...gemstone,
+                biddingActive: countdownResult.data.biddingActive,
+                biddingStartTime: countdownResult.data.biddingStartTime,
+                biddingEndTime: countdownResult.data.biddingEndTime,
+                remainingTimeSeconds: countdownResult.data.remainingTimeSeconds,
+                remainingDays: countdownResult.data.remainingDays,
+                remainingHours: countdownResult.data.remainingHours,
+                remainingMinutes: countdownResult.data.remainingMinutes,
+                remainingSeconds: countdownResult.data.remainingSeconds,
+                isExpired: countdownResult.data.isExpired
+              };
+            }
+          } catch (error) {
+            console.warn(`⚠️ Failed to refresh countdown for ${gemstone.name}:`, error);
+          }
+          
+          return gemstone; // Return unchanged if refresh failed
+        })
+      );
+      
+      setGemstones(updatedGemstones);
+      console.log('✅ All countdown data refreshed');
+    } catch (error) {
+      console.error('❌ Error refreshing countdown data:', error);
+    }
+  };
+
   // Function to fetch marketplace listings from real database
   const fetchMarketplaceListings = async () => {
     setLoading(true);
@@ -252,7 +323,7 @@ const MarketplacePage: React.FC = () => {
           // Fetch latest bid for each gemstone
           try {
             // Fetch latest bids and countdown data for all gemstones in parallel
-            const bidPromises = convertedGemstones.map(async (gemstone) => {
+            const bidPromises = convertedGemstones.map(async (gemstone: DetailedGemstone) => {
               try {
                 console.log(`🔍 Fetching bids and countdown for gemstone ${gemstone.id} (${gemstone.name})`);
                 
@@ -279,12 +350,12 @@ const MarketplacePage: React.FC = () => {
                   
                   // Fallback to getting individual bids if stats aren't available
                   if (!gemstoneWithBids.latestBidPrice) {
-                    const bidResponse = await api.bids.getByGemstoneId(gemstone.id);
+                    const bidResponse = await api.getByGemstoneId(gemstone.id);
                     console.log(`📊 Bid response for ${gemstone.name}:`, bidResponse);
                     
                     if (bidResponse.success && bidResponse.data && bidResponse.data.length > 0) {
                       // Get highest bid amount
-                      const highestBid = bidResponse.data.reduce((highest, current) => 
+                      const highestBid = bidResponse.data.reduce((highest: any, current: any) => 
                         current.amount > highest.amount ? current : highest, bidResponse.data[0]);
                       
                       console.log(`💰 Highest bid for ${gemstone.name}:`, highestBid.amount);
@@ -459,12 +530,78 @@ const MarketplacePage: React.FC = () => {
   //   setGemstones(mockGemstones);
   // }, []);
   
-  const handleViewDetails = (gemstoneId: string) => {
-    console.log('View details clicked for gemstone:', gemstoneId);
-    const gemstone = gemstones.find(g => g.id === gemstoneId);
-    if (gemstone) {
-      console.log('Setting selected gemstone:', gemstone);
-      setSelectedGemstone(gemstone);
+  const handleViewDetails = async (gemstoneId: string) => {
+    console.log('🔍 View details clicked for gemstone:', gemstoneId);
+    
+    try {
+      setLoading(true);
+      
+      // First get the basic gemstone from our current list for fallback
+      const basicGemstone = gemstones.find(g => g.id === gemstoneId);
+      if (!basicGemstone) {
+        message.error('Gemstone not found');
+        return;
+      }
+      
+      console.log('📋 Found basic gemstone data:', basicGemstone);
+      
+      // Fetch detailed information from backend
+      console.log('🔍 Fetching detailed information from backend...');
+      const detailResponse = await fetch(`/api/marketplace/listings/${gemstoneId}`);
+      
+      if (!detailResponse.ok) {
+        console.warn('⚠️ Failed to fetch detailed info from backend, using basic data');
+        // Fallback to basic gemstone if backend fails
+        setSelectedGemstone(basicGemstone);
+        setIsModalOpen(true);
+        return;
+      }
+      
+      const detailResult = await detailResponse.json();
+      console.log('📋 Backend detail response:', detailResult);
+      
+      if (detailResult.success && detailResult.data) {
+        // Convert the detailed backend data to DetailedGemstone format
+        console.log('🔄 Converting detailed backend data to modal format...');
+        const detailedGemstone = convertToDetailedGemstone(detailResult.data);
+        
+        // Merge with any existing bid data from the basic gemstone
+        const enhancedGemstone = {
+          ...detailedGemstone,
+          // Preserve current bid information from marketplace data
+          currentBid: basicGemstone.currentBid || detailedGemstone.price,
+          latestBidPrice: basicGemstone.latestBidPrice,
+          totalBids: basicGemstone.totalBids,
+          highestBidder: basicGemstone.highestBidder,
+          biddingActive: basicGemstone.biddingActive,
+          biddingStartTime: basicGemstone.biddingStartTime,
+          biddingEndTime: basicGemstone.biddingEndTime,
+          remainingTimeSeconds: basicGemstone.remainingTimeSeconds
+        };
+        
+        console.log('✅ Enhanced gemstone with detailed backend data:', enhancedGemstone);
+        console.log('📷 Total images available:', enhancedGemstone.images?.length || 0);
+        
+        setSelectedGemstone(enhancedGemstone);
+      } else {
+        console.warn('⚠️ Backend returned unsuccessful response, using basic data');
+        setSelectedGemstone(basicGemstone);
+      }
+      
+    } catch (error) {
+      console.error('❌ Error fetching detailed gemstone info:', error);
+      
+      // Fallback to basic gemstone data if there's an error
+      const basicGemstone = gemstones.find(g => g.id === gemstoneId);
+      if (basicGemstone) {
+        console.log('🔄 Using fallback basic gemstone data');
+        setSelectedGemstone(basicGemstone);
+      } else {
+        message.error('Failed to load gemstone details');
+        return;
+      }
+    } finally {
+      setLoading(false);
       setIsModalOpen(true);
     }
   };
@@ -681,6 +818,9 @@ const MarketplacePage: React.FC = () => {
             {/* Results Summary */}
             <div className="mb-3 sm:mb-4 lg:mb-6">
               <Title level={3} className="!mb-1 !text-base sm:!text-lg lg:!text-xl xl:!text-2xl">Gemstone Marketplace</Title>
+              <Paragraph className="!text-xs sm:!text-sm !mb-0 text-secondary-600">
+                Browse available and recently sold gemstones
+              </Paragraph>
               <Text type="secondary" className="text-xs sm:text-sm lg:text-base">
                 {loading ? 'Loading from gemnet_db.gem_listings...' : `Showing ${totalItems > 0 ? Math.min(totalItems, (currentPage - 1) * itemsPerPage + 1) : 0}-${Math.min(currentPage * itemsPerPage, totalItems)} of ${totalItems} approved listings from database`}
               </Text>
@@ -748,15 +888,15 @@ const MarketplacePage: React.FC = () => {
               </>
             ) : (
               <div style={{ textAlign: 'center', padding: '40px 0 60px' }}>
-                <Title level={3} type="secondary" className="!text-lg sm:!text-xl lg:!text-2xl">No Approved Listings in Database</Title>
+                <Title level={3} type="secondary" className="!text-lg sm:!text-xl lg:!text-2xl">No Listings Found</Title>
                 <Paragraph type="secondary" className="!text-sm sm:!text-base">
-                  No approved gemstone listings found in gemnet_db.gem_listings collection. 
-                  <br />Add some approved listings to the database or check your search filters.
+                  No approved or sold gemstone listings found in the database. 
+                  <br />Add some listings to the database or adjust your search filters.
                 </Paragraph>
                 <div className="mb-4 p-4 bg-blue-50 rounded-lg text-left max-w-2xl mx-auto">
                   <Text strong className="block mb-2">Database Query:</Text>
                   <Text code className="text-sm">
-                    gemnet_db.gem_listings.find({"{listingStatus: 'APPROVED', isActive: true}"})
+                    gemnet_db.gem_listings.find({"{listingStatus: {$in: ['APPROVED', 'sold']}, isActive: true}"})
                   </Text>
                 </div>
                 <Button type="primary" onClick={() => fetchMarketplaceListings()}>
@@ -801,6 +941,7 @@ const MarketplacePage: React.FC = () => {
             setSelectedGemstone(null);
           }}
           onPlaceBid={handlePlaceBid}
+          onCountdownUpdated={refreshAllCountdowns} // Pass countdown refresh callback
         />
       )}
 

@@ -859,7 +859,7 @@ const extendedAPI = {
 
   // Marketplace APIs
   marketplace: {
-    // Get marketplace listings (approved gemstones)
+    // Get marketplace listings (approved and sold gemstones)
     getListings: async (params?: {
       page?: number,
       size?: number,
@@ -869,7 +869,8 @@ const extendedAPI = {
       category?: string,
       minPrice?: number,
       maxPrice?: number,
-      certifiedOnly?: boolean
+      certifiedOnly?: boolean,
+      includeSold?: boolean
     }): Promise<ApiResponse<any>> => {
       try {
         const queryParams = new URLSearchParams();
@@ -883,6 +884,8 @@ const extendedAPI = {
         if (params?.minPrice !== undefined) queryParams.append('minPrice', params.minPrice.toString());
         if (params?.maxPrice !== undefined) queryParams.append('maxPrice', params.maxPrice.toString());
         if (params?.certifiedOnly) queryParams.append('certifiedOnly', params.certifiedOnly.toString());
+        // Include sold items by default to show complete marketplace
+        queryParams.append('includeSold', params?.includeSold !== undefined ? params.includeSold.toString() : 'true');
         
         const response = await api.get(`/api/marketplace/listings?${queryParams.toString()}`);
         return response.data;

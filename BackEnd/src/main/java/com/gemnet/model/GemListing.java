@@ -116,8 +116,14 @@ public class GemListing {
     
     // Bidding countdown fields
     private LocalDateTime biddingStartTime; // When the first bid was placed
-    private LocalDateTime biddingEndTime;   // When bidding ends (4 days after first bid)
+    private LocalDateTime biddingEndTime;   // When bidding ends (30 seconds after first bid for testing)
     private Boolean biddingActive = false;  // Whether bidding countdown is active
+    
+    // Bidding completion fields
+    private LocalDateTime biddingCompletedAt; // When bidding was completed
+    private String winningBidderId;           // User ID of the winning bidder
+    private BigDecimal finalPrice;            // Final winning bid amount
+    private String sellerId;                  // User ID of the seller (same as userId but more explicit)
     
     // Constructors
     public GemListing() {
@@ -443,6 +449,38 @@ public class GemListing {
     
     public void setBiddingActive(Boolean biddingActive) {
         this.biddingActive = biddingActive;
+    }
+    
+    public LocalDateTime getBiddingCompletedAt() {
+        return biddingCompletedAt;
+    }
+    
+    public void setBiddingCompletedAt(LocalDateTime biddingCompletedAt) {
+        this.biddingCompletedAt = biddingCompletedAt;
+    }
+    
+    public String getWinningBidderId() {
+        return winningBidderId;
+    }
+    
+    public void setWinningBidderId(String winningBidderId) {
+        this.winningBidderId = winningBidderId;
+    }
+    
+    public BigDecimal getFinalPrice() {
+        return finalPrice;
+    }
+    
+    public void setFinalPrice(BigDecimal finalPrice) {
+        this.finalPrice = finalPrice;
+    }
+    
+    public String getSellerId() {
+        return sellerId != null ? sellerId : userId; // Fallback to userId for backward compatibility
+    }
+    
+    public void setSellerId(String sellerId) {
+        this.sellerId = sellerId;
     }
     
     // Helper methods

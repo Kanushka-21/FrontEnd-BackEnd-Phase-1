@@ -184,19 +184,22 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({ userId, c
       markAsRead(notification.id);
     }
     
-    // Navigate to the marketplace item
-    if (notification.listingId) {
+    // Close notification dropdown first
+    setIsOpen(false);
+    
+    // Handle different notification types with different navigation
+    if (notification.type === 'BID_WON' || notification.type === 'ITEM_SOLD') {
+      console.log('🔔 Navigating to Purchase History for BID_WON/ITEM_SOLD notification');
+      // Navigate to Purchase History dashboard for successful bid wins
+      window.location.href = '/buyer/dashboard?section=purchases';
+    } else if (notification.listingId) {
       console.log('🔔 Navigating to marketplace with listingId:', notification.listingId);
-      
-      // Close notification dropdown
-      setIsOpen(false);
-      
-      // Navigate to marketplace with specific gemstone using the same parameter as HomePage
+      // Navigate to marketplace with specific gemstone for other notification types
       const marketplaceUrl = `/marketplace?viewGemstone=${notification.listingId}`;
       console.log('🔔 Navigation URL:', marketplaceUrl);
       window.location.href = marketplaceUrl;
     } else {
-      console.log('🔔 No listingId found in notification, cannot navigate');
+      console.log('🔔 No specific navigation for this notification type');
     }
   };
 
@@ -214,6 +217,12 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({ userId, c
         return <CheckCircle className="w-5 h-5 text-green-600" />;
       case 'BID_REJECTED':
         return <X className="w-5 h-5 text-gray-600" />;
+      case 'BID_WON':
+        return <CheckCircle className="w-5 h-5 text-green-600" />;
+      case 'ITEM_SOLD':
+        return <CheckCircle className="w-5 h-5 text-blue-600" />;
+      case 'BIDDING_ENDED':
+        return <Clock className="w-5 h-5 text-gray-600" />;
       default:
         return <Bell className="w-5 h-5 text-gray-600" />;
     }
@@ -236,6 +245,15 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({ userId, c
         break;
       case 'BID_ACTIVITY':
         typeClasses = isRead ? "" : "bg-orange-50 border-l-orange-500";
+        break;
+      case 'BID_WON':
+        typeClasses = isRead ? "" : "bg-green-50 border-l-green-500";
+        break;
+      case 'ITEM_SOLD':
+        typeClasses = isRead ? "" : "bg-blue-50 border-l-blue-500";
+        break;
+      case 'BIDDING_ENDED':
+        typeClasses = isRead ? "" : "bg-gray-50 border-l-gray-500";
         break;
       default:
         typeClasses = unreadClasses;

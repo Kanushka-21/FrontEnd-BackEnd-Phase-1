@@ -56,4 +56,10 @@ public interface BidRepository extends MongoRepository<Bid, String> {
     
     // Find all bids for a specific listing and bidder
     List<Bid> findByListingIdAndBidderIdOrderByBidTimeDesc(String listingId, String bidderId);
+    
+    // Find bids for a listing excluding a specific bidder with status
+    List<Bid> findByListingIdAndBidderIdNotAndStatus(String listingId, String excludedBidderId, String status);
+    
+    // Find the highest bid for a listing (for determining winner)
+    Optional<Bid> findTopByListingIdOrderByBidAmountDesc(String listingId);
 }
