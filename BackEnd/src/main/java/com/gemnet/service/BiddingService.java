@@ -678,7 +678,7 @@ public class BiddingService {
                     countdownData.put("remainingSeconds", seconds);
                     countdownData.put("isExpired", false);
                 } else {
-                    // Countdown has expired
+                    // Countdown has expired - complete the bidding process
                     countdownData.put("remainingTimeSeconds", 0);
                     countdownData.put("remainingDays", 0);
                     countdownData.put("remainingHours", 0);
@@ -686,9 +686,31 @@ public class BiddingService {
                     countdownData.put("remainingSeconds", 0);
                     countdownData.put("isExpired", true);
                     
-                    // Mark bidding as inactive if expired
-                    listing.setBiddingActive(false);
-                    gemListingRepository.save(listing);
+                    // Complete the bidding process if not already completed
+                    if (Boolean.TRUE.equals(listing.getBiddingActive())) {
+                        System.out.println("⏰ Countdown expired for listing: " + listingId + " - completing bidding process");
+                        
+                        // Find the highest bid
+                        Optional<Bid> winningBidOpt = bidRepository.findTopByListingIdOrderByBidAmountDesc(listing.getId());
+                        
+                        if (winningBidOpt.isPresent()) {
+                            Bid winningBid = winningBidOpt.get();
+                            System.out.println("👑 Found winning bid: " + winningBid.getBidAmount() + " by user: " + winningBid.getBidderId());
+                            
+                            // Complete the bidding process
+                            boolean completed = completeBidding(listing, winningBid);
+                            if (completed) {
+                                System.out.println("✅ Successfully completed bidding for listing: " + listingId);
+                            }
+                        } else {
+                            // No bids - mark as expired
+                            System.out.println("⏳ No bids found for expired listing: " + listingId + " - marking as expired_no_bids");
+                            listing.setBiddingActive(false);
+                            listing.setListingStatus("expired_no_bids");
+                            listing.setBiddingCompletedAt(LocalDateTime.now());
+                            gemListingRepository.save(listing);
+                        }
+                    }
                 }
             } else {
                 countdownData.put("biddingActive", false);
@@ -953,9 +975,36 @@ public class BiddingService {
         try {
             System.out.println("📋 Getting purchase history for user: " + userId);
 
-            // Find all listings where this user was the winning bidder
-            List<GemListing> purchasedListings = gemListingRepository
+            // Find all listings where this user was the winning bidder and status is sold or expired_no_bids
+            List<GemListing> soldListings = gemListingRepository
                 .findByWinningBidderIdAndListingStatus(userId, "sold");
+            
+            List<GemListing> expiredListings = gemListingRepository
+                .findByWinningBidderIdAndListingStatus(userId, "expired_no_bids");
+
+            System.out.println("📋 Found " + soldListings.size() + " listings with status 'sold'");
+            System.out.println("📋 Found " + expiredListings.size() + " listings with status 'expired_no_bids'");
+
+            // Combine both lists
+            List<GemListing> purchasedListings = new ArrayList<>();
+            purchasedListings.addAll(soldListings);
+            purchasedListings.addAll(expiredListings);
+
+            System.out.println("📋 Total purchased listings: " + purchasedListings.size());
+
+            // If no items found, also check for any listings with this user as winningBidderId regardless of status
+            if (purchasedListings.isEmpty()) {
+                System.out.println("📋 No purchased listings found, checking for any listings with winningBidderId...");
+                List<GemListing> anyWinningListings = gemListingRepository.findByWinningBidderId(userId);
+                System.out.println("📋 Found " + anyWinningListings.size() + " listings with winningBidderId: " + userId);
+                
+                // Log the status of each listing found
+                for (GemListing listing : anyWinningListings) {
+                    System.out.println("📋 Listing " + listing.getId() + " has status: '" + listing.getListingStatus() + 
+                                     "', biddingCompleted: " + listing.getBiddingCompletedAt() + 
+                                     ", finalPrice: " + listing.getFinalPrice());
+                }
+            }
 
             List<Map<String, Object>> purchaseHistory = new ArrayList<>();
 
@@ -975,6 +1024,7 @@ public class BiddingService {
                 purchaseItem.put("cut", listing.getCut());
 
                 purchaseHistory.add(purchaseItem);
+                System.out.println("📋 Added purchase item: " + listing.getGemName() + " for $" + listing.getFinalPrice());
             }
 
             System.out.println("✅ Found " + purchaseHistory.size() + " purchased items for user: " + userId);
@@ -1144,6 +1194,64 @@ public class BiddingService {
             System.err.println("Error completing bidding for testing: " + e.getMessage());
             e.printStackTrace();
             return new ApiResponse<>(false, "Failed to complete bidding: " + e.getMessage(), null);
+        }
+    }
+
+    /**
+     * Complete bidding for any active listing (for testing only - no listingId needed)
+     */
+    public ApiResponse<String> completeAnyBiddingForTesting() {
+        try {
+            System.out.println("🧪 [TESTING] Finding active listings to complete...");
+
+            // Find all active bidding listings
+            List<GemListing> activeListings = gemListingRepository.findByBiddingActiveTrue();
+            System.out.println("🧪 [TESTING] Found " + activeListings.size() + " active bidding listings");
+
+            if (activeListings.isEmpty()) {
+                return new ApiResponse<>(false, "No active bidding listings found to complete", null);
+            }
+
+            int completedCount = 0;
+            for (GemListing listing : activeListings.subList(0, Math.min(3, activeListings.size()))) { // Complete max 3 for testing
+                // Find the highest bid for this listing
+                Optional<Bid> winningBidOpt = bidRepository.findTopByListingIdOrderByBidAmountDesc(listing.getId());
+                
+                if (winningBidOpt.isEmpty()) {
+                    System.out.println("🧪 [TESTING] No bids found for listing: " + listing.getId());
+                    continue;
+                }
+
+                Bid winningBid = winningBidOpt.get();
+                System.out.println("🧪 [TESTING] Completing bidding for listing: " + listing.getId() + 
+                                   " with winning bid from: " + winningBid.getBidderId() + 
+                                   " Amount: $" + winningBid.getBidAmount());
+
+                // Update listing status
+                listing.setBiddingActive(false);
+                listing.setListingStatus("sold");
+                listing.setBiddingCompletedAt(LocalDateTime.now());
+                listing.setWinningBidderId(winningBid.getBidderId());
+                listing.setFinalPrice(winningBid.getBidAmount());
+
+                // Save the updated listing
+                gemListingRepository.save(listing);
+
+                // Send notifications
+                sendBiddingCompletionNotifications(listing, winningBid);
+
+                completedCount++;
+                System.out.println("🧪 [TESTING] ✅ Completed bidding for listing: " + listing.getId());
+            }
+
+            System.out.println("🧪 [TESTING] ✅ Completed " + completedCount + " bidding processes");
+            return new ApiResponse<>(true, "Completed " + completedCount + " bidding processes for testing", 
+                                   "Completed biddings: " + completedCount);
+
+        } catch (Exception e) {
+            System.err.println("🧪 [TESTING] Error completing bidding: " + e.getMessage());
+            e.printStackTrace();
+            return new ApiResponse<>(false, "Failed to complete bidding for testing: " + e.getMessage(), null);
         }
     }
 }

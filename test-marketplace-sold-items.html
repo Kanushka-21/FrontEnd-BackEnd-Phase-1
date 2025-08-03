@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Marketplace - Sold Items Display</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background-color: #fafafa;
+        }
+        .test-title {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .pending { background-color: #fff3cd; color: #856404; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        
+        .test-item {
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+        
+        .api-response {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+            overflow-x: auto;
+        }
+        
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background-color: #0056b3;
+        }
+        
+        .step-indicator {
+            display: inline-block;
+            width: 25px;
+            height: 25px;
+            background: #007bff;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 25px;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛍️ Marketplace Sold Items Test</h1>
+        <p><strong>Purpose:</strong> Test that marketplace now displays both active and sold items with proper status indicators</p>
+        
+        <!-- Backend API Test -->
+        <div class="test-section">
+            <div class="test-title">
+                <span class="step-indicator">1</span>
+                Backend API Test - Marketplace with Sold Items
+            </div>
+            
+            <div class="test-item">
+                <strong>Test Marketplace API (includeSold=true):</strong>
+                <button onclick="testMarketplaceAPI(true)">Test API with Sold Items</button>
+                <button onclick="testMarketplaceAPI(false)">Test API without Sold Items</button>
+                <div id="apiResult"></div>
+            </div>
+        </div>
+
+        <!-- Frontend Display Test -->
+        <div class="test-section">
+            <div class="test-title">
+                <span class="step-indicator">2</span>
+                Frontend Marketplace Display Test
+            </div>
+            
+            <div class="test-item">
+                <strong>Expected Behavior:</strong>
+                <ul>
+                    <li>✅ Marketplace should show both active and sold items</li>
+                    <li>✅ Sold items should have a red "SOLD" badge</li>
+                    <li>✅ Sold items should have a disabled "Sold Item" button</li>
+                    <li>✅ Active items should have normal "View Details" button</li>
+                    <li>✅ Page title should indicate "Browse available and recently sold gemstones"</li>
+                </ul>
+                
+                <div>
+                    <button onclick="openMarketplace()">Open Marketplace Page</button>
+                    <button onclick="testFrontendDisplay()">Test Frontend Display</button>
+                </div>
+                <div id="frontendResult"></div>
+            </div>
+        </div>
+
+        <!-- Visual Verification Test -->
+        <div class="test-section">
+            <div class="test-title">
+                <span class="step-indicator">3</span>
+                Visual Verification Checklist
+            </div>
+            
+            <div class="test-item">
+                <strong>Manual Verification Steps:</strong>
+                <ol>
+                    <li>Open marketplace at <a href="http://localhost:5173" target="_blank">http://localhost:5173</a></li>
+                    <li>Verify multiple items are displayed (should be ~14 total)</li>
+                    <li>Check for red "SOLD" badges on sold items</li>
+                    <li>Verify sold items have disabled "Sold Item" buttons</li>
+                    <li>Check that active items still have "View Details" buttons</li>
+                    <li>Confirm page subtitle mentions "recently sold gemstones"</li>
+                </ol>
+                
+                <div style="margin-top: 15px;">
+                    <label>
+                        <input type="checkbox" id="itemsVisible"> Multiple items visible (~14 total)
+                    </label><br>
+                    <label>
+                        <input type="checkbox" id="soldBadges"> Red "SOLD" badges visible on sold items
+                    </label><br>
+                    <label>
+                        <input type="checkbox" id="soldButtons"> Sold items have disabled "Sold Item" buttons
+                    </label><br>
+                    <label>
+                        <input type="checkbox" id="activeButtons"> Active items have "View Details" buttons
+                    </label><br>
+                    <label>
+                        <input type="checkbox" id="subtitle"> Page subtitle mentions sold gemstones
+                    </label><br>
+                    <button onclick="completeVerification()" style="margin-top: 10px;">Complete Verification</button>
+                </div>
+                <div id="verificationResult"></div>
+            </div>
+        </div>
+
+        <!-- Results Summary -->
+        <div class="test-section">
+            <div class="test-title">
+                <span class="step-indicator">✓</span>
+                Test Results Summary
+            </div>
+            <div id="summaryResult">
+                <p class="status info">Click the test buttons above to see results</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let testResults = {
+            backendAPI: null,
+            frontendDisplay: null,
+            visualVerification: null
+        };
+
+        async function testMarketplaceAPI(includeSold) {
+            const resultDiv = document.getElementById('apiResult');
+            resultDiv.innerHTML = '<p>🔄 Testing marketplace API...</p>';
+            
+            try {
+                const url = `http://localhost:9092/api/marketplace/listings?includeSold=${includeSold}&size=50`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    const totalItems = data.data.totalElements;
+                    const listings = data.data.listings || [];
+                    const soldCount = listings.filter(item => item.listingStatus === 'sold').length;
+                    const activeCount = listings.filter(item => item.listingStatus === 'APPROVED').length;
+                    
+                    resultDiv.innerHTML = `
+                        <div class="api-response">
+                            <div class="status success">✅ API Success</div>
+                            <strong>Results (includeSold=${includeSold}):</strong><br>
+                            📊 Total Items: ${totalItems}<br>
+                            🛍️ Sold Items: ${soldCount}<br>
+                            ✅ Active Items: ${activeCount}<br>
+                            📋 Status Distribution: ${JSON.stringify(
+                                listings.reduce((acc, item) => {
+                                    acc[item.listingStatus] = (acc[item.listingStatus] || 0) + 1;
+                                    return acc;
+                                }, {})
+                            )}
+                        </div>
+                    `;
+                    
+                    testResults.backendAPI = includeSold ? 'success' : 'partial';
+                    updateSummary();
+                } else {
+                    throw new Error(data.message || 'API request failed');
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="api-response">
+                        <div class="status error">❌ API Error</div>
+                        Error: ${error.message}
+                    </div>
+                `;
+                testResults.backendAPI = 'failed';
+                updateSummary();
+            }
+        }
+
+        function openMarketplace() {
+            window.open('http://localhost:5173', '_blank');
+        }
+
+        async function testFrontendDisplay() {
+            const resultDiv = document.getElementById('frontendResult');
+            resultDiv.innerHTML = '<p>🔄 Testing frontend display...</p>';
+            
+            try {
+                // Test if frontend is accessible
+                const response = await fetch('http://localhost:5173');
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="api-response">
+                            <div class="status success">✅ Frontend Accessible</div>
+                            Frontend is running at http://localhost:5173<br>
+                            Please manually verify the marketplace displays sold items with proper status indicators.
+                        </div>
+                    `;
+                    testResults.frontendDisplay = 'accessible';
+                } else {
+                    throw new Error('Frontend not accessible');
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="api-response">
+                        <div class="status error">❌ Frontend Error</div>
+                        Error: ${error.message}<br>
+                        Make sure the frontend dev server is running.
+                    </div>
+                `;
+                testResults.frontendDisplay = 'failed';
+            }
+            updateSummary();
+        }
+
+        function completeVerification() {
+            const checks = [
+                'itemsVisible', 'soldBadges', 'soldButtons', 'activeButtons', 'subtitle'
+            ];
+            
+            const completed = checks.filter(id => document.getElementById(id).checked);
+            const resultDiv = document.getElementById('verificationResult');
+            
+            if (completed.length === checks.length) {
+                resultDiv.innerHTML = `
+                    <div class="status success">✅ All Visual Checks Completed</div>
+                    <p>Marketplace successfully displays sold items with proper status indicators!</p>
+                `;
+                testResults.visualVerification = 'success';
+            } else {
+                resultDiv.innerHTML = `
+                    <div class="status pending">⚠️ Partial Verification</div>
+                    <p>Completed: ${completed.length}/${checks.length} checks</p>
+                    <p>Missing: ${checks.filter(id => !document.getElementById(id).checked).join(', ')}</p>
+                `;
+                testResults.visualVerification = 'partial';
+            }
+            updateSummary();
+        }
+
+        function updateSummary() {
+            const summaryDiv = document.getElementById('summaryResult');
+            const results = testResults;
+            
+            let summary = '<h4>🧪 Test Status:</h4>';
+            
+            // Backend API Test
+            if (results.backendAPI === 'success') {
+                summary += '<div class="status success">✅ Backend API: Including sold items</div>';
+            } else if (results.backendAPI === 'partial') {
+                summary += '<div class="status pending">⚠️ Backend API: Partial test completed</div>';
+            } else if (results.backendAPI === 'failed') {
+                summary += '<div class="status error">❌ Backend API: Failed</div>';
+            } else {
+                summary += '<div class="status pending">⏳ Backend API: Not tested</div>';
+            }
+            
+            // Frontend Display Test
+            if (results.frontendDisplay === 'accessible') {
+                summary += '<div class="status success">✅ Frontend: Accessible</div>';
+            } else if (results.frontendDisplay === 'failed') {
+                summary += '<div class="status error">❌ Frontend: Not accessible</div>';
+            } else {
+                summary += '<div class="status pending">⏳ Frontend: Not tested</div>';
+            }
+            
+            // Visual Verification
+            if (results.visualVerification === 'success') {
+                summary += '<div class="status success">✅ Visual Verification: Complete</div>';
+            } else if (results.visualVerification === 'partial') {
+                summary += '<div class="status pending">⚠️ Visual Verification: Partial</div>';
+            } else {
+                summary += '<div class="status pending">⏳ Visual Verification: Not completed</div>';
+            }
+            
+            // Overall Status
+            const allComplete = results.backendAPI === 'success' && 
+                               results.frontendDisplay === 'accessible' && 
+                               results.visualVerification === 'success';
+            
+            if (allComplete) {
+                summary += '<div style="margin-top: 15px; padding: 15px; background: #d4edda; border-radius: 5px;">';
+                summary += '<strong>🎉 All Tests Passed!</strong><br>';
+                summary += 'Marketplace successfully displays both active and sold items with proper status indicators.';
+                summary += '</div>';
+            }
+            
+            summaryDiv.innerHTML = summary;
+        }
+
+        // Initialize
+        updateSummary();
+    </script>
+</body>
+</html>

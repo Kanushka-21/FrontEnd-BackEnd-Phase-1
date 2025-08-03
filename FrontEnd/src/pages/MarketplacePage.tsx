@@ -530,12 +530,78 @@ const MarketplacePage: React.FC = () => {
   //   setGemstones(mockGemstones);
   // }, []);
   
-  const handleViewDetails = (gemstoneId: string) => {
-    console.log('View details clicked for gemstone:', gemstoneId);
-    const gemstone = gemstones.find(g => g.id === gemstoneId);
-    if (gemstone) {
-      console.log('Setting selected gemstone:', gemstone);
-      setSelectedGemstone(gemstone);
+  const handleViewDetails = async (gemstoneId: string) => {
+    console.log('🔍 View details clicked for gemstone:', gemstoneId);
+    
+    try {
+      setLoading(true);
+      
+      // First get the basic gemstone from our current list for fallback
+      const basicGemstone = gemstones.find(g => g.id === gemstoneId);
+      if (!basicGemstone) {
+        message.error('Gemstone not found');
+        return;
+      }
+      
+      console.log('📋 Found basic gemstone data:', basicGemstone);
+      
+      // Fetch detailed information from backend
+      console.log('🔍 Fetching detailed information from backend...');
+      const detailResponse = await fetch(`/api/marketplace/listings/${gemstoneId}`);
+      
+      if (!detailResponse.ok) {
+        console.warn('⚠️ Failed to fetch detailed info from backend, using basic data');
+        // Fallback to basic gemstone if backend fails
+        setSelectedGemstone(basicGemstone);
+        setIsModalOpen(true);
+        return;
+      }
+      
+      const detailResult = await detailResponse.json();
+      console.log('📋 Backend detail response:', detailResult);
+      
+      if (detailResult.success && detailResult.data) {
+        // Convert the detailed backend data to DetailedGemstone format
+        console.log('🔄 Converting detailed backend data to modal format...');
+        const detailedGemstone = convertToDetailedGemstone(detailResult.data);
+        
+        // Merge with any existing bid data from the basic gemstone
+        const enhancedGemstone = {
+          ...detailedGemstone,
+          // Preserve current bid information from marketplace data
+          currentBid: basicGemstone.currentBid || detailedGemstone.price,
+          latestBidPrice: basicGemstone.latestBidPrice,
+          totalBids: basicGemstone.totalBids,
+          highestBidder: basicGemstone.highestBidder,
+          biddingActive: basicGemstone.biddingActive,
+          biddingStartTime: basicGemstone.biddingStartTime,
+          biddingEndTime: basicGemstone.biddingEndTime,
+          remainingTimeSeconds: basicGemstone.remainingTimeSeconds
+        };
+        
+        console.log('✅ Enhanced gemstone with detailed backend data:', enhancedGemstone);
+        console.log('📷 Total images available:', enhancedGemstone.images?.length || 0);
+        
+        setSelectedGemstone(enhancedGemstone);
+      } else {
+        console.warn('⚠️ Backend returned unsuccessful response, using basic data');
+        setSelectedGemstone(basicGemstone);
+      }
+      
+    } catch (error) {
+      console.error('❌ Error fetching detailed gemstone info:', error);
+      
+      // Fallback to basic gemstone data if there's an error
+      const basicGemstone = gemstones.find(g => g.id === gemstoneId);
+      if (basicGemstone) {
+        console.log('🔄 Using fallback basic gemstone data');
+        setSelectedGemstone(basicGemstone);
+      } else {
+        message.error('Failed to load gemstone details');
+        return;
+      }
+    } finally {
+      setLoading(false);
       setIsModalOpen(true);
     }
   };
@@ -752,6 +818,9 @@ const MarketplacePage: React.FC = () => {
             {/* Results Summary */}
             <div className="mb-3 sm:mb-4 lg:mb-6">
               <Title level={3} className="!mb-1 !text-base sm:!text-lg lg:!text-xl xl:!text-2xl">Gemstone Marketplace</Title>
+              <Paragraph className="!text-xs sm:!text-sm !mb-0 text-secondary-600">
+                Browse available and recently sold gemstones
+              </Paragraph>
               <Text type="secondary" className="text-xs sm:text-sm lg:text-base">
                 {loading ? 'Loading from gemnet_db.gem_listings...' : `Showing ${totalItems > 0 ? Math.min(totalItems, (currentPage - 1) * itemsPerPage + 1) : 0}-${Math.min(currentPage * itemsPerPage, totalItems)} of ${totalItems} approved listings from database`}
               </Text>
@@ -819,15 +888,15 @@ const MarketplacePage: React.FC = () => {
               </>
             ) : (
               <div style={{ textAlign: 'center', padding: '40px 0 60px' }}>
-                <Title level={3} type="secondary" className="!text-lg sm:!text-xl lg:!text-2xl">No Approved Listings in Database</Title>
+                <Title level={3} type="secondary" className="!text-lg sm:!text-xl lg:!text-2xl">No Listings Found</Title>
                 <Paragraph type="secondary" className="!text-sm sm:!text-base">
-                  No approved gemstone listings found in gemnet_db.gem_listings collection. 
-                  <br />Add some approved listings to the database or check your search filters.
+                  No approved or sold gemstone listings found in the database. 
+                  <br />Add some listings to the database or adjust your search filters.
                 </Paragraph>
                 <div className="mb-4 p-4 bg-blue-50 rounded-lg text-left max-w-2xl mx-auto">
                   <Text strong className="block mb-2">Database Query:</Text>
                   <Text code className="text-sm">
-                    gemnet_db.gem_listings.find({"{listingStatus: 'APPROVED', isActive: true}"})
+                    gemnet_db.gem_listings.find({"{listingStatus: {$in: ['APPROVED', 'sold']}, isActive: true}"})
                   </Text>
                 </div>
                 <Button type="primary" onClick={() => fetchMarketplaceListings()}>

@@ -22,10 +22,12 @@ const GemstoneCard: React.FC<GemstoneCardProps> = ({ gemstone, onViewDetails }) 
   React.useEffect(() => {
     console.log(`🔍 GemstoneCard rendered for ${gemstone.name}:`, gemstone);
     console.log(`💰 Gemstone ${gemstone.name} latestBidPrice:`, gemstone.latestBidPrice);
+    console.log(`🏷️ Gemstone ${gemstone.name} listingStatus:`, gemstone.listingStatus);
     console.log(`⏰ Gemstone ${gemstone.name} countdown data:`, {
       biddingActive: gemstone.biddingActive,
       remainingTimeSeconds: gemstone.remainingTimeSeconds,
-      isExpired: gemstone.isExpired
+      isExpired: gemstone.isExpired,
+      listingStatus: gemstone.listingStatus
     });
   }, [gemstone]);
 
@@ -78,13 +80,26 @@ const GemstoneCard: React.FC<GemstoneCardProps> = ({ gemstone, onViewDetails }) 
             onLoad={handleImageLoad}
           />
         )}
-        {gemstone.certified && (
-          <div className="absolute top-2 right-2 bg-primary-600 text-white px-2 py-1 rounded-md text-xs font-medium flex items-center space-x-1">
-            <Shield className="w-3 h-3" />
-            <span className="hidden sm:inline">Certified</span>
-            <span className="sm:hidden">✓</span>
-          </div>
-        )}
+        {/* Status badges */}
+        <div className="absolute top-2 right-2 flex flex-col space-y-1">
+          {gemstone.certified && (
+            <div className="bg-primary-600 text-white px-2 py-1 rounded-md text-xs font-medium flex items-center space-x-1">
+              <Shield className="w-3 h-3" />
+              <span className="hidden sm:inline">Certified</span>
+              <span className="sm:hidden">✓</span>
+            </div>
+          )}
+          {gemstone.listingStatus === 'sold' && (
+            <div className="bg-red-600 text-white px-2 py-1 rounded-md text-xs font-medium flex items-center">
+              <span>SOLD</span>
+            </div>
+          )}
+          {gemstone.listingStatus === 'expired_no_bids' && (
+            <div className="bg-gray-600 text-white px-2 py-1 rounded-md text-xs font-medium flex items-center">
+              <span>EXPIRED</span>
+            </div>
+          )}
+        </div>
       </div>
         <div className="p-3 sm:p-4">
         <div className="flex items-center space-x-2 mb-2">
@@ -127,12 +142,19 @@ const GemstoneCard: React.FC<GemstoneCardProps> = ({ gemstone, onViewDetails }) 
           </div>
           
           {/* Countdown Timer */}
-          <div className="mt-3 p-2 bg-red-50 rounded-lg border border-red-200">
+          <div className={`mt-3 p-2 rounded-lg border ${
+            gemstone.listingStatus === 'sold' 
+              ? 'bg-gray-50 border-gray-200' 
+              : gemstone.listingStatus === 'expired_no_bids'
+              ? 'bg-gray-50 border-gray-300'
+              : 'bg-red-50 border-red-200'
+          }`}>
             <CountdownTimer
               listingId={gemstone.id}
               initialRemainingSeconds={gemstone.remainingTimeSeconds}
               biddingActive={gemstone.biddingActive}
               isExpired={gemstone.isExpired}
+              listingStatus={gemstone.listingStatus}
               className="justify-center"
               showIcon={true}
             />
@@ -172,13 +194,22 @@ const GemstoneCard: React.FC<GemstoneCardProps> = ({ gemstone, onViewDetails }) 
         
         <div className="mt-3 sm:mt-4">
           <Button 
-            variant="primary"
+            variant={
+              gemstone.listingStatus === 'sold' || gemstone.listingStatus === 'expired_no_bids' 
+                ? 'secondary' 
+                : 'primary'
+            }
             size="sm"
             onClick={handleViewClick}
             type="button"
             className="w-full text-sm sm:text-base"
+            disabled={gemstone.listingStatus === 'sold' || gemstone.listingStatus === 'expired_no_bids'}
           >
-            View Details
+            {gemstone.listingStatus === 'sold' 
+              ? 'Sold Item' 
+              : gemstone.listingStatus === 'expired_no_bids'
+              ? 'Expired Item'
+              : 'View Details'}
           </Button>
         </div>
       </div>

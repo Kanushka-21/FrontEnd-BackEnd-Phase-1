@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Countdown Fix Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-button {
+            background: #3b82f6;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #2563eb;
+        }
+        .test-button.success {
+            background: #10b981;
+        }
+        .test-button.danger {
+            background: #ef4444;
+        }
+        .test-section {
+            border: 1px solid #e5e7eb;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .result {
+            background: #f8fafc;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            margin: 2px;
+        }
+        .status-active { background: #dbeafe; color: #1e40af; }
+        .status-sold { background: #fecaca; color: #dc2626; }
+        .status-expired { background: #f3f4f6; color: #6b7280; }
+        .status-approved { background: #d1fae5; color: #059669; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Countdown Fix Verification Test</h1>
+    <p>This test verifies that countdown timers don't reset after expiring and properly show "Bidding Closed" status.</p>
+
+    <div class="container">
+        <h2>🎯 Test Objectives</h2>
+        <ul>
+            <li><strong>Countdown Reset Bug:</strong> After countdown ends, it should NOT reset to 4 days</li>
+            <li><strong>Status Persistence:</strong> Expired items should stay as "Bidding Closed" on page reload</li>
+            <li><strong>Purchase History:</strong> Closed items should appear in buyer's purchase history</li>
+            <li><strong>Marketplace Visibility:</strong> Closed items should remain visible in marketplace</li>
+        </ul>
+    </div>
+
+    <div class="container">
+        <h2>🧪 Backend API Tests</h2>
+        
+        <div class="test-section">
+            <h3>Test 1: Get All Marketplace Listings (Check Status Distribution)</h3>
+            <button class="test-button" onclick="testMarketplaceListings()">Test Marketplace API</button>
+            <div id="marketplace-result" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Test 2: Test Countdown Status for Specific Listing</h3>
+            <input type="text" id="listing-id" placeholder="Enter listing ID" style="padding: 5px; margin: 5px;">
+            <button class="test-button" onclick="testCountdownStatus()">Check Countdown Status</button>
+            <div id="countdown-result" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Test 3: Force Process Expired Bids</h3>
+            <button class="test-button danger" onclick="processExpiredBids()">Force Process Expired Bids</button>
+            <div id="expired-result" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Test 4: Test Purchase History API</h3>
+            <input type="text" id="user-id" placeholder="Enter user ID" style="padding: 5px; margin: 5px;">
+            <button class="test-button" onclick="testPurchaseHistory()">Check Purchase History</button>
+            <div id="purchase-result" class="result"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>🌐 Frontend Tests</h2>
+        
+        <div class="test-section">
+            <h3>Test 5: Open Marketplace and Check Status Display</h3>
+            <button class="test-button success" onclick="openMarketplace()">Open Marketplace</button>
+            <p><em>Check if expired items show "Bidding Closed" instead of countdown timers</em></p>
+        </div>
+
+        <div class="test-section">
+            <h3>Test 6: Open Buyer Dashboard Purchases</h3>
+            <button class="test-button success" onclick="openBuyerPurchases()">Open Buyer Purchases</button>
+            <p><em>Check if won/expired items appear in purchase history</em></p>
+        </div>
+
+        <div class="test-section">
+            <h3>Test 7: Test Notification Redirect</h3>
+            <button class="test-button success" onclick="testNotificationRedirect()">Simulate BID_WON Notification</button>
+            <p><em>Should redirect to buyer dashboard purchases section</em></p>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>📊 Test Results Summary</h2>
+        <div id="test-summary" class="result">
+            No tests run yet. Click the test buttons above to start.
+        </div>
+    </div>
+
+    <script>
+        let testResults = [];
+
+        function logResult(testName, success, data) {
+            const result = {
+                test: testName,
+                success: success,
+                timestamp: new Date().toISOString(),
+                data: data
+            };
+            testResults.push(result);
+            updateSummary();
+        }
+
+        function updateSummary() {
+            const summary = document.getElementById('test-summary');
+            const passed = testResults.filter(r => r.success).length;
+            const total = testResults.length;
+            
+            let summaryText = `Tests Run: ${total}, Passed: ${passed}, Failed: ${total - passed}\n\n`;
+            testResults.forEach(result => {
+                const status = result.success ? '✅' : '❌';
+                summaryText += `${status} ${result.test} (${result.timestamp})\n`;
+            });
+            
+            summary.textContent = summaryText;
+        }
+
+        async function testMarketplaceListings() {
+            const resultDiv = document.getElementById('marketplace-result');
+            resultDiv.textContent = 'Testing marketplace API...';
+            
+            try {
+                const response = await fetch('http://localhost:9092/api/marketplace/listings?page=0&size=20&includeSold=true');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const listings = data.data;
+                    let statusCounts = {};
+                    
+                    listings.forEach(listing => {
+                        const status = listing.listingStatus;
+                        statusCounts[status] = (statusCounts[status] || 0) + 1;
+                    });
+                    
+                    let result = `Found ${listings.length} listings:\n\n`;
+                    result += 'Status Distribution:\n';
+                    Object.entries(statusCounts).forEach(([status, count]) => {
+                        result += `  ${status}: ${count} items\n`;
+                    });
+                    
+                    result += '\nFirst 5 listings:\n';
+                    listings.slice(0, 5).forEach((listing, index) => {
+                        result += `${index + 1}. ${listing.gemName} (${listing.id})\n`;
+                        result += `   Status: ${listing.listingStatus}\n`;
+                        result += `   Bidding Active: ${listing.biddingActive}\n`;
+                        result += `   Winner: ${listing.winningBidderId || 'None'}\n`;
+                        result += `   Final Price: ${listing.finalPrice || 'N/A'}\n\n`;
+                    });
+                    
+                    resultDiv.textContent = result;
+                    logResult('Marketplace Listings', true, statusCounts);
+                } else {
+                    resultDiv.textContent = `Error: ${data.message}`;
+                    logResult('Marketplace Listings', false, data.message);
+                }
+            } catch (error) {
+                resultDiv.textContent = `Error: ${error.message}`;
+                logResult('Marketplace Listings', false, error.message);
+            }
+        }
+
+        async function testCountdownStatus() {
+            const listingId = document.getElementById('listing-id').value;
+            const resultDiv = document.getElementById('countdown-result');
+            
+            if (!listingId) {
+                resultDiv.textContent = 'Please enter a listing ID';
+                return;
+            }
+            
+            resultDiv.textContent = `Testing countdown status for listing ${listingId}...`;
+            
+            try {
+                const response = await fetch(`http://localhost:9092/api/bidding/listing/${listingId}/countdown`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const countdown = data.data;
+                    let result = `Countdown Status for ${listingId}:\n\n`;
+                    result += `Bidding Active: ${countdown.biddingActive}\n`;
+                    result += `Is Expired: ${countdown.isExpired}\n`;
+                    result += `Remaining Time: ${countdown.remainingTimeSeconds} seconds\n`;
+                    result += `Days: ${countdown.remainingDays}, Hours: ${countdown.remainingHours}\n`;
+                    result += `Minutes: ${countdown.remainingMinutes}, Seconds: ${countdown.remainingSeconds}\n`;
+                    
+                    if (countdown.biddingEndTime) {
+                        result += `End Time: ${countdown.biddingEndTime}\n`;
+                    }
+                    
+                    resultDiv.textContent = result;
+                    logResult('Countdown Status', true, countdown);
+                } else {
+                    resultDiv.textContent = `Error: ${data.message}`;
+                    logResult('Countdown Status', false, data.message);
+                }
+            } catch (error) {
+                resultDiv.textContent = `Error: ${error.message}`;
+                logResult('Countdown Status', false, error.message);
+            }
+        }
+
+        async function processExpiredBids() {
+            const resultDiv = document.getElementById('expired-result');
+            resultDiv.textContent = 'Processing expired bids...';
+            
+            try {
+                const response = await fetch('http://localhost:9092/api/bidding/process-expired', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    let result = `Expired Bids Processing Results:\n\n`;
+                    result += `Processed: ${data.data.processedCount} listings\n`;
+                    result += `Completed: ${data.data.completedCount} listings\n`;
+                    result += `Message: ${data.message}\n`;
+                    
+                    resultDiv.textContent = result;
+                    logResult('Process Expired Bids', true, data.data);
+                } else {
+                    resultDiv.textContent = `Error: ${data.message}`;
+                    logResult('Process Expired Bids', false, data.message);
+                }
+            } catch (error) {
+                resultDiv.textContent = `Error: ${error.message}`;
+                logResult('Process Expired Bids', false, error.message);
+            }
+        }
+
+        async function testPurchaseHistory() {
+            const userId = document.getElementById('user-id').value;
+            const resultDiv = document.getElementById('purchase-result');
+            
+            if (!userId) {
+                resultDiv.textContent = 'Please enter a user ID';
+                return;
+            }
+            
+            resultDiv.textContent = `Testing purchase history for user ${userId}...`;
+            
+            try {
+                const response = await fetch(`http://localhost:9092/api/bidding/purchase-history/${userId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const purchases = data.data;
+                    let result = `Purchase History for ${userId}:\n\n`;
+                    result += `Total Purchases: ${purchases.length}\n\n`;
+                    
+                    purchases.forEach((purchase, index) => {
+                        result += `${index + 1}. ${purchase.gemName}\n`;
+                        result += `   Final Price: ${purchase.finalPrice}\n`;
+                        result += `   Purchase Date: ${purchase.purchaseDate}\n`;
+                        result += `   Seller: ${purchase.sellerId}\n\n`;
+                    });
+                    
+                    resultDiv.textContent = result;
+                    logResult('Purchase History', true, { count: purchases.length });
+                } else {
+                    resultDiv.textContent = `Error: ${data.message}`;
+                    logResult('Purchase History', false, data.message);
+                }
+            } catch (error) {
+                resultDiv.textContent = `Error: ${error.message}`;
+                logResult('Purchase History', false, error.message);
+            }
+        }
+
+        function openMarketplace() {
+            window.open('http://localhost:3000/marketplace', '_blank');
+            logResult('Open Marketplace', true, 'Opened in new tab');
+        }
+
+        function openBuyerPurchases() {
+            window.open('http://localhost:3000/buyer/dashboard?section=purchases', '_blank');
+            logResult('Open Buyer Purchases', true, 'Opened in new tab');
+        }
+
+        function testNotificationRedirect() {
+            // Simulate notification click
+            window.open('/buyer/dashboard?section=purchases', '_blank');
+            logResult('Notification Redirect', true, 'Redirected to purchases section');
+        }
+
+        // Auto-run basic tests on page load
+        window.onload = function() {
+            console.log('🧪 Countdown Fix Test Page Loaded');
+            // Uncomment to auto-run tests
+            // setTimeout(testMarketplaceListings, 1000);
+        };
+    </script>
+
+    <div class="container">
+        <h2>🚀 Quick Test Instructions</h2>
+        <ol>
+            <li><strong>Test Marketplace API</strong> - Check if expired items have correct status</li>
+            <li><strong>Enter a listing ID</strong> and test countdown status - should show expired for completed items</li>
+            <li><strong>Force process expired bids</strong> - ensures all expired items are properly handled</li>
+            <li><strong>Open marketplace</strong> - verify expired items show "Bidding Closed" without countdown</li>
+            <li><strong>Open buyer purchases</strong> - verify won items appear in purchase history</li>
+            <li><strong>Test page reload</strong> - verify countdown doesn't reset to 4 days</li>
+        </ol>
+    </div>
+</body>
+</html>

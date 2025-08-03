@@ -7,6 +7,7 @@ interface CountdownTimerProps {
   initialRemainingSeconds?: number;
   biddingActive?: boolean;
   isExpired?: boolean;
+  listingStatus?: 'APPROVED' | 'ACTIVE' | 'sold' | 'expired_no_bids'; // Add expired_no_bids status
   onCountdownComplete?: () => void;
   showIcon?: boolean;
   className?: string;
@@ -50,6 +51,7 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
   initialRemainingSeconds = 0,
   biddingActive = false,
   isExpired = false,
+  listingStatus,
   onCountdownComplete,
   showIcon = true,
   className = "",
@@ -58,7 +60,7 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
   onCountdownUpdate
 }) => {
   const [remainingSeconds, setRemainingSeconds] = useState(initialRemainingSeconds);
-  const [isActive, setIsActive] = useState(biddingActive && !isExpired);
+  const [isActive, setIsActive] = useState(biddingActive && !isExpired && (listingStatus as string) !== 'sold'); // Don't activate if sold
   const [countdown, setCountdown] = useState<CountdownTime>({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
   // Function to refresh countdown data
@@ -137,19 +139,55 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
     console.log(`⏰ CountdownTimer props for listing ${listingId}:`, {
       initialRemainingSeconds,
       biddingActive,
-      isExpired
+      isExpired,
+      listingStatus // Add this to see the actual value
     });
     setRemainingSeconds(initialRemainingSeconds);
-    setIsActive(biddingActive && !isExpired);
-  }, [initialRemainingSeconds, biddingActive, isExpired, listingId]);
+    setIsActive(biddingActive && !isExpired && (listingStatus as string) !== 'sold'); // Don't activate if sold
+  }, [initialRemainingSeconds, biddingActive, isExpired, listingStatus, listingId]);
 
   // Format number with leading zero
   const formatNumber = (num: number): string => {
     return num.toString().padStart(2, '0');
   };
 
+  // PRIORITY CHECK: If item is sold, show "Bidding Closed - SOLD" immediately
+  // Handle various possible values for sold status
+  console.log(`🔍 DEBUG: Checking listingStatus for ${listingId}: "${listingStatus}" (type: ${typeof listingStatus})`);
+  
+  const isSold = listingStatus === 'sold';
+  const isExpiredNoBids = listingStatus === 'expired_no_bids';
+  
+  // TEMPORARY DEBUG: Always show sold status for testing
+  if (isSold || (listingStatus as string) === 'sold') {
+    console.log(`🛑 SOLD ITEM DETECTED: ${listingId} - listingStatus: "${listingStatus}" - Showing closed status`);
+    return (
+      <div className={`flex items-center gap-2 text-red-600 ${className}`}>
+        {showIcon && <AlertCircle className="w-4 h-4" />}
+        <div className="flex flex-col items-center">
+          <span className="text-sm font-bold">Bidding Closed</span>
+          <span className="text-xs font-semibold bg-red-100 text-red-800 px-2 py-0.5 rounded">SOLD</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle expired items with no bids
+  if (isExpiredNoBids || (listingStatus as string) === 'expired_no_bids') {
+    console.log(`⏰ EXPIRED ITEM DETECTED: ${listingId} - listingStatus: "${listingStatus}" - Showing closed status`);
+    return (
+      <div className={`flex items-center gap-2 text-gray-600 ${className}`}>
+        {showIcon && <AlertCircle className="w-4 h-4" />}
+        <div className="flex flex-col items-center">
+          <span className="text-sm font-bold">Bidding Closed</span>
+          <span className="text-xs font-semibold bg-gray-100 text-gray-700 px-2 py-0.5 rounded">NO BIDS</span>
+        </div>
+      </div>
+    );
+  }
+
   // If bidding is not active and not expired, show "Waiting for first bid"
-  if (!biddingActive && !isExpired) {
+  if (!biddingActive && !isExpired && (listingStatus as string) !== 'sold') {
     return (
       <div className={`flex items-center gap-2 text-gray-500 ${className}`}>
         {showIcon && <Clock className="w-4 h-4" />}

@@ -69,6 +69,10 @@ public interface GemListingRepository extends MongoRepository<GemListing, String
     @Query("{'listingStatus': {$in: ['APPROVED', 'ACTIVE']}, 'isActive': true}")
     List<GemListing> findMarketplaceListings();
     
+    // Find all marketplace listings including sold items (for marketplace display)
+    @Query("{'listingStatus': {$in: ['APPROVED', 'ACTIVE', 'sold']}, 'isActive': true}")
+    List<GemListing> findAllMarketplaceListings();
+    
     // Find seller's active listings
     @Query("{'userId': ?0, 'isActive': true, 'listingStatus': {$ne: 'SOLD'}}")
     List<GemListing> findSellerActiveListings(String userId);
@@ -166,6 +170,10 @@ public interface GemListingRepository extends MongoRepository<GemListing, String
     @Query("{'listingStatus': {$in: ['APPROVED', 'ACTIVE']}, 'isActive': true}")
     Page<GemListing> findMarketplaceListings(Pageable pageable);
     
+    // Find all marketplace listings including sold items with pagination
+    @Query("{'listingStatus': {$in: ['APPROVED', 'ACTIVE', 'sold', 'expired_no_bids']}, 'isActive': true}")
+    Page<GemListing> findAllMarketplaceListings(Pageable pageable);
+    
     // Find pending approval listings with pagination
     @Query("{'listingStatus': 'PENDING', 'isActive': true}")
     Page<GemListing> findPendingApprovalListings(Pageable pageable);
@@ -196,6 +204,20 @@ public interface GemListingRepository extends MongoRepository<GemListing, String
     @Query("{'price': {$gte: ?0}, 'listingStatus': {$in: ['APPROVED', 'ACTIVE']}, 'isActive': true}")
     Page<GemListing> findByMinPriceInMarketplace(Double minPrice, Pageable pageable);
     
+    // ===== MARKETPLACE METHODS INCLUDING SOLD ITEMS =====
+    
+    // Search marketplace listings by name including sold items with pagination
+    @Query("{'gemName': {$regex: ?0, $options: 'i'}, 'listingStatus': {$in: ['APPROVED', 'ACTIVE', 'sold', 'expired_no_bids']}, 'isActive': true}")
+    Page<GemListing> searchByNameInMarketplaceIncludingSold(String gemName, Pageable pageable);
+    
+    // Find by category and certification in marketplace including sold items
+    @Query("{'category': ?0, 'isCertified': ?1, 'listingStatus': {$in: ['APPROVED', 'ACTIVE', 'sold', 'expired_no_bids']}, 'isActive': true}")
+    Page<GemListing> findByCategoryAndCertificationInMarketplaceIncludingSold(String category, Boolean isCertified, Pageable pageable);
+    
+    // Find by minimum price in marketplace including sold items
+    @Query("{'price': {$gte: ?0}, 'listingStatus': {$in: ['APPROVED', 'ACTIVE', 'sold', 'expired_no_bids']}, 'isActive': true}")
+    Page<GemListing> findByMinPriceInMarketplaceIncludingSold(Double minPrice, Pageable pageable);
+    
     // Count marketplace listings
     @Query(value = "{'listingStatus': {$in: ['APPROVED', 'ACTIVE']}, 'isActive': true}", count = true)
     long countMarketplaceListings();
@@ -214,6 +236,9 @@ public interface GemListingRepository extends MongoRepository<GemListing, String
     
     // Find listings by winning bidder (for purchase history)
     List<GemListing> findByWinningBidderIdAndListingStatus(String winningBidderId, String listingStatus);
+    
+    // Find listings by winning bidder regardless of status (for debugging)
+    List<GemListing> findByWinningBidderId(String winningBidderId);
     
     // Find seller's sold listings
     List<GemListing> findBySellerId(String sellerId);

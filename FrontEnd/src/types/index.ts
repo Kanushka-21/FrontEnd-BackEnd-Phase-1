@@ -239,6 +239,8 @@ export interface Gemstone {
     name: string;
     rating: number;
   };
+  // Listing status
+  listingStatus?: 'APPROVED' | 'ACTIVE' | 'sold' | 'expired_no_bids';
   // Bidding countdown fields
   biddingActive?: boolean;
   biddingStartTime?: string;
