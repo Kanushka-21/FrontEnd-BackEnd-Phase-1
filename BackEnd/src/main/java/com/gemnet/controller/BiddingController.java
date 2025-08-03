@@ -416,4 +416,33 @@ public class BiddingController {
                 .body(new ApiResponse<>(false, "Failed to create test purchase: " + e.getMessage(), null));
         }
     }
+    
+    /**
+     * Complete bidding for a specific listing (for testing notifications)
+     * POST /api/bidding/testing/complete-bidding/{listingId}
+     */
+    @PostMapping("/testing/complete-bidding/{listingId}")
+    public ResponseEntity<ApiResponse<String>> completeBiddingForTesting(
+        @PathVariable String listingId) {
+        
+        try {
+            System.out.println("🧪 [TESTING] Manual bidding completion for listing: " + listingId);
+            
+            ApiResponse<String> response = biddingService.completeBiddingForTesting(listingId);
+            
+            if (response.isSuccess()) {
+                System.out.println("✅ [TESTING] Bidding completed successfully with notifications");
+                return ResponseEntity.ok(response);
+            } else {
+                System.err.println("❌ [TESTING] Failed to complete bidding: " + response.getMessage());
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("❌ [TESTING] Error in complete bidding endpoint: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError()
+                .body(new ApiResponse<>(false, "Failed to complete bidding: " + e.getMessage(), null));
+        }
+    }
 }

@@ -870,41 +870,78 @@ public class BiddingService {
     private void sendBiddingCompletionNotifications(GemListing listing, Bid winningBid) {
         try {
             System.out.println("📤 Sending completion notifications for listing: " + listing.getId());
+            
+            String bidAmountFormatted = formatAmount(winningBid.getBidAmount());
+            String gemName = listing.getGemName();
+            String listingId = listing.getId();
+            String winningBidderId = winningBid.getBidderId();
+            String winningBidderName = winningBid.getBidderName();
+            String sellerId = listing.getUserId();
 
-            // Notification to the winner (buyer)
-            Notification winnerNotification = new Notification();
-            winnerNotification.setUserId(winningBid.getBidderId());
-            winnerNotification.setType("bid_won");
-            winnerNotification.setTitle("🎉 Congratulations! You won the bid!");
-            winnerNotification.setMessage(
-                "You successfully won the bid for " + listing.getGemName() + 
-                " with a winning bid of $" + String.format("%.2f", winningBid.getBidAmount()) + 
-                ". The item has been added to your Purchase History."
+            // Notification to the winner (buyer) - BID WON
+            System.out.println("🎉 Creating winner notification for user: " + winningBidderId);
+            createNotification(
+                winningBidderId,
+                listingId,
+                winningBid.getId(),
+                "BID_WON",
+                "🎉 Congratulations! You won the bid!",
+                "You successfully won the bid for " + gemName + 
+                " with a winning bid of LKR " + bidAmountFormatted + 
+                ". The item has been added to your Purchase History. Congratulations on your successful purchase!",
+                winningBidderId,
+                winningBidderName,
+                bidAmountFormatted,
+                gemName
             );
-            winnerNotification.setListingId(listing.getId());
-            winnerNotification.setCreatedAt(LocalDateTime.now());
-            winnerNotification.setRead(false);
-            notificationRepository.save(winnerNotification);
 
-            // Notification to the seller
-            Notification sellerNotification = new Notification();
-            sellerNotification.setUserId(listing.getUserId()); // Use userId as sellerId
-            sellerNotification.setType("item_sold");
-            sellerNotification.setTitle("💰 Your item has been sold!");
-            sellerNotification.setMessage(
-                "Your " + listing.getGemName() + " has been sold for $" + 
-                String.format("%.2f", winningBid.getBidAmount()) + 
-                ". A buyer has won the bidding and the transaction is now complete."
+            // Notification to the seller - ITEM SOLD
+            System.out.println("💰 Creating seller notification for user: " + sellerId);
+            createNotification(
+                sellerId,
+                listingId,
+                winningBid.getId(),
+                "ITEM_SOLD",
+                "💰 Your item has been sold!",
+                "Your " + gemName + " has been sold for LKR " + bidAmountFormatted + 
+                ". Buyer: " + winningBidderName + ". The bidding has completed successfully and the transaction is now complete.",
+                winningBidderId,
+                winningBidderName,
+                bidAmountFormatted,
+                gemName
             );
-            sellerNotification.setListingId(listing.getId());
-            sellerNotification.setCreatedAt(LocalDateTime.now());
-            sellerNotification.setRead(false);
-            notificationRepository.save(sellerNotification);
 
-            System.out.println("✅ Completion notifications sent successfully");
+            // Also notify other bidders that the bidding has ended (if any)
+            System.out.println("📢 Notifying other bidders about bidding completion...");
+            List<Bid> otherBids = bidRepository.findByListingIdAndBidderIdNotAndStatus(
+                listingId, 
+                winningBidderId, 
+                "ACTIVE"
+            );
+            
+            for (Bid otherBid : otherBids) {
+                createNotification(
+                    otherBid.getBidderId(),
+                    listingId,
+                    winningBid.getId(),
+                    "BIDDING_ENDED",
+                    "⏰ Bidding has ended",
+                    "The bidding for " + gemName + " has ended. The winning bid was LKR " + 
+                    bidAmountFormatted + " by " + winningBidderName + ". Thank you for participating in the auction.",
+                    winningBidderId,
+                    winningBidderName,
+                    bidAmountFormatted,
+                    gemName
+                );
+            }
+
+            System.out.println("✅ All completion notifications sent successfully");
+            System.out.println("   - Winner notification sent to: " + winningBidderId);
+            System.out.println("   - Seller notification sent to: " + sellerId);
+            System.out.println("   - Other bidder notifications: " + otherBids.size());
 
         } catch (Exception e) {
-            System.err.println("Error sending completion notifications: " + e.getMessage());
+            System.err.println("❌ Error sending completion notifications: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -1061,6 +1098,52 @@ public class BiddingService {
             System.err.println("Error creating test purchase: " + e.getMessage());
             e.printStackTrace();
             return new ApiResponse<>(false, "Failed to create test purchase: " + e.getMessage(), null);
+        }
+    }
+    
+    /**
+     * Complete bidding for a specific listing (for testing notifications)
+     * @param listingId The listing ID to complete bidding for
+     */
+    public ApiResponse<String> completeBiddingForTesting(String listingId) {
+        try {
+            System.out.println("🧪 [TESTING] Completing bidding for listing: " + listingId);
+
+            Optional<GemListing> listingOpt = gemListingRepository.findById(listingId);
+            if (listingOpt.isEmpty()) {
+                return new ApiResponse<>(false, "Listing not found", null);
+            }
+
+            GemListing listing = listingOpt.get();
+            
+            // Find the highest bid for this listing
+            Optional<Bid> highestBidOpt = bidRepository.findTopByListingIdOrderByBidAmountDesc(listingId);
+            
+            if (highestBidOpt.isEmpty()) {
+                return new ApiResponse<>(false, "No bids found for this listing", null);
+            }
+
+            Bid winningBid = highestBidOpt.get();
+            
+            // Complete the bidding process with proper notifications
+            boolean completed = completeBidding(listing, winningBid);
+            
+            if (completed) {
+                System.out.println("✅ [TESTING] Bidding completed successfully with notifications");
+                System.out.println("   Listing: " + listing.getGemName() + " (ID: " + listingId + ")");
+                System.out.println("   Winner: " + winningBid.getBidderName() + " (ID: " + winningBid.getBidderId() + ")");
+                System.out.println("   Winning Bid: LKR " + winningBid.getBidAmount());
+                
+                return new ApiResponse<>(true, "Bidding completed successfully with notifications", 
+                    "Winner: " + winningBid.getBidderName() + " with bid of LKR " + winningBid.getBidAmount());
+            } else {
+                return new ApiResponse<>(false, "Failed to complete bidding process", null);
+            }
+
+        } catch (Exception e) {
+            System.err.println("Error completing bidding for testing: " + e.getMessage());
+            e.printStackTrace();
+            return new ApiResponse<>(false, "Failed to complete bidding: " + e.getMessage(), null);
         }
     }
 }
