@@ -471,4 +471,33 @@ public class BiddingController {
                 .body(new ApiResponse<>(false, "Failed to complete any bidding: " + e.getMessage(), null));
         }
     }
+
+    /**
+     * Fix sold items that still have biddingActive=true
+     */
+    @PostMapping("/fix-sold-items")
+    @Operation(summary = "Fix sold items with active bidding", 
+               description = "Fix sold items that still have biddingActive=true")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> fixSoldItems() {
+        
+        System.out.println("🔧 [FIX] Starting fix for sold items with active bidding");
+        
+        try {
+            ApiResponse<Map<String, Object>> response = biddingService.fixSoldItemsWithActiveBidding();
+            
+            if (response.isSuccess()) {
+                System.out.println("✅ [FIX] Sold items fixed successfully");
+                return ResponseEntity.ok(response);
+            } else {
+                System.err.println("❌ [FIX] Failed to fix sold items: " + response.getMessage());
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("❌ [FIX] Error in fix sold items endpoint: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError()
+                .body(new ApiResponse<>(false, "Failed to fix sold items: " + e.getMessage(), null));
+        }
+    }
 }

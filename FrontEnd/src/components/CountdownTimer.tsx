@@ -60,7 +60,7 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
   onCountdownUpdate
 }) => {
   const [remainingSeconds, setRemainingSeconds] = useState(initialRemainingSeconds);
-  const [isActive, setIsActive] = useState(biddingActive && !isExpired && (listingStatus as string) !== 'sold'); // Don't activate if sold
+  const [isActive, setIsActive] = useState(false); // Initialize as false, will be set based on status checks
   const [countdown, setCountdown] = useState<CountdownTime>({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
   // Function to refresh countdown data
@@ -71,7 +71,12 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
         const data = await response.json();
         if (data.success && data.data) {
           setRemainingSeconds(data.data.remainingTimeSeconds || 0);
-          setIsActive(data.data.biddingActive && !data.data.isExpired);
+          // Only set active if status is not sold/expired and bidding is actually active
+          const shouldBeActive = data.data.biddingActive && 
+                                 !data.data.isExpired && 
+                                 listingStatus !== 'sold' && 
+                                 listingStatus !== 'expired_no_bids';
+          setIsActive(shouldBeActive);
           
           // Notify parent component that countdown was updated
           if (onCountdownUpdate) {
@@ -143,7 +148,15 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
       listingStatus // Add this to see the actual value
     });
     setRemainingSeconds(initialRemainingSeconds);
-    setIsActive(biddingActive && !isExpired && (listingStatus as string) !== 'sold'); // Don't activate if sold
+    
+    // Only set active if status allows it - NEVER for sold or expired items
+    const shouldBeActive = biddingActive && 
+                          !isExpired && 
+                          listingStatus !== 'sold' && 
+                          listingStatus !== 'expired_no_bids';
+    setIsActive(shouldBeActive);
+    
+    console.log(`⏰ Setting isActive to: ${shouldBeActive} for listing ${listingId}`);
   }, [initialRemainingSeconds, biddingActive, isExpired, listingStatus, listingId]);
 
   // Format number with leading zero

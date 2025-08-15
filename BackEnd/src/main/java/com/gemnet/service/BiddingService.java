@@ -1254,4 +1254,52 @@ public class BiddingService {
             return new ApiResponse<>(false, "Failed to complete bidding for testing: " + e.getMessage(), null);
         }
     }
+
+    /**
+     * Fix sold items that still have biddingActive=true
+     */
+    public ApiResponse<Map<String, Object>> fixSoldItemsWithActiveBidding() {
+        try {
+            System.out.println("🔧 [FIX] Starting to fix sold items with active bidding");
+
+            // Find all listings with status 'sold' but biddingActive = true
+            List<GemListing> problemListings = gemListingRepository.findAll().stream()
+                .filter(listing -> "sold".equals(listing.getListingStatus()) && Boolean.TRUE.equals(listing.getBiddingActive()))
+                .collect(java.util.stream.Collectors.toList());
+
+            System.out.println("🔧 [FIX] Found " + problemListings.size() + " sold items with active bidding");
+
+            int fixedCount = 0;
+            for (GemListing listing : problemListings) {
+                System.out.println("🔧 [FIX] Fixing listing: " + listing.getId() + " - " + listing.getGemName());
+                
+                // Set bidding to inactive
+                listing.setBiddingActive(false);
+                
+                // Ensure bidding completed timestamp is set
+                if (listing.getBiddingCompletedAt() == null) {
+                    listing.setBiddingCompletedAt(LocalDateTime.now());
+                }
+                
+                // Save the fix
+                gemListingRepository.save(listing);
+                fixedCount++;
+                
+                System.out.println("✅ [FIX] Fixed listing: " + listing.getId());
+            }
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("problemItemsFound", problemListings.size());
+            result.put("itemsFixed", fixedCount);
+            result.put("timestamp", LocalDateTime.now().toString());
+
+            System.out.println("✅ [FIX] Completed fixing " + fixedCount + " sold items");
+            return new ApiResponse<>(true, "Fixed " + fixedCount + " sold items with active bidding", result);
+
+        } catch (Exception e) {
+            System.err.println("🔧 [FIX] Error fixing sold items: " + e.getMessage());
+            e.printStackTrace();
+            return new ApiResponse<>(false, "Failed to fix sold items: " + e.getMessage(), null);
+        }
+    }
 }

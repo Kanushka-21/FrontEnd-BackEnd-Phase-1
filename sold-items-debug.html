@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sold Items Debug Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; }
+        .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .test-button { background: #3b82f6; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin: 5px; }
+        .test-button:hover { background: #2563eb; }
+        .result { background: #f8fafc; padding: 10px; border-radius: 4px; margin-top: 10px; white-space: pre-wrap; font-family: monospace; font-size: 12px; max-height: 400px; overflow-y: auto; }
+        .sold-item { background: #fecaca; padding: 10px; margin: 5px; border-radius: 5px; }
+        .status-sold { background: #dc2626; color: white; padding: 2px 6px; border-radius: 3px; font-size: 11px; }
+        .status-active { background: #10b981; color: white; padding: 2px 6px; border-radius: 3px; font-size: 11px; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Sold Items Countdown Debug</h1>
+    
+    <div class="container">
+        <h2>🎯 Debug Objectives</h2>
+        <ul>
+            <li>Find sold items that still show countdown timers</li>
+            <li>Check if backend properly sets biddingActive=false for sold items</li>
+            <li>Verify frontend receives correct status data</li>
+            <li>Force update sold items to close bidding</li>
+        </ul>
+    </div>
+
+    <div class="container">
+        <h2>🔍 Step 1: Check All Marketplace Items</h2>
+        <button class="test-button" onclick="debugMarketplaceItems()">Debug All Marketplace Items</button>
+        <div id="marketplace-debug" class="result"></div>
+    </div>
+
+    <div class="container">
+        <h2>🔧 Step 2: Check Specific Sold Item Status</h2>
+        <input type="text" id="sold-listing-id" placeholder="Enter sold item ID (from MongoDB)" style="padding: 5px; margin: 5px;">
+        <button class="test-button" onclick="debugSpecificItem()">Debug Specific Item</button>
+        <div id="specific-debug" class="result"></div>
+    </div>
+
+    <div class="container">
+        <h2>⚠️ Step 3: Force Fix Sold Items</h2>
+        <button class="test-button" onclick="fixSoldItems()" style="background: #dc2626;">Force Fix All Sold Items</button>
+        <div id="fix-result" class="result"></div>
+    </div>
+
+    <div class="container">
+        <h2>🌐 Step 4: Test Frontend</h2>
+        <button class="test-button" onclick="openMarketplace()">Open Marketplace to Verify</button>
+    </div>
+
+    <script>
+        async function debugMarketplaceItems() {
+            const resultDiv = document.getElementById('marketplace-debug');
+            resultDiv.textContent = 'Fetching all marketplace items...';
+            
+            try {
+                const response = await fetch('http://localhost:9092/api/marketplace/listings?page=0&size=50&includeSold=true');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const listings = data.data;
+                    const soldItems = listings.filter(item => item.listingStatus === 'sold');
+                    
+                    let result = `Total listings: ${listings.length}\n`;
+                    result += `Sold items: ${soldItems.length}\n\n`;
+                    
+                    result += 'PROBLEM ITEMS (sold but biddingActive=true):\n';
+                    result += '===============================================\n';
+                    
+                    const problemItems = soldItems.filter(item => item.biddingActive === true);
+                    
+                    if (problemItems.length > 0) {
+                        problemItems.forEach((item, index) => {
+                            result += `${index + 1}. ${item.gemName} (ID: ${item.id})\n`;
+                            result += `   Status: ${item.listingStatus}\n`;
+                            result += `   Bidding Active: ${item.biddingActive} ❌ PROBLEM!\n`;
+                            result += `   Is Active: ${item.isActive}\n`;
+                            result += `   Final Price: ${item.finalPrice}\n`;
+                            result += `   Winner: ${item.winningBidderId}\n`;
+                            result += `   Bidding End Time: ${item.biddingEndTime}\n`;
+                            result += `   Remaining Seconds: ${item.remainingTimeSeconds}\n\n`;
+                        });
+                    } else {
+                        result += 'No problem items found! All sold items have biddingActive=false ✅\n\n';
+                    }
+                    
+                    result += 'ALL SOLD ITEMS SUMMARY:\n';
+                    result += '=====================\n';
+                    soldItems.forEach((item, index) => {
+                        const status = item.biddingActive ? '❌ ACTIVE' : '✅ CLOSED';
+                        result += `${index + 1}. ${item.gemName}: ${status}\n`;
+                    });
+                    
+                    resultDiv.textContent = result;
+                } else {
+                    resultDiv.textContent = `Error: ${data.message}`;
+                }
+            } catch (error) {
+                resultDiv.textContent = `Error: ${error.message}`;
+            }
+        }
+
+        async function debugSpecificItem() {
+            const listingId = document.getElementById('sold-listing-id').value;
+            const resultDiv = document.getElementById('specific-debug');
+            
+            if (!listingId) {
+                resultDiv.textContent = 'Please enter a listing ID';
+                return;
+            }
+            
+            resultDiv.textContent = `Debugging specific item: ${listingId}...`;
+            
+            try {
+                // Get listing details
+                const listingResponse = await fetch(`http://localhost:9092/api/gems/listing/${listingId}`);
+                const listingData = await listingResponse.json();
+                
+                // Get countdown status
+                const countdownResponse = await fetch(`http://localhost:9092/api/bidding/listing/${listingId}/countdown`);
+                const countdownData = await countdownResponse.json();
+                
+                let result = `LISTING DETAILS for ${listingId}:\n`;
+                result += '================================\n';
+                
+                if (listingData.success) {
+                    const listing = listingData.data;
+                    result += `Gem Name: ${listing.gemName}\n`;
+                    result += `Listing Status: ${listing.listingStatus}\n`;
+                    result += `Bidding Active: ${listing.biddingActive}\n`;
+                    result += `Is Active: ${listing.isActive}\n`;
+                    result += `Final Price: ${listing.finalPrice}\n`;
+                    result += `Winner ID: ${listing.winningBidderId}\n`;
+                    result += `Bidding End Time: ${listing.biddingEndTime}\n`;
+                    result += `Bidding Completed At: ${listing.biddingCompletedAt}\n\n`;
+                }
+                
+                result += `COUNTDOWN STATUS:\n`;
+                result += '================\n';
+                
+                if (countdownData.success) {
+                    const countdown = countdownData.data;
+                    result += `Bidding Active: ${countdown.biddingActive}\n`;
+                    result += `Is Expired: ${countdown.isExpired}\n`;
+                    result += `Remaining Seconds: ${countdown.remainingTimeSeconds}\n`;
+                    result += `End Time: ${countdown.biddingEndTime}\n\n`;
+                }
+                
+                // Determine if this is a problem item
+                if (listingData.success && listingData.data.listingStatus === 'sold' && listingData.data.biddingActive === true) {
+                    result += '🚨 PROBLEM DETECTED: Sold item with active bidding!\n';
+                    result += 'This item needs to be fixed.\n';
+                } else {
+                    result += '✅ Item status looks correct.\n';
+                }
+                
+                resultDiv.textContent = result;
+            } catch (error) {
+                resultDiv.textContent = `Error: ${error.message}`;
+            }
+        }
+
+        async function fixSoldItems() {
+            const resultDiv = document.getElementById('fix-result');
+            resultDiv.textContent = 'Attempting to fix sold items...';
+            
+            try {
+                // Use the new fix endpoint specifically for sold items
+                const fixResponse = await fetch('http://localhost:9092/api/bidding/fix-sold-items', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const fixData = await fixResponse.json();
+                
+                let result = 'FIXING SOLD ITEMS:\n';
+                result += '==================\n';
+                result += `Status: ${fixData.success ? 'Success' : 'Failed'}\n`;
+                result += `Message: ${fixData.message}\n`;
+                
+                if (fixData.success && fixData.data) {
+                    result += `Problem Items Found: ${fixData.data.problemItemsFound}\n`;
+                    result += `Items Fixed: ${fixData.data.itemsFixed}\n`;
+                    result += `Fix Time: ${fixData.data.timestamp}\n\n`;
+                }
+                
+                // Also run general process expired bids
+                const processResponse = await fetch('http://localhost:9092/api/bidding/process-expired', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const processData = await processResponse.json();
+                
+                result += 'GENERAL EXPIRED BIDS PROCESSING:\n';
+                result += '===============================\n';
+                result += `Status: ${processData.success ? 'Success' : 'Failed'}\n`;
+                result += `Message: ${processData.message}\n`;
+                
+                if (processData.success && processData.data) {
+                    result += `Processed: ${processData.data.processedCount} listings\n`;
+                    result += `Completed: ${processData.data.completedCount} listings\n\n`;
+                }
+                
+                // Verify the fix worked
+                result += 'VERIFICATION:\n';
+                result += '============\n';
+                
+                const verifyResponse = await fetch('http://localhost:9092/api/marketplace/listings?page=0&size=50&includeSold=true');
+                const verifyData = await verifyResponse.json();
+                
+                if (verifyData.success) {
+                    const soldItems = verifyData.data.filter(item => item.listingStatus === 'sold');
+                    const problemItems = soldItems.filter(item => item.biddingActive === true);
+                    
+                    result += `Total sold items: ${soldItems.length}\n`;
+                    result += `Problem items remaining: ${problemItems.length}\n\n`;
+                    
+                    if (problemItems.length === 0) {
+                        result += '✅ All sold items are now properly closed!\n';
+                        result += '✅ Countdown timers should be stopped!\n';
+                    } else {
+                        result += '❌ Some items still have issues:\n';
+                        problemItems.forEach(item => {
+                            result += `  - ${item.gemName} (${item.id})\n`;
+                        });
+                        result += '\n🔄 Try running the fix again or check manually.\n';
+                    }
+                }
+                
+                resultDiv.textContent = result;
+            } catch (error) {
+                resultDiv.textContent = `Error: ${error.message}`;
+            }
+        }
+
+        function openMarketplace() {
+            window.open('http://localhost:3000/marketplace', '_blank');
+        }
+
+        // Auto-run on page load
+        window.onload = function() {
+            console.log('🔍 Sold Items Debug Tool Loaded');
+            // Uncomment to auto-debug
+            // setTimeout(debugMarketplaceItems, 1000);
+        };
+    </script>
+
+    <div class="container">
+        <h2>📋 Instructions</h2>
+        <ol>
+            <li><strong>Debug All Items:</strong> Check which sold items still have biddingActive=true</li>
+            <li><strong>Check Specific Item:</strong> Use the MongoDB ObjectId from the image to debug that specific item</li>
+            <li><strong>Force Fix:</strong> Run process-expired-bids to fix any inconsistent states</li>
+            <li><strong>Verify:</strong> Open marketplace to confirm sold items show "Bidding Closed"</li>
+        </ol>
+        
+        <div class="sold-item">
+            <strong>From your MongoDB image:</strong><br>
+            Use this ID to test: <code>6867822652772b2df3518cc</code><br>
+            Status: <span class="status-sold">sold</span> but isActive: <span class="status-active">true</span> ← This is the problem!
+        </div>
+    </div>
+</body>
+</html>
