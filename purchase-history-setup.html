@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Purchase History Debug & Setup</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .section {
+            background: white;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .button:hover {
+            background: #0056b3;
+        }
+        .button.success {
+            background: #28a745;
+        }
+        .button.warning {
+            background: #ffc107;
+            color: #212529;
+        }
+        .button.danger {
+            background: #dc3545;
+        }
+        .results {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            border-left: 4px solid #007bff;
+        }
+        .highlight {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .input-group {
+            margin: 10px 0;
+        }
+        .input-group input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-right: 10px;
+            width: 200px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🛒 Purchase History Debug & Setup</h1>
+    <p>This tool helps debug and create test data for the purchase history feature.</p>
+
+    <div class="section">
+        <h3>🧪 1. Create Test Purchase Data</h3>
+        <p>Create test purchases for a user to test the purchase history feature.</p>
+        <div class="input-group">
+            <input type="text" id="test-user-id" placeholder="User ID (email)" value="pasindu@gmail.com">
+            <button class="button success" onclick="createTestPurchases()">Create Test Purchases</button>
+            <button class="button warning" onclick="resetTestPurchases()">Reset Purchases</button>
+        </div>
+        <div id="test-results" class="results"></div>
+    </div>
+
+    <div class="section">
+        <h3>🔍 2. Check Current Purchase History</h3>
+        <div class="input-group">
+            <input type="text" id="check-user-id" placeholder="User ID (email)" value="pasindu@gmail.com">
+            <button class="button" onclick="checkPurchaseHistory()">Check Purchase History</button>
+        </div>
+        <div id="purchase-results" class="results"></div>
+    </div>
+
+    <div class="section">
+        <h3>🛒 3. Check Marketplace Data</h3>
+        <p>Check current marketplace listings and their status</p>
+        <button class="button" onclick="checkMarketplace()">Check Marketplace</button>
+        <div id="marketplace-results" class="results"></div>
+    </div>
+
+    <div class="section">
+        <h3>🔄 4. Process Expired Bids</h3>
+        <p>Process any expired bids to create sold items</p>
+        <button class="button" onclick="processExpiredBids()">Process Expired Bids</button>
+        <div id="process-results" class="results"></div>
+    </div>
+
+    <div class="section">
+        <h3>🚀 5. Quick Actions</h3>
+        <button class="button success" onclick="runCompleteSetup()">Setup Test Data</button>
+        <button class="button" onclick="runFullDiagnostic()">Run Full Diagnostic</button>
+        <button class="button danger" onclick="clearAll()">Clear All Results</button>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:9092/api';
+
+        async function createTestPurchases() {
+            const userId = document.getElementById('test-user-id').value.trim();
+            const resultsDiv = document.getElementById('test-results');
+            
+            if (!userId) {
+                resultsDiv.textContent = '❌ Please enter a user ID';
+                return;
+            }
+
+            resultsDiv.textContent = '🔄 Creating test purchase data...';
+            
+            try {
+                // Try the new endpoint first
+                let response = await fetch(`${API_BASE}/bidding/testing/create-test-purchases/${userId}`, {
+                    method: 'POST'
+                });
+
+                if (response.status === 404) {
+                    // If endpoint doesn't exist, manually create test data
+                    resultsDiv.textContent = '🔄 New endpoint not available, creating test data manually...';
+                    await createTestDataManually(userId, resultsDiv);
+                    return;
+                }
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    let output = `✅ Test purchases created successfully!\n\n`;
+                    output += `👤 User: ${userId}\n`;
+                    output += `📊 Created: ${result.data.createdCount} purchases\n\n`;
+                    output += `🛍️ Purchases created:\n`;
+                    result.data.purchases.forEach((purchase, index) => {
+                        output += `  ${index + 1}. ${purchase}\n`;
+                    });
+                    output += `\n✅ Now check the purchase history to see these items!`;
+                    resultsDiv.textContent = output;
+                } else {
+                    resultsDiv.textContent = `❌ Error: ${result.message}`;
+                }
+                
+            } catch (error) {
+                console.error('Error creating test purchases:', error);
+                // Fallback to manual creation
+                await createTestDataManually(userId, resultsDiv);
+            }
+        }
+
+        async function createTestDataManually(userId, resultsDiv) {
+            try {
+                resultsDiv.textContent = '🔄 Creating test data manually...';
+                
+                // First get some active listings
+                const listingsResponse = await fetch(`${API_BASE}/marketplace/listings?page=0&size=5`);
+                const listingsData = await listingsResponse.json();
+                
+                if (!listingsData.success || listingsData.data.listings.length === 0) {
+                    resultsDiv.textContent = '❌ No active listings found to create test purchases';
+                    return;
+                }
+
+                let output = `🔄 Manual test data creation:\n\n`;
+                output += `Found ${listingsData.data.listings.length} listings\n`;
+                output += `Creating test purchases for user: ${userId}\n\n`;
+                
+                // For now, just show what would be created
+                output += `⚠️ Manual test data creation requires backend restart with new endpoints.\n`;
+                output += `Available listings that could be marked as sold:\n`;
+                
+                listingsData.data.listings.slice(0, 3).forEach((listing, index) => {
+                    output += `  ${index + 1}. ${listing.gemName} - ${listing.id}\n`;
+                });
+                
+                output += `\n💡 Restart the backend to use the new test endpoints!`;
+                resultsDiv.textContent = output;
+                
+            } catch (error) {
+                resultsDiv.textContent = `❌ Error in manual creation: ${error.message}`;
+            }
+        }
+
+        async function resetTestPurchases() {
+            const userId = document.getElementById('test-user-id').value.trim();
+            const resultsDiv = document.getElementById('test-results');
+            
+            if (!userId) {
+                resultsDiv.textContent = '❌ Please enter a user ID';
+                return;
+            }
+
+            resultsDiv.textContent = '🔄 Resetting purchase data...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/bidding/testing/reset-purchases/${userId}`, {
+                    method: 'POST'
+                });
+
+                if (response.status === 404) {
+                    resultsDiv.textContent = '⚠️ Reset endpoint not available. Restart backend with new endpoints.';
+                    return;
+                }
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    let output = `✅ Purchases reset successfully!\n\n`;
+                    output += `👤 User: ${userId}\n`;
+                    output += `📊 Reset: ${result.data.resetCount} purchases\n`;
+                    output += `\n✅ User now has clean purchase history.`;
+                    resultsDiv.textContent = output;
+                } else {
+                    resultsDiv.textContent = `❌ Error: ${result.message}`;
+                }
+                
+            } catch (error) {
+                resultsDiv.textContent = `❌ Error: ${error.message}`;
+            }
+        }
+
+        async function checkPurchaseHistory() {
+            const userId = document.getElementById('check-user-id').value.trim();
+            const resultsDiv = document.getElementById('purchase-results');
+            
+            if (!userId) {
+                resultsDiv.textContent = '❌ Please enter a user ID';
+                return;
+            }
+
+            resultsDiv.textContent = '🔄 Checking purchase history...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/bidding/purchase-history/${userId}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    let output = `✅ Purchase History Results:\n\n`;
+                    output += `👤 User: ${userId}\n`;
+                    output += `🛒 Total purchases: ${result.data.length}\n\n`;
+                    
+                    if (result.data.length > 0) {
+                        output += `📋 Purchase Details:\n`;
+                        result.data.forEach((purchase, index) => {
+                            output += `\n${index + 1}. ${purchase.gemName}\n`;
+                            output += `   🆔 ID: ${purchase.id}\n`;
+                            output += `   💰 Price: LKR ${purchase.finalPrice}\n`;
+                            output += `   📅 Date: ${purchase.purchaseDate}\n`;
+                            output += `   💎 Type: ${purchase.gemType}\n`;
+                            output += `   ⚖️ Weight: ${purchase.weight || 'N/A'}\n`;
+                        });
+                        
+                        output += `\n✅ These purchases should appear in the buyer dashboard!`;
+                    } else {
+                        output += `ℹ️ No purchases found.\n`;
+                        output += `\nPossible solutions:\n`;
+                        output += `  1. Create test purchase data using the button above\n`;
+                        output += `  2. Process expired bids to create sold items\n`;
+                        output += `  3. Check if user has won any actual bids\n`;
+                    }
+                    
+                    resultsDiv.textContent = output;
+                } else {
+                    resultsDiv.textContent = `❌ Error: ${result.message}`;
+                }
+                
+            } catch (error) {
+                resultsDiv.textContent = `❌ Error: ${error.message}`;
+            }
+        }
+
+        async function checkMarketplace() {
+            const resultsDiv = document.getElementById('marketplace-results');
+            resultsDiv.textContent = '🔄 Checking marketplace...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/marketplace/listings?page=0&size=20`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    const listings = result.data.listings;
+                    const soldItems = listings.filter(l => l.listingStatus === 'sold');
+                    const activeItems = listings.filter(l => l.listingStatus === 'active');
+                    const expiredItems = listings.filter(l => l.listingStatus === 'expired_no_bids');
+                    
+                    let output = `✅ Marketplace Analysis:\n\n`;
+                    output += `📊 Status Breakdown:\n`;
+                    output += `  🟢 Active: ${activeItems.length}\n`;
+                    output += `  🛑 Sold: ${soldItems.length}\n`;
+                    output += `  ⏰ Expired: ${expiredItems.length}\n`;
+                    output += `  📋 Total: ${listings.length}\n\n`;
+                    
+                    if (soldItems.length > 0) {
+                        output += `🛑 SOLD ITEMS:\n`;
+                        soldItems.forEach((item, index) => {
+                            output += `  ${index + 1}. ${item.gemName}\n`;
+                            output += `     Winner: ${item.winningBidderId || 'None'}\n`;
+                            output += `     Price: LKR ${item.finalPrice || 'N/A'}\n`;
+                            output += `     Completed: ${item.biddingCompletedAt || 'N/A'}\n\n`;
+                        });
+                    }
+                    
+                    if (activeItems.length > 0) {
+                        output += `🟢 ACTIVE ITEMS (can be used for test data):\n`;
+                        activeItems.slice(0, 5).forEach((item, index) => {
+                            output += `  ${index + 1}. ${item.gemName} (${item.id})\n`;
+                        });
+                        if (activeItems.length > 5) {
+                            output += `  ... and ${activeItems.length - 5} more\n`;
+                        }
+                    }
+                    
+                    resultsDiv.textContent = output;
+                } else {
+                    resultsDiv.textContent = `❌ Error: ${result.message}`;
+                }
+                
+            } catch (error) {
+                resultsDiv.textContent = `❌ Error: ${error.message}`;
+            }
+        }
+
+        async function processExpiredBids() {
+            const resultsDiv = document.getElementById('process-results');
+            resultsDiv.textContent = '🔄 Processing expired bids...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/bidding/process-expired`, {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    let output = `✅ Expired bids processed:\n\n`;
+                    output += `📊 Results:\n`;
+                    output += `  Processed: ${result.data.processedCount}\n`;
+                    output += `  Completed: ${result.data.completedCount}\n`;
+                    output += `  Completed IDs: ${result.data.completedListings.join(', ') || 'None'}\n\n`;
+                    
+                    if (result.data.completedCount > 0) {
+                        output += `🎉 ${result.data.completedCount} bids were completed and marked as sold!`;
+                    } else {
+                        output += `ℹ️ No expired bids with winners found to process.`;
+                    }
+                    
+                    resultsDiv.textContent = output;
+                } else {
+                    resultsDiv.textContent = `❌ Error: ${result.message}`;
+                }
+                
+            } catch (error) {
+                resultsDiv.textContent = `❌ Error: ${error.message}`;
+            }
+        }
+
+        async function runCompleteSetup() {
+            const userId = document.getElementById('test-user-id').value.trim() || 'pasindu@gmail.com';
+            document.getElementById('test-user-id').value = userId;
+            document.getElementById('check-user-id').value = userId;
+            
+            const testResults = document.getElementById('test-results');
+            testResults.textContent = '🚀 Running complete setup...\n\n';
+            
+            try {
+                // Step 1: Process expired bids
+                testResults.textContent += 'Step 1: Processing expired bids...\n';
+                await processExpiredBids();
+                await new Promise(r => setTimeout(r, 1000));
+                
+                // Step 2: Create test data
+                testResults.textContent += 'Step 2: Creating test purchases...\n';
+                await createTestPurchases();
+                await new Promise(r => setTimeout(r, 1000));
+                
+                // Step 3: Check results
+                testResults.textContent += 'Step 3: Checking purchase history...\n';
+                await checkPurchaseHistory();
+                
+                testResults.textContent += '\n✅ Setup complete! Check the results above.';
+                
+            } catch (error) {
+                testResults.textContent += `\n❌ Setup error: ${error.message}`;
+            }
+        }
+
+        async function runFullDiagnostic() {
+            const userId = document.getElementById('check-user-id').value.trim() || 'pasindu@gmail.com';
+            
+            // Clear previous results
+            clearAll();
+            
+            // Run all checks
+            setTimeout(() => checkMarketplace(), 500);
+            setTimeout(() => processExpiredBids(), 1500);
+            setTimeout(() => {
+                document.getElementById('check-user-id').value = userId;
+                checkPurchaseHistory();
+            }, 2500);
+        }
+
+        function clearAll() {
+            document.getElementById('test-results').textContent = '';
+            document.getElementById('purchase-results').textContent = '';
+            document.getElementById('marketplace-results').textContent = '';
+            document.getElementById('process-results').textContent = '';
+        }
+
+        // Auto-run basic checks on page load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                checkMarketplace();
+                checkPurchaseHistory();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

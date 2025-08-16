@@ -49,7 +49,7 @@ const Purchases: React.FC<PurchasesProps> = ({ user }) => {
       }
 
       try {
-        console.log('� Fetching purchase history for user ID:', user.id);
+        console.log('🛒 Fetching purchase history for user ID:', user.id);
         setLoading(true);
         setError(null);
 
@@ -110,21 +110,65 @@ const Purchases: React.FC<PurchasesProps> = ({ user }) => {
       return;
     }
 
+    console.log('🔄 Manually refreshing purchase history for user:', user.id);
+
     fetch(`http://localhost:9092/api/bidding/purchase-history/${user.id}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
       },
     })
-    .then(response => response.json())
+    .then(response => {
+      console.log('🔄 Refresh response status:', response.status);
+      return response.json();
+    })
     .then(result => {
+      console.log('🔄 Refresh response data:', result);
       if (result.success && result.data) {
         setPurchases(result.data);
+        setError(null);
         console.log('🔄 Purchase history refreshed:', result.data.length, 'items');
+      } else {
+        setError(result.message || 'Failed to refresh purchase history');
       }
     })
-    .catch(error => console.error('🔄 Refresh error:', error))
+    .catch(error => {
+      console.error('🔄 Refresh error:', error);
+      setError(error instanceof Error ? error.message : 'Error refreshing purchase history');
+    })
     .finally(() => setRefreshing(false));
+  };
+
+  // Create test purchase data (for development)
+  const createTestData = async () => {
+    if (!user?.id) return;
+    
+    setRefreshing(true);
+    try {
+      console.log('🧪 Creating test purchase data for user:', user.id);
+      
+      const response = await fetch(`http://localhost:9092/api/bidding/testing/create-test-purchases/${user.id}`, {
+        method: 'POST'
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('🧪 Test data creation result:', result);
+        
+        if (result.success) {
+          // Refresh purchase history after creating test data
+          setTimeout(() => {
+            handleRefresh();
+          }, 1000);
+        }
+      } else {
+        console.log('🧪 Test endpoint not available (expected during development)');
+      }
+    } catch (error) {
+      console.log('🧪 Test data creation not available:', error);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   // Format date
@@ -351,11 +395,49 @@ const Purchases: React.FC<PurchasesProps> = ({ user }) => {
           <ShoppingBag className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No purchases yet</h3>
           <p className="text-gray-500 mb-4">Your won bids and completed purchases will appear here.</p>
-          <div className="bg-blue-50 rounded-lg p-4 mt-4">
-            <p className="text-sm text-blue-700">
-              <Trophy className="w-4 h-4 inline mr-1" />
-              Win a bid in the marketplace to see your first purchase here!
-            </p>
+          
+          {/* Development debug info */}
+          {user?.id && (
+            <div className="bg-gray-50 rounded-lg p-4 mb-4 text-sm text-gray-600">
+              <p><strong>Debug Info:</strong></p>
+              <p>User ID: {user.id}</p>
+              <p>API Endpoint: /api/bidding/purchase-history/{user.id}</p>
+              <p>Looking for items where winningBidderId = "{user.id}" and listingStatus = "sold"</p>
+            </div>
+          )}
+          
+          <div className="space-y-3">
+            <div className="bg-blue-50 rounded-lg p-4">
+              <p className="text-sm text-blue-700">
+                <Trophy className="w-4 h-4 inline mr-1" />
+                Win a bid in the marketplace to see your first purchase here!
+              </p>
+            </div>
+            
+            {/* Development tools */}
+            <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+              <p className="text-sm text-yellow-800 mb-2">
+                <strong>Development Tools:</strong>
+              </p>
+              <div className="space-y-2">
+                <button
+                  onClick={createTestData}
+                  disabled={refreshing}
+                  className="text-sm bg-yellow-600 text-white px-3 py-1 rounded hover:bg-yellow-700 disabled:opacity-50 mr-2"
+                >
+                  {refreshing ? 'Creating...' : 'Create Test Data'}
+                </button>
+                <button
+                  onClick={() => window.open('/purchase-history-setup.html', '_blank')}
+                  className="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+                >
+                  Open Debug Tool
+                </button>
+              </div>
+              <p className="text-xs text-yellow-700 mt-2">
+                These buttons help create test purchase data for development.
+              </p>
+            </div>
           </div>
         </div>
       )}

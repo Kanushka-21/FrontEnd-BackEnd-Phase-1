@@ -500,4 +500,94 @@ public class BiddingController {
                 .body(new ApiResponse<>(false, "Failed to fix sold items: " + e.getMessage(), null));
         }
     }
+
+    /**
+     * Create test purchase data for a user (for testing purposes)
+     */
+    @PostMapping("/testing/create-test-purchases/{userId}")
+    @Operation(summary = "Create test purchases", description = "Create test purchase data for testing purposes")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> createTestPurchaseData(
+            @PathVariable String userId) {
+        
+        System.out.println("🧪 [TESTING] Creating test purchase data for user: " + userId);
+        
+        try {
+            ApiResponse<Map<String, Object>> response = biddingService.createTestPurchaseData(userId);
+            
+            if (response.isSuccess()) {
+                System.out.println("✅ [TESTING] Test purchase data created successfully");
+                return ResponseEntity.ok(response);
+            } else {
+                System.err.println("❌ [TESTING] Failed to create test purchase data: " + response.getMessage());
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("❌ [TESTING] Error in create test purchase endpoint: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError()
+                .body(new ApiResponse<>(false, "Failed to create test purchase data: " + e.getMessage(), null));
+        }
+    }
+
+    /**
+     * Reset user purchases (for testing purposes)
+     */
+    @PostMapping("/testing/reset-purchases/{userId}")
+    @Operation(summary = "Reset user purchases", description = "Reset purchase data for testing purposes")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> resetUserPurchases(
+            @PathVariable String userId) {
+        
+        System.out.println("🧪 [TESTING] Resetting purchases for user: " + userId);
+        
+        try {
+            ApiResponse<Map<String, Object>> response = biddingService.resetUserPurchases(userId);
+            
+            if (response.isSuccess()) {
+                System.out.println("✅ [TESTING] User purchases reset successfully");
+                return ResponseEntity.ok(response);
+            } else {
+                System.err.println("❌ [TESTING] Failed to reset user purchases: " + response.getMessage());
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("❌ [TESTING] Error in reset purchases endpoint: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError()
+                .body(new ApiResponse<>(false, "Failed to reset user purchases: " + e.getMessage(), null));
+        }
+    }
+
+    /**
+     * Link all SOLD items to a specific buyer (fix purchase history)
+     */
+    @PostMapping("/fix/link-sold-items-to-buyer")
+    @Operation(summary = "Link sold items to buyer", description = "Links all SOLD marketplace items to a specific buyer's purchase history")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> linkSoldItemsToBuyer(
+            @RequestBody Map<String, Object> request) {
+        
+        String userId = (String) request.get("userId");
+        String userEmail = (String) request.get("userEmail");
+        
+        System.out.println("🔗 [FIX] Linking SOLD items to buyer: " + userId + " (" + userEmail + ")");
+        
+        try {
+            ApiResponse<Map<String, Object>> response = biddingService.linkAllSoldItemsToBuyer(userId, userEmail);
+            
+            if (response.isSuccess()) {
+                System.out.println("✅ [FIX] SOLD items linked successfully to buyer");
+                return ResponseEntity.ok(response);
+            } else {
+                System.err.println("❌ [FIX] Failed to link SOLD items: " + response.getMessage());
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("❌ [FIX] Error in link sold items endpoint: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError()
+                .body(new ApiResponse<>(false, "Failed to link SOLD items to buyer: " + e.getMessage(), null));
+        }
+    }
 }
