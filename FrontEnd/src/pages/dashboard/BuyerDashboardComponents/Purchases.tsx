@@ -406,38 +406,11 @@ const Purchases: React.FC<PurchasesProps> = ({ user }) => {
             </div>
           )}
           
-          <div className="space-y-3">
-            <div className="bg-blue-50 rounded-lg p-4">
-              <p className="text-sm text-blue-700">
-                <Trophy className="w-4 h-4 inline mr-1" />
-                Win a bid in the marketplace to see your first purchase here!
-              </p>
-            </div>
-            
-            {/* Development tools */}
-            <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
-              <p className="text-sm text-yellow-800 mb-2">
-                <strong>Development Tools:</strong>
-              </p>
-              <div className="space-y-2">
-                <button
-                  onClick={createTestData}
-                  disabled={refreshing}
-                  className="text-sm bg-yellow-600 text-white px-3 py-1 rounded hover:bg-yellow-700 disabled:opacity-50 mr-2"
-                >
-                  {refreshing ? 'Creating...' : 'Create Test Data'}
-                </button>
-                <button
-                  onClick={() => window.open('/purchase-history-setup.html', '_blank')}
-                  className="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
-                >
-                  Open Debug Tool
-                </button>
-              </div>
-              <p className="text-xs text-yellow-700 mt-2">
-                These buttons help create test purchase data for development.
-              </p>
-            </div>
+          <div className="bg-blue-50 rounded-lg p-4">
+            <p className="text-sm text-blue-700">
+              <Trophy className="w-4 h-4 inline mr-1" />
+              Win a bid in the marketplace to see your first purchase here!
+            </p>
           </div>
         </div>
       )}

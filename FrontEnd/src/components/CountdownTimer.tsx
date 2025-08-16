@@ -60,7 +60,6 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
   onCountdownUpdate
 }) => {
   const [remainingSeconds, setRemainingSeconds] = useState(initialRemainingSeconds);
-  const [isActive, setIsActive] = useState(false); // Initialize as false, will be set based on status checks
   const [countdown, setCountdown] = useState<CountdownTime>({ days: 0, hours: 0, minutes: 0, seconds: 0 });
 
   // Function to refresh countdown data
@@ -79,12 +78,6 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
           // Only update countdown if the item is not sold
           if (data.data.listingStatus !== 'sold' && data.data.listingStatus !== 'expired_no_bids') {
             setRemainingSeconds(data.data.remainingTimeSeconds || 0);
-            // Only set active if status is not sold/expired and bidding is actually active
-            const shouldBeActive = data.data.biddingActive && 
-                                   !data.data.isExpired && 
-                                   listingStatus !== 'sold' && 
-                                   listingStatus !== 'expired_no_bids';
-            setIsActive(shouldBeActive);
             
             // Notify parent component that countdown was updated
             if (onCountdownUpdate) {
@@ -119,17 +112,20 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
     setCountdown(calculateCountdown(remainingSeconds));
   }, [remainingSeconds]);
 
-  // Timer effect
+  // Timer effect - FIXED: More robust timer
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
 
-    if (isActive && remainingSeconds > 0) {
+    // FIXED: Start timer if we have remaining seconds, regardless of other conditions
+    if (remainingSeconds > 0 && listingStatus !== 'sold' && listingStatus !== 'expired_no_bids') {
+      console.log(`⏰ STARTING TIMER for listing ${listingId} with ${remainingSeconds} seconds remaining`);
+      
       interval = setInterval(() => {
         setRemainingSeconds(prevSeconds => {
           const newSeconds = prevSeconds - 1;
           
           if (newSeconds <= 0) {
-            setIsActive(false);
+            console.log(`⏰ COUNTDOWN COMPLETE for listing ${listingId}`);
             // Process expired bid when countdown completes
             processExpiredBid(listingId);
             if (onCountdownComplete) {
@@ -141,6 +137,8 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
           return newSeconds;
         });
       }, 1000);
+    } else {
+      console.log(`⏰ NOT STARTING TIMER for listing ${listingId} - remainingSeconds: ${remainingSeconds}, status: ${listingStatus}`);
     }
 
     return () => {
@@ -148,7 +146,7 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
         clearInterval(interval);
       }
     };
-  }, [isActive, remainingSeconds, onCountdownComplete, listingId]);
+  }, [remainingSeconds, listingStatus, onCountdownComplete, listingId]);
 
   // Update initial values when props change
   useEffect(() => {
@@ -156,21 +154,11 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
       initialRemainingSeconds,
       biddingActive,
       isExpired,
-      listingStatus // Add this to see the actual value
+      listingStatus
     });
     setRemainingSeconds(initialRemainingSeconds);
     
-    // Only set active if status allows it and there are remaining seconds
-    // CRITICAL: Only for ACTIVE listings with actual countdown time
-    const shouldBeActive = biddingActive && 
-                          !isExpired && 
-                          initialRemainingSeconds > 0 &&
-                          listingStatus !== 'sold' && 
-                          listingStatus !== 'expired_no_bids' &&
-                          (listingStatus === 'APPROVED' || listingStatus === 'ACTIVE');
-    setIsActive(shouldBeActive);
-    
-    console.log(`⏰ Setting isActive to: ${shouldBeActive} for listing ${listingId} (status: ${listingStatus})`);
+    console.log(`⏰ FIXED: Timer will start if remainingSeconds > 0 for listing ${listingId} (status: ${listingStatus}, remainingSeconds: ${initialRemainingSeconds})`);
   }, [initialRemainingSeconds, biddingActive, isExpired, listingStatus, listingId]);
 
   // Format number with leading zero

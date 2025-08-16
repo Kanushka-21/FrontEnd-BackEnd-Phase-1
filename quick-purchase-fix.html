@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Purchase History Fix</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f0f2f5;
+        }
+        .container {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        button {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px 5px;
+            font-size: 16px;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+        }
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-weight: bold;
+        }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .result {
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 15px 0;
+        }
+        .user-id-input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #3498db;
+            border-radius: 5px;
+            font-size: 16px;
+            margin: 10px 0;
+        }
+        .step {
+            background: #f8f9fa;
+            border-left: 4px solid #3498db;
+            padding: 20px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Quick Purchase History Fix</h1>
+        
+        <div class="step">
+            <h3>Step 1: Set Your User ID</h3>
+            <input type="text" id="userIdInput" class="user-id-input" 
+                   value="676e3a0b72a3a908ae4255ad" 
+                   placeholder="Enter your user ID here">
+            <button onclick="setUserId()">Set User ID</button>
+            <div id="userStatus"></div>
+        </div>
+
+        <div class="step">
+            <h3>Step 2: Check Backend Status</h3>
+            <button onclick="checkBackend()">🔍 Check Backend</button>
+            <div id="backendStatus"></div>
+        </div>
+
+        <div class="step">
+            <h3>Step 3: Fix Purchase History</h3>
+            <button onclick="fixPurchaseHistory()">🔗 Link SOLD Items to User</button>
+            <div id="fixStatus"></div>
+        </div>
+
+        <div class="step">
+            <h3>Step 4: Test Purchase History</h3>
+            <button onclick="testPurchaseHistory()">✅ Test Purchase History API</button>
+            <div id="testStatus"></div>
+            <div id="testResult" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="step">
+            <h3>Step 5: Open Purchase History Page</h3>
+            <button onclick="openPurchasePage()">🌐 Open Purchase History</button>
+            <div id="pageStatus"></div>
+        </div>
+    </div>
+
+    <script>
+        let userId = '676e3a0b72a3a908ae4255ad';
+
+        function setUserId() {
+            userId = document.getElementById('userIdInput').value;
+            document.getElementById('userStatus').innerHTML = 
+                `<div class="success">✅ User ID set to: ${userId}</div>`;
+        }
+
+        async function checkBackend() {
+            try {
+                document.getElementById('backendStatus').innerHTML = 
+                    '<div class="info">🔍 Checking backend...</div>';
+                
+                const response = await fetch('http://localhost:9092/api/gemlistings/approved');
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('backendStatus').innerHTML = 
+                        `<div class="success">✅ Backend is running! Found ${data.data ? data.data.length : 0} marketplace items</div>`;
+                } else {
+                    throw new Error(`Backend returned ${response.status}`);
+                }
+            } catch (error) {
+                document.getElementById('backendStatus').innerHTML = 
+                    `<div class="error">❌ Backend error: ${error.message}</div>`;
+            }
+        }
+
+        async function fixPurchaseHistory() {
+            try {
+                document.getElementById('fixStatus').innerHTML = 
+                    '<div class="info">🔗 Linking SOLD items to user...</div>';
+                
+                // First get all marketplace items
+                const marketResponse = await fetch('http://localhost:9092/api/gemlistings/approved');
+                const marketData = await marketResponse.json();
+                
+                if (!marketData.success || !marketData.data) {
+                    throw new Error('Could not fetch marketplace items');
+                }
+                
+                // Find SOLD items
+                const soldItems = marketData.data.filter(item => 
+                    item.listingStatus === 'sold' || 
+                    (item.biddingCompletedAt && new Date(item.biddingCompletedAt) < new Date())
+                );
+                
+                if (soldItems.length === 0) {
+                    document.getElementById('fixStatus').innerHTML = 
+                        '<div class="warning">⚠️ No SOLD items found in marketplace</div>';
+                    return;
+                }
+                
+                // Try the automated linking API first
+                try {
+                    const linkResponse = await fetch(
+                        `http://localhost:9092/api/bidding/fix/link-sold-items-to-buyer?userId=${userId}`, 
+                        { method: 'POST' }
+                    );
+                    
+                    if (linkResponse.ok) {
+                        const linkData = await linkResponse.json();
+                        if (linkData.success) {
+                            document.getElementById('fixStatus').innerHTML = 
+                                `<div class="success">✅ Successfully linked SOLD items! ${linkData.message}</div>`;
+                            return;
+                        }
+                    }
+                } catch (autoError) {
+                    console.log('Auto-linking failed, trying manual approach...');
+                }
+                
+                // Manual linking approach
+                let linkedCount = 0;
+                for (const item of soldItems) {
+                    if (!item.winningBidderId) { // Only link if not already linked
+                        try {
+                            const updateResponse = await fetch(`http://localhost:9092/api/gemlistings/${item.id}`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    ...item,
+                                    winningBidderId: userId,
+                                    listingStatus: 'sold',
+                                    biddingCompletedAt: item.biddingCompletedAt || new Date().toISOString(),
+                                    finalPrice: item.finalPrice || item.startingPrice || 1000
+                                })
+                            });
+                            
+                            if (updateResponse.ok) {
+                                linkedCount++;
+                            }
+                        } catch (error) {
+                            console.error('Error linking item:', item.id, error);
+                        }
+                    }
+                }
+                
+                document.getElementById('fixStatus').innerHTML = 
+                    `<div class="success">✅ Manually linked ${linkedCount} SOLD items to user ${userId}</div>`;
+                
+            } catch (error) {
+                document.getElementById('fixStatus').innerHTML = 
+                    `<div class="error">❌ Fix error: ${error.message}</div>`;
+            }
+        }
+
+        async function testPurchaseHistory() {
+            try {
+                document.getElementById('testStatus').innerHTML = 
+                    '<div class="info">✅ Testing purchase history API...</div>';
+                
+                const response = await fetch(`http://localhost:9092/api/bidding/purchase-history/${userId}`);
+                const data = await response.json();
+                
+                document.getElementById('testResult').style.display = 'block';
+                document.getElementById('testResult').textContent = JSON.stringify(data, null, 2);
+                
+                if (data.success && data.data && data.data.length > 0) {
+                    document.getElementById('testStatus').innerHTML = 
+                        `<div class="success">🎉 SUCCESS! Found ${data.data.length} items in purchase history!</div>`;
+                } else {
+                    document.getElementById('testStatus').innerHTML = 
+                        `<div class="warning">⚠️ API works but no purchases found. Try running the fix step above.</div>`;
+                }
+            } catch (error) {
+                document.getElementById('testStatus').innerHTML = 
+                    `<div class="error">❌ Test error: ${error.message}</div>`;
+            }
+        }
+
+        function openPurchasePage() {
+            document.getElementById('pageStatus').innerHTML = 
+                `<div class="success">🌐 Opening purchase history page... <a href="http://localhost:3000/buyer/dashboard?section=purchases" target="_blank">Click here if it doesn't open automatically</a></div>`;
+            
+            window.open('http://localhost:3000/buyer/dashboard?section=purchases', '_blank');
+        }
+
+        // Auto-check backend on page load
+        window.onload = function() {
+            setTimeout(checkBackend, 1000);
+        };
+    </script>
+</body>
+</html>

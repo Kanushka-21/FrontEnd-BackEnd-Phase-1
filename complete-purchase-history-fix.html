@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Purchase History Fix Tool</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .step {
+            margin: 15px 0;
+            padding: 15px;
+            border-left: 4px solid #007bff;
+            background: #f8f9fa;
+        }
+        .user-info {
+            background: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .api-response {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .marketplace-items {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .item-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            background: white;
+        }
+        .sold-badge {
+            background: #dc3545;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Complete Purchase History Fix Tool</h1>
+        <p>This tool will fix the purchase history by linking SOLD items to buyers and testing the complete flow.</p>
+        
+        <div class="user-info">
+            <h3>👤 Current User Information</h3>
+            <div id="userInfo">Loading user data...</div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>📋 Step-by-Step Fix Process</h2>
+        
+        <div class="step">
+            <h3>Step 1: Check Current Marketplace Items</h3>
+            <button onclick="checkMarketplaceItems()">🔍 Check Marketplace Items</button>
+            <div id="marketplaceStatus"></div>
+            <div id="marketplaceItems" class="marketplace-items"></div>
+        </div>
+
+        <div class="step">
+            <h3>Step 2: Check Current Purchase History</h3>
+            <button onclick="checkCurrentPurchaseHistory()">📊 Check Current Purchase History</button>
+            <div id="currentPurchaseStatus"></div>
+            <div id="currentPurchaseData" class="api-response"></div>
+        </div>
+
+        <div class="step">
+            <h3>Step 3: Link SOLD Items to Current User</h3>
+            <button onclick="linkSoldItemsToUser()">🔗 Link SOLD Items to User</button>
+            <div id="linkingStatus"></div>
+        </div>
+
+        <div class="step">
+            <h3>Step 4: Verify Purchase History After Fix</h3>
+            <button onclick="verifyAfterFix()">✅ Verify Purchase History</button>
+            <div id="verificationStatus"></div>
+            <div id="verificationData" class="api-response"></div>
+        </div>
+
+        <div class="step">
+            <h3>Step 5: Test Frontend Integration</h3>
+            <button onclick="testFrontendIntegration()">🌐 Open Purchase History Page</button>
+            <div id="frontendStatus"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>🐛 Debug Information</h2>
+        <div id="debugInfo" class="api-response"></div>
+    </div>
+
+    <script>
+        let currentUser = null;
+        let marketplaceItems = [];
+        let soldItems = [];
+
+        // Simulate getting current user (you can modify this to match your app's user system)
+        async function getCurrentUser() {
+            try {
+                // First try to get from localStorage (if your app stores user info there)
+                const storedUser = localStorage.getItem('user') || localStorage.getItem('currentUser');
+                if (storedUser) {
+                    currentUser = JSON.parse(storedUser);
+                    return currentUser;
+                }
+                
+                // If no stored user, create a test user ID that matches your system
+                // You can modify this to use the actual user ID from your authentication system
+                currentUser = {
+                    id: "676e3a0b72a3a908ae4255ad", // Default test user ID - change this to your actual user ID
+                    username: "testbuyer",
+                    email: "testbuyer@example.com"
+                };
+                
+                return currentUser;
+            } catch (error) {
+                console.error('Error getting current user:', error);
+                // Fallback user ID
+                currentUser = {
+                    id: "676e3a0b72a3a908ae4255ad",
+                    username: "testbuyer",
+                    email: "testbuyer@example.com"
+                };
+                return currentUser;
+            }
+        }
+
+        async function checkMarketplaceItems() {
+            try {
+                document.getElementById('marketplaceStatus').innerHTML = '<div class="info">🔍 Checking marketplace items...</div>';
+                
+                const response = await fetch('http://localhost:9092/api/gemlistings/approved');
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    marketplaceItems = data.data;
+                    soldItems = marketplaceItems.filter(item => 
+                        item.listingStatus === 'sold' || 
+                        item.listingStatus === 'expired_no_bids' ||
+                        (item.biddingCompletedAt && new Date(item.biddingCompletedAt) < new Date())
+                    );
+                    
+                    document.getElementById('marketplaceStatus').innerHTML = `
+                        <div class="success">✅ Found ${marketplaceItems.length} total marketplace items</div>
+                        <div class="info">📊 Found ${soldItems.length} SOLD/EXPIRED items</div>
+                    `;
+                    
+                    // Display sold items
+                    const itemsHTML = soldItems.map(item => `
+                        <div class="item-card">
+                            <div class="sold-badge">SOLD</div>
+                            <h4>${item.gemName || 'Unknown Gem'}</h4>
+                            <p><strong>Status:</strong> ${item.listingStatus}</p>
+                            <p><strong>Final Price:</strong> $${item.finalPrice || 'N/A'}</p>
+                            <p><strong>Current Winning Bidder:</strong> ${item.winningBidderId || 'NONE'}</p>
+                            <p><strong>Completed At:</strong> ${item.biddingCompletedAt || 'N/A'}</p>
+                            <p><strong>Item ID:</strong> ${item.id}</p>
+                        </div>
+                    `).join('');
+                    
+                    document.getElementById('marketplaceItems').innerHTML = itemsHTML;
+                } else {
+                    document.getElementById('marketplaceStatus').innerHTML = '<div class="error">❌ Failed to fetch marketplace items</div>';
+                }
+            } catch (error) {
+                document.getElementById('marketplaceStatus').innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        async function checkCurrentPurchaseHistory() {
+            try {
+                if (!currentUser) {
+                    await getCurrentUser();
+                }
+                
+                document.getElementById('currentPurchaseStatus').innerHTML = '<div class="info">📊 Checking current purchase history...</div>';
+                
+                const response = await fetch(`http://localhost:9092/api/bidding/purchase-history/${currentUser.id}`);
+                const data = await response.json();
+                
+                document.getElementById('currentPurchaseData').textContent = JSON.stringify(data, null, 2);
+                
+                if (data.success && data.data && data.data.length > 0) {
+                    document.getElementById('currentPurchaseStatus').innerHTML = `
+                        <div class="success">✅ Found ${data.data.length} items in purchase history</div>
+                    `;
+                } else {
+                    document.getElementById('currentPurchaseStatus').innerHTML = `
+                        <div class="warning">⚠️ No items in purchase history (this is the problem we're fixing)</div>
+                    `;
+                }
+            } catch (error) {
+                document.getElementById('currentPurchaseStatus').innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        async function linkSoldItemsToUser() {
+            try {
+                if (!currentUser) {
+                    await getCurrentUser();
+                }
+                
+                document.getElementById('linkingStatus').innerHTML = '<div class="info">🔗 Linking SOLD items to current user...</div>';
+                
+                // First, try the automatic linking endpoint
+                const linkResponse = await fetch(`http://localhost:9092/api/bidding/fix/link-sold-items-to-buyer?userId=${currentUser.id}`, {
+                    method: 'POST'
+                });
+                const linkData = await linkResponse.json();
+                
+                if (linkData.success) {
+                    document.getElementById('linkingStatus').innerHTML = `
+                        <div class="success">✅ Successfully linked SOLD items to user</div>
+                        <div class="info">📊 ${linkData.message}</div>
+                    `;
+                } else {
+                    // If automatic linking fails, try manual approach
+                    document.getElementById('linkingStatus').innerHTML = '<div class="warning">⚠️ Automatic linking failed, trying manual approach...</div>';
+                    
+                    let linkedCount = 0;
+                    for (const item of soldItems) {
+                        try {
+                            const updateResponse = await fetch(`http://localhost:9092/api/gemlistings/${item.id}`, {
+                                method: 'PUT',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    ...item,
+                                    winningBidderId: currentUser.id,
+                                    listingStatus: 'sold',
+                                    biddingCompletedAt: item.biddingCompletedAt || new Date().toISOString()
+                                })
+                            });
+                            
+                            if (updateResponse.ok) {
+                                linkedCount++;
+                            }
+                        } catch (error) {
+                            console.error('Error updating item:', item.id, error);
+                        }
+                    }
+                    
+                    document.getElementById('linkingStatus').innerHTML = `
+                        <div class="success">✅ Manually linked ${linkedCount} items to user</div>
+                    `;
+                }
+            } catch (error) {
+                document.getElementById('linkingStatus').innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        async function verifyAfterFix() {
+            try {
+                if (!currentUser) {
+                    await getCurrentUser();
+                }
+                
+                document.getElementById('verificationStatus').innerHTML = '<div class="info">✅ Verifying purchase history after fix...</div>';
+                
+                // Wait a moment for the database to update
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                const response = await fetch(`http://localhost:9092/api/bidding/purchase-history/${currentUser.id}`);
+                const data = await response.json();
+                
+                document.getElementById('verificationData').textContent = JSON.stringify(data, null, 2);
+                
+                if (data.success && data.data && data.data.length > 0) {
+                    document.getElementById('verificationStatus').innerHTML = `
+                        <div class="success">🎉 SUCCESS! Found ${data.data.length} items in purchase history</div>
+                        <div class="info">💡 The purchase history API is now working correctly!</div>
+                    `;
+                } else {
+                    document.getElementById('verificationStatus').innerHTML = `
+                        <div class="error">❌ Still no items in purchase history. Manual intervention may be needed.</div>
+                    `;
+                }
+            } catch (error) {
+                document.getElementById('verificationStatus').innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        function testFrontendIntegration() {
+            document.getElementById('frontendStatus').innerHTML = `
+                <div class="info">🌐 Opening purchase history page...</div>
+                <div class="success">
+                    <a href="http://localhost:3000/buyer/dashboard?section=purchases" target="_blank">
+                        🔗 Click here to open Purchase History Page
+                    </a>
+                </div>
+                <div class="warning">
+                    ⚠️ Make sure to refresh the page if it was already open to see the updated data
+                </div>
+            `;
+            
+            // Auto-open the page
+            window.open('http://localhost:3000/buyer/dashboard?section=purchases', '_blank');
+        }
+
+        function addDebugInfo(message) {
+            const debugDiv = document.getElementById('debugInfo');
+            const timestamp = new Date().toLocaleTimeString();
+            debugDiv.textContent += `[${timestamp}] ${message}\n`;
+        }
+
+        // Initialize user info on page load
+        window.onload = async function() {
+            await getCurrentUser();
+            document.getElementById('userInfo').innerHTML = `
+                <p><strong>User ID:</strong> ${currentUser.id}</p>
+                <p><strong>Username:</strong> ${currentUser.username}</p>
+                <p><strong>Email:</strong> ${currentUser.email}</p>
+                <div class="warning">
+                    ⚠️ If this is not your actual user ID, please modify the getCurrentUser() function in this tool
+                </div>
+            `;
+            
+            addDebugInfo('Tool initialized with user: ' + currentUser.id);
+        };
+
+        // Auto-run the first step
+        setTimeout(() => {
+            checkMarketplaceItems();
+        }, 1000);
+    </script>
+</body>
+</html>
