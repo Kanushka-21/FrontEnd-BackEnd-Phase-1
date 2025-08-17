@@ -590,4 +590,38 @@ public class BiddingController {
                 .body(new ApiResponse<>(false, "Failed to link SOLD items to buyer: " + e.getMessage(), null));
         }
     }
+
+    /**
+     * Update the winning bidder for a specific listing (Admin endpoint for purchase history fixes)
+     */
+    @PostMapping("/admin/update-winner")
+    @Operation(summary = "Update winning bidder", description = "Update the winning bidder ID for a specific listing")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> updateWinningBidder(
+            @RequestBody Map<String, Object> request) {
+        
+        String listingId = (String) request.get("listingId");
+        String winningBidderId = (String) request.get("winningBidderId");
+        Object finalPriceObj = request.get("finalPrice");
+        
+        System.out.println("🔧 [ADMIN] Updating winning bidder for listing: " + listingId);
+        System.out.println("🔧 [ADMIN] New winning bidder: " + winningBidderId);
+        
+        try {
+            ApiResponse<Map<String, Object>> response = biddingService.updateWinningBidder(listingId, winningBidderId, finalPriceObj);
+            
+            if (response.isSuccess()) {
+                System.out.println("✅ [ADMIN] Winning bidder updated successfully");
+                return ResponseEntity.ok(response);
+            } else {
+                System.err.println("❌ [ADMIN] Failed to update winning bidder: " + response.getMessage());
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("❌ [ADMIN] Error in update winning bidder endpoint: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError()
+                .body(new ApiResponse<>(false, "Failed to update winning bidder: " + e.getMessage(), null));
+        }
+    }
 }

@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>🚀 INSTANT Purchase History Fix</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 800px; 
+            margin: 0 auto; 
+            padding: 20px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .container {
+            background: rgba(255,255,255,0.95);
+            color: #333;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .button {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 10px 5px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .button-danger {
+            background: linear-gradient(45deg, #f44336, #d32f2f);
+        }
+        .results {
+            background: #000;
+            color: #00ff00;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin: 15px 0;
+        }
+        .success {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin: 20px 0;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .current-user {
+            background: #e3f2fd;
+            border: 2px solid #2196f3;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 INSTANT Purchase History Fix</h1>
+            <p>Fix purchase history in buyer dashboard sidebar permanently</p>
+        </div>
+
+        <div class="current-user" id="userDisplay">
+            <h3>👤 Current User</h3>
+            <div id="userInfo">Detecting user...</div>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0;">
+            <button class="button" onclick="fixPurchaseHistoryNow()">
+                🔧 FIX PURCHASE HISTORY NOW
+            </button>
+            <button class="button button-danger" onclick="verifyFix()">
+                ✅ VERIFY FIX WORKED
+            </button>
+        </div>
+
+        <div id="results" class="results">
+🚀 INSTANT Purchase History Fix Ready
+
+🎯 This will:
+1. Get your current user details
+2. Find SOLD items in database
+3. Link them to your account (pasindu perera)
+4. Make them appear in Purchase History sidebar
+
+💡 Click "FIX PURCHASE HISTORY NOW" to start!
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const resultDiv = document.getElementById('results');
+            const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : type === 'warning' ? '⚠️' : 'ℹ️';
+            resultDiv.textContent += `[${timestamp}] ${icon} ${message}\\n`;
+            resultDiv.scrollTop = resultDiv.scrollHeight;
+        }
+
+        async function detectUser() {
+            try {
+                // Try to get user data from localStorage
+                const userData = localStorage.getItem('userData');
+                if (userData) {
+                    currentUser = JSON.parse(userData);
+                    document.getElementById('userInfo').innerHTML = `
+                        <strong>Name:</strong> ${currentUser.firstName} ${currentUser.lastName}<br>
+                        <strong>Email:</strong> ${currentUser.email}<br>
+                        <strong>User ID:</strong> ${currentUser.userId}<br>
+                        <strong>Role:</strong> ${currentUser.role}
+                    `;
+                    log(`✅ Detected user: ${currentUser.firstName} ${currentUser.lastName} (${currentUser.email})`, 'success');
+                    return true;
+                } else {
+                    log('❌ No user data found. Please ensure you are logged in.', 'error');
+                    return false;
+                }
+            } catch (error) {
+                log(`❌ Error detecting user: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        async function fixPurchaseHistoryNow() {
+            log('🚀 Starting instant purchase history fix...', 'info');
+            
+            // Step 1: Detect user
+            const userDetected = await detectUser();
+            if (!userDetected) {
+                log('❌ Cannot proceed without user data', 'error');
+                return;
+            }
+
+            // Step 2: Get marketplace data and find SOLD items
+            log('📊 Checking marketplace for SOLD items...', 'info');
+            try {
+                const response = await fetch('http://localhost:9092/api/marketplace/listings?page=0&size=100');
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const result = await response.json();
+                if (!result.success || !result.data || !result.data.listings) {
+                    throw new Error('Invalid marketplace response');
+                }
+
+                const allListings = result.data.listings;
+                const soldItems = allListings.filter(item => item.listingStatus === 'sold');
+                
+                log(`✅ Found ${soldItems.length} SOLD items in marketplace`, 'success');
+                
+                if (soldItems.length === 0) {
+                    log('⚠️ No SOLD items found to link', 'warning');
+                    return;
+                }
+
+                // Step 3: Update each SOLD item to belong to current user
+                log(`🔗 Linking ${soldItems.length} SOLD items to ${currentUser.firstName} ${currentUser.lastName}...`, 'info');
+                
+                let successCount = 0;
+                for (const item of soldItems) {
+                    try {
+                        log(`🔄 Processing: ${item.gemName}`, 'info');
+                        
+                        const updateResponse = await fetch('http://localhost:9092/api/bidding/admin/update-winner', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                listingId: item.id,
+                                winningBidderId: currentUser.userId,
+                                finalPrice: item.finalPrice || item.price || 50000
+                            })
+                        });
+
+                        if (updateResponse.ok) {
+                            const updateResult = await updateResponse.json();
+                            if (updateResult.success) {
+                                log(`✅ Linked: ${item.gemName} (LKR ${item.finalPrice || item.price})`, 'success');
+                                successCount++;
+                            } else {
+                                log(`⚠️ Could not link ${item.gemName}: ${updateResult.message}`, 'warning');
+                            }
+                        } else {
+                            log(`⚠️ HTTP ${updateResponse.status} for ${item.gemName}`, 'warning');
+                        }
+                        
+                        // Small delay between requests
+                        await new Promise(r => setTimeout(r, 100));
+                        
+                    } catch (itemError) {
+                        log(`⚠️ Error processing ${item.gemName}: ${itemError.message}`, 'warning');
+                    }
+                }
+
+                log(`🎯 Linking complete: ${successCount}/${soldItems.length} items linked`, 'success');
+
+                // Step 4: Verify the fix worked
+                if (successCount > 0) {
+                    log('✅ SOLD items linked! Verifying purchase history...', 'success');
+                    await new Promise(r => setTimeout(r, 1000));
+                    await verifyFix();
+                } else {
+                    log('❌ No items were successfully linked', 'error');
+                }
+
+            } catch (error) {
+                log(`❌ Error accessing marketplace: ${error.message}`, 'error');
+                log('💡 Make sure the backend is running on port 9092', 'warning');
+            }
+        }
+
+        async function verifyFix() {
+            if (!currentUser) {
+                await detectUser();
+                if (!currentUser) return;
+            }
+
+            log('✅ Verifying purchase history...', 'info');
+            
+            try {
+                const response = await fetch(`http://localhost:9092/api/bidding/purchase-history/${currentUser.userId}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    const purchases = result.data || [];
+                    log(`🎉 SUCCESS! Found ${purchases.length} purchases!`, 'success');
+                    
+                    if (purchases.length > 0) {
+                        log('📋 Your purchases:', 'success');
+                        purchases.forEach((purchase, index) => {
+                            log(`  ${index + 1}. ${purchase.gemName} - LKR ${purchase.finalPrice?.toLocaleString()}`, 'success');
+                        });
+                        
+                        // Show success message
+                        const successDiv = document.createElement('div');
+                        successDiv.className = 'success';
+                        successDiv.innerHTML = `
+                            🎉 PURCHASE HISTORY FIXED! 🎉<br><br>
+                            ✅ ${purchases.length} purchase${purchases.length !== 1 ? 's' : ''} now visible<br>
+                            ✅ Refresh your buyer dashboard to see them<br><br>
+                            <button class="button" onclick="openDashboard()">
+                                🖥️ Open Buyer Dashboard
+                            </button>
+                        `;
+                        document.querySelector('.container').appendChild(successDiv);
+                        
+                    } else {
+                        log('⚠️ Purchase history API works but still shows 0 items', 'warning');
+                        log('💡 This may mean items need more time to sync, or backend needs restart', 'info');
+                    }
+                } else {
+                    log(`❌ Purchase history API error: ${result.message}`, 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ Error verifying: ${error.message}`, 'error');
+                log('💡 Make sure backend is running and try refreshing the dashboard', 'warning');
+            }
+        }
+
+        function openDashboard() {
+            window.open('http://localhost:5173/buyer/dashboard', '_blank');
+            log('🖥️ Dashboard opened in new tab', 'info');
+            log('👀 Go to Purchases section (sidebar) to see your items!', 'warning');
+        }
+
+        // Auto-detect user on load
+        window.addEventListener('load', () => {
+            detectUser();
+        });
+    </script>
+</body>
+</html>

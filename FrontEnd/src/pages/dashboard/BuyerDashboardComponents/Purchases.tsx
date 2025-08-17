@@ -38,22 +38,25 @@ const Purchases: React.FC<PurchasesProps> = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState<{[key: string]: number}>({});
 
   // Fetch purchase history
   useEffect(() => {
     const fetchPurchaseHistory = async () => {
-      if (!user?.id) {
+      // Use userId (the correct database field) instead of id
+      const userId = user?.userId || user?.id;
+      if (!userId) {
         console.log('🛒 No user ID available for purchase history');
         setLoading(false);
         return;
       }
 
       try {
-        console.log('🛒 Fetching purchase history for user ID:', user.id);
+        console.log('🛒 Fetching purchase history for user ID:', userId);
         setLoading(true);
         setError(null);
 
-        const response = await fetch(`http://localhost:9092/api/bidding/purchase-history/${user.id}`, {
+        const response = await fetch(`http://localhost:9092/api/bidding/purchase-history/${userId}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -76,7 +79,14 @@ const Purchases: React.FC<PurchasesProps> = ({ user }) => {
                 id: purchase.id,
                 gemName: purchase.gemName,
                 finalPrice: purchase.finalPrice,
-                purchaseDate: purchase.purchaseDate
+                purchaseDate: purchase.purchaseDate,
+                primaryImageUrl: purchase.primaryImageUrl,
+                imagesCount: purchase.images?.length || 0,
+                images: purchase.images?.map((img: any) => ({
+                  url: img.imageUrl,
+                  isPrimary: img.isPrimary,
+                  originalName: img.originalName
+                }))
               });
             });
           } else {
@@ -100,19 +110,20 @@ const Purchases: React.FC<PurchasesProps> = ({ user }) => {
     };
 
     fetchPurchaseHistory();
-  }, [user?.id]);
+  }, [user?.userId, user?.id]);
 
   // Manual refresh function
   const handleRefresh = () => {
     setRefreshing(true);
-    if (!user?.id) {
+    const userId = user?.userId || user?.id;
+    if (!userId) {
       setRefreshing(false);
       return;
     }
 
-    console.log('🔄 Manually refreshing purchase history for user:', user.id);
+    console.log('🔄 Manually refreshing purchase history for user:', userId);
 
-    fetch(`http://localhost:9092/api/bidding/purchase-history/${user.id}`, {
+    fetch(`http://localhost:9092/api/bidding/purchase-history/${userId}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -141,13 +152,14 @@ const Purchases: React.FC<PurchasesProps> = ({ user }) => {
 
   // Create test purchase data (for development)
   const createTestData = async () => {
-    if (!user?.id) return;
+    const userId = user?.userId || user?.id;
+    if (!userId) return;
     
     setRefreshing(true);
     try {
-      console.log('🧪 Creating test purchase data for user:', user.id);
+      console.log('🧪 Creating test purchase data for user:', userId);
       
-      const response = await fetch(`http://localhost:9092/api/bidding/testing/create-test-purchases/${user.id}`, {
+      const response = await fetch(`http://localhost:9092/api/bidding/testing/create-test-purchases/${userId}`, {
         method: 'POST'
       });
       
@@ -191,26 +203,96 @@ const Purchases: React.FC<PurchasesProps> = ({ user }) => {
     }).format(amount);
   };
 
-  // Get image URL with improved handling for the new data structure
-  const getImageUrl = (item: PurchaseItem) => {
-    // First try primaryImageUrl
-    if (item.primaryImageUrl) {
-      return `http://localhost:9092${item.primaryImageUrl}`;
+  // Get all valid images for an item
+  const getItemImages = (item: PurchaseItem) => {
+    if (!item.images || item.images.length === 0) return [];
+    
+    return item.images
+      .filter((img: any) => typeof img === 'object' && img.imageUrl)
+      .map((img: any) => ({
+        url: `http://localhost:9092${img.imageUrl}`,
+        isPrimary: img.isPrimary || false,
+        description: img.description || '',
+        originalName: img.originalName || ''
+      }));
+  };
+
+  // Get current image URL for display with fallback handling
+  const getCurrentImageUrl = (item: PurchaseItem) => {
+    const images = getItemImages(item);
+    if (images.length === 0) {
+      // Try primaryImageUrl as fallback
+      if (item.primaryImageUrl) {
+        return `http://localhost:9092${item.primaryImageUrl}`;
+      }
+      // Ultimate fallback
+      return 'https://images.unsplash.com/photo-1506792006437-256b665541e2?w=300&h=200&fit=crop';
     }
     
-    // Then try to get first image from images array (new structure with objects)
-    if (item.images && item.images.length > 0) {
-      const firstImage = item.images[0];
-      // Handle both old string format and new object format
-      if (typeof firstImage === 'string') {
-        return `http://localhost:9092/uploads/gems/${firstImage}`;
-      } else if (firstImage && firstImage.imageUrl) {
-        return `http://localhost:9092${firstImage.imageUrl}`;
+    const currentIndex = selectedImageIndex[item.id] || 0;
+    return images[currentIndex]?.url || images[0]?.url;
+  };
+
+  // Test if an image URL is accessible
+  const testImageUrl = async (url: string): Promise<boolean> => {
+    try {
+      const response = await fetch(url, { method: 'HEAD' });
+      return response.ok;
+    } catch (error) {
+      return false;
+    }
+  };
+
+  // Get working image URL with real-time testing
+  const getWorkingImageUrl = async (item: PurchaseItem): Promise<string> => {
+    const allImages = getItemImages(item);
+    
+    // Add primary image to the list if it exists
+    if (item.primaryImageUrl) {
+      allImages.unshift({
+        url: `http://localhost:9092${item.primaryImageUrl}`,
+        isPrimary: true,
+        description: 'Primary Image',
+        originalName: 'Primary'
+      });
+    }
+    
+    // Test each image URL
+    for (const image of allImages) {
+      const isWorking = await testImageUrl(image.url);
+      if (isWorking) {
+        return image.url;
       }
     }
     
-    // Fallback to default image
-    return 'https://images.unsplash.com/photo-1506792006437-256b665541e2?w=60&h=60&fit=crop';
+    // If no images work, return fallback
+    return 'https://images.unsplash.com/photo-1506792006437-256b665541e2?w=300&h=200&fit=crop';
+  };
+
+  // Navigate between images
+  const nextImage = (item: PurchaseItem, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const images = getItemImages(item);
+    if (images.length <= 1) return;
+    
+    const currentIndex = selectedImageIndex[item.id] || 0;
+    const nextIndex = (currentIndex + 1) % images.length;
+    setSelectedImageIndex(prev => ({ ...prev, [item.id]: nextIndex }));
+  };
+
+  const prevImage = (item: PurchaseItem, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const images = getItemImages(item);
+    if (images.length <= 1) return;
+    
+    const currentIndex = selectedImageIndex[item.id] || 0;
+    const prevIndex = currentIndex === 0 ? images.length - 1 : currentIndex - 1;
+    setSelectedImageIndex(prev => ({ ...prev, [item.id]: prevIndex }));
+  };
+
+  // Get image URL with proper handling for the actual API structure
+  const getImageUrl = (item: PurchaseItem) => {
+    return getCurrentImageUrl(item);
   };
 
   if (loading) {
@@ -292,22 +374,104 @@ const Purchases: React.FC<PurchasesProps> = ({ user }) => {
                 key={purchase.id}
                 className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200 overflow-hidden"
               >
-                {/* Image */}
-                <div className="relative h-48 bg-gray-100">
+                {/* Enhanced Image with navigation */}
+                <div className="relative h-48 bg-gray-100 group">
                   <img 
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover transition-opacity duration-200"
                     src={getImageUrl(purchase)} 
                     alt={purchase.gemName}
+                    loading="lazy"
+                    onLoad={(e) => {
+                      (e.target as HTMLImageElement).style.opacity = '1';
+                      // Hide loading indicator
+                      const loadingDiv = (e.target as HTMLImageElement).nextElementSibling;
+                      if (loadingDiv) {
+                        (loadingDiv as HTMLElement).style.display = 'none';
+                      }
+                    }}
                     onError={(e) => {
+                      console.warn(`Failed to load image for ${purchase.gemName}:`, getImageUrl(purchase));
+                      // Hide loading indicator
+                      const loadingDiv = (e.target as HTMLImageElement).nextElementSibling;
+                      if (loadingDiv) {
+                        (loadingDiv as HTMLElement).style.display = 'none';
+                      }
+                      
+                      // Try alternative image URLs
+                      const currentSrc = (e.target as HTMLImageElement).src;
+                      const images = getItemImages(purchase);
+                      
+                      // Find an alternative image that hasn't been tried yet
+                      const alternativeImage = images.find(img => img.url !== currentSrc);
+                      if (alternativeImage) {
+                        (e.target as HTMLImageElement).src = alternativeImage.url;
+                        return;
+                      }
+                      
+                      // If all item images fail, use fallback
                       (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1506792006437-256b665541e2?w=300&h=200&fit=crop';
                     }}
+                    style={{ opacity: 0 }}
                   />
+                  
+                  {/* Loading indicator */}
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  </div>
+                  
+                  {/* Image navigation buttons */}
+                  {getItemImages(purchase).length > 1 && (
+                    <>
+                      <button
+                        onClick={(e) => prevImage(purchase, e)}
+                        className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-opacity-70"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={(e) => nextImage(purchase, e)}
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-opacity-70"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                    </>
+                  )}
+                  
+                  {/* Image indicators */}
+                  {getItemImages(purchase).length > 1 && (
+                    <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-1">
+                      {getItemImages(purchase).map((_, index) => (
+                        <div
+                          key={index}
+                          className={`w-2 h-2 rounded-full transition-colors duration-200 ${
+                            (selectedImageIndex[purchase.id] || 0) === index 
+                              ? 'bg-white' 
+                              : 'bg-white bg-opacity-50'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  
                   <div className="absolute top-3 right-3">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                       <Trophy className="w-3 h-3 mr-1" />
                       Won
                     </span>
                   </div>
+                  
+                  {/* Image count badge */}
+                  {getItemImages(purchase).length > 1 && (
+                    <div className="absolute top-3 left-3">
+                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-black bg-opacity-50 text-white">
+                        {(selectedImageIndex[purchase.id] || 0) + 1} / {getItemImages(purchase).length}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Content */}
@@ -397,12 +561,29 @@ const Purchases: React.FC<PurchasesProps> = ({ user }) => {
           <p className="text-gray-500 mb-4">Your won bids and completed purchases will appear here.</p>
           
           {/* Development debug info */}
-          {user?.id && (
+          {(user?.userId || user?.id) && (
             <div className="bg-gray-50 rounded-lg p-4 mb-4 text-sm text-gray-600">
               <p><strong>Debug Info:</strong></p>
-              <p>User ID: {user.id}</p>
-              <p>API Endpoint: /api/bidding/purchase-history/{user.id}</p>
-              <p>Looking for items where winningBidderId = "{user.id}" and listingStatus = "sold"</p>
+              <p>User ID: {user.userId || user.id}</p>
+              <p>User Email: {user.email}</p>
+              <p>API Endpoint: /api/bidding/purchase-history/{user.userId || user.id}</p>
+              <p>Looking for items where winningBidderId = "{user.userId || user.id}" and listingStatus = "sold"</p>
+              
+              <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded">
+                <p className="font-semibold text-yellow-800">🔧 Need to fix Purchase History?</p>
+                <p className="text-yellow-700 text-xs mt-1">
+                  If you should have purchases but they're not showing, there might be SOLD items in the database 
+                  that aren't linked to your account. Use the Purchase History Fix Tool to resolve this.
+                </p>
+                <button 
+                  onClick={() => {
+                    window.open('/PERMANENT_PURCHASE_HISTORY_FIX.html', '_blank');
+                  }}
+                  className="mt-2 px-3 py-1 bg-yellow-600 text-white rounded text-xs hover:bg-yellow-700"
+                >
+                  🔧 Open Fix Tool
+                </button>
+              </div>
             </div>
           )}
           

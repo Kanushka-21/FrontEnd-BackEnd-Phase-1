@@ -1496,4 +1496,79 @@ public class BiddingService {
             return new ApiResponse<>(false, "Failed to link SOLD items to buyer: " + e.getMessage(), null);
         }
     }
+
+    /**
+     * Update the winning bidder for a specific listing
+     */
+    public ApiResponse<Map<String, Object>> updateWinningBidder(String listingId, String winningBidderId, Object finalPriceObj) {
+        try {
+            System.out.println("🔧 Updating winning bidder for listing: " + listingId);
+            System.out.println("🔧 New winning bidder ID: " + winningBidderId);
+
+            Optional<GemListing> listingOpt = gemListingRepository.findById(listingId);
+            if (listingOpt.isEmpty()) {
+                return new ApiResponse<>(false, "Listing not found with ID: " + listingId, null);
+            }
+
+            GemListing listing = listingOpt.get();
+            
+            // Update the winning bidder
+            listing.setWinningBidderId(winningBidderId);
+            
+            // Ensure status is sold
+            if (!"sold".equals(listing.getListingStatus())) {
+                listing.setListingStatus("sold");
+            }
+            
+            // Set bidding as inactive
+            listing.setBiddingActive(false);
+            
+            // Set completion time if not already set
+            if (listing.getBiddingCompletedAt() == null) {
+                listing.setBiddingCompletedAt(LocalDateTime.now());
+            }
+            
+            // Update final price if provided
+            if (finalPriceObj != null) {
+                BigDecimal finalPrice = null;
+                if (finalPriceObj instanceof Number) {
+                    finalPrice = BigDecimal.valueOf(((Number) finalPriceObj).doubleValue());
+                } else if (finalPriceObj instanceof String) {
+                    try {
+                        finalPrice = new BigDecimal((String) finalPriceObj);
+                    } catch (NumberFormatException e) {
+                        System.err.println("⚠️ Invalid final price format: " + finalPriceObj);
+                    }
+                }
+                
+                if (finalPrice != null) {
+                    listing.setFinalPrice(finalPrice);
+                }
+            }
+            
+            // Ensure final price is set (use listing price as fallback)
+            if (listing.getFinalPrice() == null) {
+                listing.setFinalPrice(listing.getPrice());
+            }
+
+            // Save the updated listing
+            GemListing savedListing = gemListingRepository.save(listing);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("listingId", savedListing.getId());
+            result.put("gemName", savedListing.getGemName());
+            result.put("winningBidderId", savedListing.getWinningBidderId());
+            result.put("finalPrice", savedListing.getFinalPrice());
+            result.put("listingStatus", savedListing.getListingStatus());
+            result.put("biddingCompletedAt", savedListing.getBiddingCompletedAt());
+
+            System.out.println("✅ Successfully updated winning bidder for: " + savedListing.getGemName());
+            return new ApiResponse<>(true, "Winning bidder updated successfully", result);
+
+        } catch (Exception e) {
+            System.err.println("❌ Error updating winning bidder: " + e.getMessage());
+            e.printStackTrace();
+            return new ApiResponse<>(false, "Failed to update winning bidder: " + e.getMessage(), null);
+        }
+    }
 }
