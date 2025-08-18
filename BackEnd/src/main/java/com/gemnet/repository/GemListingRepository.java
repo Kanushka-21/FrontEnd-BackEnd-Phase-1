@@ -166,12 +166,15 @@ public interface GemListingRepository extends MongoRepository<GemListing, String
     // Find listings by category with pagination
     Page<GemListing> findByCategory(String category, Pageable pageable);
     
-    // Find marketplace listings with pagination
+    // Find marketplace listings with pagination (active items only)
     @Query("{'listingStatus': {$in: ['APPROVED', 'ACTIVE']}, 'isActive': true}")
     Page<GemListing> findMarketplaceListings(Pageable pageable);
     
-    // Find all marketplace listings including sold items with pagination
-    @Query("{'listingStatus': {$in: ['APPROVED', 'ACTIVE', 'sold', 'expired_no_bids']}, 'isActive': true}")
+    // Find all marketplace listings including sold items with pagination (FIXED to include sold items)
+    @Query("{'$or': [" +
+           "{'listingStatus': {$in: ['APPROVED', 'ACTIVE']}, 'isActive': true}, " +
+           "{'listingStatus': {$in: ['sold', 'expired_no_bids']}}" +
+           "]}")
     Page<GemListing> findAllMarketplaceListings(Pageable pageable);
     
     // Find pending approval listings with pagination
@@ -206,16 +209,25 @@ public interface GemListingRepository extends MongoRepository<GemListing, String
     
     // ===== MARKETPLACE METHODS INCLUDING SOLD ITEMS =====
     
-    // Search marketplace listings by name including sold items with pagination
-    @Query("{'gemName': {$regex: ?0, $options: 'i'}, 'listingStatus': {$in: ['APPROVED', 'ACTIVE', 'sold', 'expired_no_bids']}, 'isActive': true}")
+    // Search marketplace listings by name including sold items with pagination (FIXED)
+    @Query("{'gemName': {$regex: ?0, $options: 'i'}, '$or': [" +
+           "{'listingStatus': {$in: ['APPROVED', 'ACTIVE']}, 'isActive': true}, " +
+           "{'listingStatus': {$in: ['sold', 'expired_no_bids']}}" +
+           "]}")
     Page<GemListing> searchByNameInMarketplaceIncludingSold(String gemName, Pageable pageable);
     
-    // Find by category and certification in marketplace including sold items
-    @Query("{'category': ?0, 'isCertified': ?1, 'listingStatus': {$in: ['APPROVED', 'ACTIVE', 'sold', 'expired_no_bids']}, 'isActive': true}")
+    // Find by category and certification in marketplace including sold items (FIXED)
+    @Query("{'category': ?0, 'isCertified': ?1, '$or': [" +
+           "{'listingStatus': {$in: ['APPROVED', 'ACTIVE']}, 'isActive': true}, " +
+           "{'listingStatus': {$in: ['sold', 'expired_no_bids']}}" +
+           "]}")
     Page<GemListing> findByCategoryAndCertificationInMarketplaceIncludingSold(String category, Boolean isCertified, Pageable pageable);
     
-    // Find by minimum price in marketplace including sold items
-    @Query("{'price': {$gte: ?0}, 'listingStatus': {$in: ['APPROVED', 'ACTIVE', 'sold', 'expired_no_bids']}, 'isActive': true}")
+    // Find by minimum price in marketplace including sold items (FIXED)
+    @Query("{'price': {$gte: ?0}, '$or': [" +
+           "{'listingStatus': {$in: ['APPROVED', 'ACTIVE']}, 'isActive': true}, " +
+           "{'listingStatus': {$in: ['sold', 'expired_no_bids']}}" +
+           "]}")
     Page<GemListing> findByMinPriceInMarketplaceIncludingSold(Double minPrice, Pageable pageable);
     
     // Count marketplace listings

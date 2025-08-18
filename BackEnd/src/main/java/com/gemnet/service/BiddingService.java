@@ -18,6 +18,7 @@ import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class BiddingService {
@@ -654,6 +655,27 @@ public class BiddingService {
             GemListing listing = listingOpt.get();
             Map<String, Object> countdownData = new HashMap<>();
             
+            // Always include the listing status in the response
+            countdownData.put("listingStatus", listing.getListingStatus());
+            
+            // ONLY skip countdown for DEFINITIVELY sold or expired items
+            if ("sold".equals(listing.getListingStatus())) {
+                System.out.println("🛑 Listing " + listingId + " is SOLD - returning no countdown");
+                countdownData.put("biddingActive", false);
+                countdownData.put("remainingTimeSeconds", 0);
+                countdownData.put("isExpired", true);
+                return new ApiResponse<>(true, "Listing is sold", countdownData);
+            }
+            
+            if ("expired_no_bids".equals(listing.getListingStatus())) {
+                System.out.println("⏰ Listing " + listingId + " is EXPIRED_NO_BIDS - returning no countdown");
+                countdownData.put("biddingActive", false);
+                countdownData.put("remainingTimeSeconds", 0);
+                countdownData.put("isExpired", true);
+                return new ApiResponse<>(true, "Listing expired with no bids", countdownData);
+            }
+            
+            // For ALL OTHER CASES (APPROVED, ACTIVE, etc.), process countdown normally
             if (Boolean.TRUE.equals(listing.getBiddingActive())) {
                 LocalDateTime now = LocalDateTime.now();
                 LocalDateTime endTime = listing.getBiddingEndTime();
@@ -717,6 +739,9 @@ public class BiddingService {
                 countdownData.put("remainingTimeSeconds", 0);
                 countdownData.put("isExpired", false);
             }
+            
+            // Always include the listing status in the response
+            countdownData.put("listingStatus", listing.getListingStatus());
             
             return new ApiResponse<>(true, "Countdown status retrieved successfully", countdownData);
             
@@ -1252,6 +1277,298 @@ public class BiddingService {
             System.err.println("🧪 [TESTING] Error completing bidding: " + e.getMessage());
             e.printStackTrace();
             return new ApiResponse<>(false, "Failed to complete bidding for testing: " + e.getMessage(), null);
+        }
+    }
+
+    /**
+     * Fix sold items that still have biddingActive=true
+     */
+    public ApiResponse<Map<String, Object>> fixSoldItemsWithActiveBidding() {
+        try {
+            System.out.println("🔧 [FIX] Starting to fix sold items with active bidding");
+
+            // Find all listings with status 'sold' but biddingActive = true
+            List<GemListing> problemListings = gemListingRepository.findAll().stream()
+                .filter(listing -> "sold".equals(listing.getListingStatus()) && Boolean.TRUE.equals(listing.getBiddingActive()))
+                .collect(java.util.stream.Collectors.toList());
+
+            System.out.println("🔧 [FIX] Found " + problemListings.size() + " sold items with active bidding");
+
+            int fixedCount = 0;
+            for (GemListing listing : problemListings) {
+                System.out.println("🔧 [FIX] Fixing listing: " + listing.getId() + " - " + listing.getGemName());
+                
+                // Set bidding to inactive
+                listing.setBiddingActive(false);
+                
+                // Ensure bidding completed timestamp is set
+                if (listing.getBiddingCompletedAt() == null) {
+                    listing.setBiddingCompletedAt(LocalDateTime.now());
+                }
+                
+                // Save the fix
+                gemListingRepository.save(listing);
+                fixedCount++;
+                
+                System.out.println("✅ [FIX] Fixed listing: " + listing.getId());
+            }
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("problemItemsFound", problemListings.size());
+            result.put("itemsFixed", fixedCount);
+            result.put("timestamp", LocalDateTime.now().toString());
+
+            System.out.println("✅ [FIX] Completed fixing " + fixedCount + " sold items");
+            return new ApiResponse<>(true, "Fixed " + fixedCount + " sold items with active bidding", result);
+
+        } catch (Exception e) {
+            System.err.println("🔧 [FIX] Error fixing sold items: " + e.getMessage());
+            e.printStackTrace();
+            return new ApiResponse<>(false, "Failed to fix sold items: " + e.getMessage(), null);
+        }
+    }
+
+    /**
+     * Create test purchase data for a user (for testing purposes)
+     */
+    public ApiResponse<Map<String, Object>> createTestPurchaseData(String userId) {
+        try {
+            System.out.println("🧪 [TEST] Creating test purchase data for user: " + userId);
+
+            // Find some active listings to mark as sold to this user
+            List<GemListing> activeListings = gemListingRepository.findByListingStatus("active");
+            
+            if (activeListings.isEmpty()) {
+                return new ApiResponse<>(false, "No active listings found to create test purchases", null);
+            }
+
+            int created = 0;
+            Map<String, Object> result = new HashMap<>();
+            List<String> createdPurchases = new ArrayList<>();
+
+            // Create up to 3 test purchases
+            for (int i = 0; i < Math.min(3, activeListings.size()); i++) {
+                GemListing listing = activeListings.get(i);
+                
+                // Mark as sold to the test user
+                listing.setListingStatus("sold");
+                listing.setWinningBidderId(userId);
+                listing.setBiddingActive(false);
+                listing.setBiddingCompletedAt(LocalDateTime.now());
+                
+                // Set a realistic final price (starting price + some amount)
+                BigDecimal finalPrice = listing.getPrice() != null ? 
+                    listing.getPrice().add(BigDecimal.valueOf((Math.random() * 50000) + 10000)) : 
+                    BigDecimal.valueOf(50000.0 + (Math.random() * 100000));
+                listing.setFinalPrice(finalPrice);
+
+                gemListingRepository.save(listing);
+                
+                created++;
+                createdPurchases.add(listing.getId() + " (" + listing.getGemName() + ") - LKR " + finalPrice.intValue());
+                
+                System.out.println("🧪 Created test purchase: " + listing.getGemName() + " for user " + userId + " at LKR " + finalPrice.intValue());
+            }
+
+            result.put("createdCount", created);
+            result.put("purchases", createdPurchases);
+            result.put("userId", userId);
+
+            System.out.println("✅ [TEST] Created " + created + " test purchases for user: " + userId);
+            return new ApiResponse<>(true, "Created " + created + " test purchases for user " + userId, result);
+
+        } catch (Exception e) {
+            System.err.println("🧪 [TEST] Error creating test purchase data: " + e.getMessage());
+            e.printStackTrace();
+            return new ApiResponse<>(false, "Failed to create test purchase data: " + e.getMessage(), null);
+        }
+    }
+
+    /**
+     * Reset purchase data for a user (for testing purposes)
+     */
+    public ApiResponse<Map<String, Object>> resetUserPurchases(String userId) {
+        try {
+            System.out.println("🧪 [TEST] Resetting purchases for user: " + userId);
+
+            // Find all listings where this user is the winning bidder
+            List<GemListing> userPurchases = gemListingRepository.findByWinningBidderId(userId);
+            
+            int resetCount = 0;
+            for (GemListing listing : userPurchases) {
+                // Reset to active status
+                listing.setListingStatus("active");
+                listing.setWinningBidderId(null);
+                listing.setBiddingActive(true);
+                listing.setBiddingCompletedAt(null);
+                listing.setFinalPrice(null);
+                
+                gemListingRepository.save(listing);
+                resetCount++;
+                
+                System.out.println("🧪 Reset listing: " + listing.getGemName() + " back to active");
+            }
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("resetCount", resetCount);
+            result.put("userId", userId);
+
+            System.out.println("✅ [TEST] Reset " + resetCount + " purchases for user: " + userId);
+            return new ApiResponse<>(true, "Reset " + resetCount + " purchases for user " + userId, result);
+
+        } catch (Exception e) {
+            System.err.println("🧪 [TEST] Error resetting user purchases: " + e.getMessage());
+            e.printStackTrace();
+            return new ApiResponse<>(false, "Failed to reset user purchases: " + e.getMessage(), null);
+        }
+    }
+
+    /**
+     * Link all SOLD items to a specific buyer to fix purchase history
+     */
+    public ApiResponse<Map<String, Object>> linkAllSoldItemsToBuyer(String userId, String userEmail) {
+        System.out.println("🔗 [FIX] Starting to link all SOLD items to buyer: " + userId);
+        
+        try {
+            // Find all SOLD listings
+            List<GemListing> allListings = gemListingRepository.findAll();
+            List<GemListing> soldListings = allListings.stream()
+                .filter(listing -> 
+                    "SOLD".equalsIgnoreCase(listing.getListingStatus()) || 
+                    "sold".equalsIgnoreCase(listing.getListingStatus()) ||
+                    (listing.getBiddingActive() != null && !listing.getBiddingActive() && listing.getBiddingCompletedAt() != null)
+                )
+                .collect(Collectors.toList());
+
+            System.out.println("🔍 Found " + soldListings.size() + " SOLD listings to link to buyer");
+
+            if (soldListings.isEmpty()) {
+                Map<String, Object> result = new HashMap<>();
+                result.put("linkedCount", 0);
+                result.put("message", "No SOLD items found to link");
+                return new ApiResponse<>(true, "No SOLD items found to link", result);
+            }
+
+            int linkedCount = 0;
+            List<String> linkedItems = new ArrayList<>();
+
+            for (GemListing listing : soldListings) {
+                // Set the winning bidder to the current user
+                listing.setWinningBidderId(userId);
+                listing.setListingStatus("SOLD");
+                listing.setListingStatus("sold");
+                listing.setBiddingActive(false);
+                
+                // Set completion time if not already set
+                if (listing.getBiddingCompletedAt() == null) {
+                    listing.setBiddingCompletedAt(LocalDateTime.now());
+                }
+                
+                // Set final price if not already set
+                if (listing.getFinalPrice() == null) {
+                    BigDecimal finalPrice = listing.getPrice() != null ? 
+                        listing.getPrice() : BigDecimal.valueOf(50000);
+                    listing.setFinalPrice(finalPrice);
+                }
+
+                // Save the updated listing
+                gemListingRepository.save(listing);
+                
+                linkedCount++;
+                linkedItems.add(listing.getGemName() + " (LKR " + listing.getFinalPrice() + ")");
+                
+                System.out.println("🔗 Linked: " + listing.getGemName() + " to buyer " + userId);
+            }
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("linkedCount", linkedCount);
+            result.put("userId", userId);
+            result.put("userEmail", userEmail);
+            result.put("linkedItems", linkedItems);
+            result.put("message", "Successfully linked " + linkedCount + " SOLD items to buyer");
+
+            System.out.println("✅ [FIX] Successfully linked " + linkedCount + " SOLD items to buyer: " + userId);
+            return new ApiResponse<>(true, "Successfully linked " + linkedCount + " SOLD items to buyer", result);
+
+        } catch (Exception e) {
+            System.err.println("🔗 [FIX] Error linking SOLD items to buyer: " + e.getMessage());
+            e.printStackTrace();
+            return new ApiResponse<>(false, "Failed to link SOLD items to buyer: " + e.getMessage(), null);
+        }
+    }
+
+    /**
+     * Update the winning bidder for a specific listing
+     */
+    public ApiResponse<Map<String, Object>> updateWinningBidder(String listingId, String winningBidderId, Object finalPriceObj) {
+        try {
+            System.out.println("🔧 Updating winning bidder for listing: " + listingId);
+            System.out.println("🔧 New winning bidder ID: " + winningBidderId);
+
+            Optional<GemListing> listingOpt = gemListingRepository.findById(listingId);
+            if (listingOpt.isEmpty()) {
+                return new ApiResponse<>(false, "Listing not found with ID: " + listingId, null);
+            }
+
+            GemListing listing = listingOpt.get();
+            
+            // Update the winning bidder
+            listing.setWinningBidderId(winningBidderId);
+            
+            // Ensure status is sold
+            if (!"sold".equals(listing.getListingStatus())) {
+                listing.setListingStatus("sold");
+            }
+            
+            // Set bidding as inactive
+            listing.setBiddingActive(false);
+            
+            // Set completion time if not already set
+            if (listing.getBiddingCompletedAt() == null) {
+                listing.setBiddingCompletedAt(LocalDateTime.now());
+            }
+            
+            // Update final price if provided
+            if (finalPriceObj != null) {
+                BigDecimal finalPrice = null;
+                if (finalPriceObj instanceof Number) {
+                    finalPrice = BigDecimal.valueOf(((Number) finalPriceObj).doubleValue());
+                } else if (finalPriceObj instanceof String) {
+                    try {
+                        finalPrice = new BigDecimal((String) finalPriceObj);
+                    } catch (NumberFormatException e) {
+                        System.err.println("⚠️ Invalid final price format: " + finalPriceObj);
+                    }
+                }
+                
+                if (finalPrice != null) {
+                    listing.setFinalPrice(finalPrice);
+                }
+            }
+            
+            // Ensure final price is set (use listing price as fallback)
+            if (listing.getFinalPrice() == null) {
+                listing.setFinalPrice(listing.getPrice());
+            }
+
+            // Save the updated listing
+            GemListing savedListing = gemListingRepository.save(listing);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("listingId", savedListing.getId());
+            result.put("gemName", savedListing.getGemName());
+            result.put("winningBidderId", savedListing.getWinningBidderId());
+            result.put("finalPrice", savedListing.getFinalPrice());
+            result.put("listingStatus", savedListing.getListingStatus());
+            result.put("biddingCompletedAt", savedListing.getBiddingCompletedAt());
+
+            System.out.println("✅ Successfully updated winning bidder for: " + savedListing.getGemName());
+            return new ApiResponse<>(true, "Winning bidder updated successfully", result);
+
+        } catch (Exception e) {
+            System.err.println("❌ Error updating winning bidder: " + e.getMessage());
+            e.printStackTrace();
+            return new ApiResponse<>(false, "Failed to update winning bidder: " + e.getMessage(), null);
         }
     }
 }

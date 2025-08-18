@@ -29,39 +29,25 @@ public class MarketplaceService {
             Pageable pageable, String search, String category, Double minPrice, Double maxPrice, 
             boolean certifiedOnly, boolean includeSold) {
         try {
-            System.out.println("🔍 MarketplaceService - Getting marketplace listings (includeSold: " + includeSold + ")");
+            // ALWAYS include sold items by default to show complete marketplace
+            boolean forceIncludeSold = true;
+            System.out.println("🔍 MarketplaceService - Getting marketplace listings (forcibly including sold items for complete view)");
             
             Page<GemListing> listingsPage;
             
-            // Apply filters based on search criteria
+            // Apply filters based on search criteria (ALWAYS include sold items)
             if (search != null && !search.trim().isEmpty()) {
-                // Search by name (need to create new search methods for sold items)
-                if (includeSold) {
-                    listingsPage = gemListingRepository.searchByNameInMarketplaceIncludingSold(search.trim(), pageable);
-                } else {
-                    listingsPage = gemListingRepository.searchByNameInMarketplace(search.trim(), pageable);
-                }
+                // Search by name - always include sold items
+                listingsPage = gemListingRepository.searchByNameInMarketplaceIncludingSold(search.trim(), pageable);
             } else if (category != null && !category.trim().isEmpty()) {
-                // Filter by category and certification (need to create new methods)
-                if (includeSold) {
-                    listingsPage = gemListingRepository.findByCategoryAndCertificationInMarketplaceIncludingSold(category.trim(), certifiedOnly, pageable);
-                } else {
-                    listingsPage = gemListingRepository.findByCategoryAndCertificationInMarketplace(category.trim(), certifiedOnly, pageable);
-                }
+                // Filter by category and certification - always include sold items
+                listingsPage = gemListingRepository.findByCategoryAndCertificationInMarketplaceIncludingSold(category.trim(), certifiedOnly, pageable);
             } else if (minPrice != null) {
-                // Filter by minimum price (need to create new methods)
-                if (includeSold) {
-                    listingsPage = gemListingRepository.findByMinPriceInMarketplaceIncludingSold(minPrice, pageable);
-                } else {
-                    listingsPage = gemListingRepository.findByMinPriceInMarketplace(minPrice, pageable);
-                }
+                // Filter by minimum price - always include sold items
+                listingsPage = gemListingRepository.findByMinPriceInMarketplaceIncludingSold(minPrice, pageable);
             } else {
-                // Get all marketplace listings
-                if (includeSold) {
-                    listingsPage = gemListingRepository.findAllMarketplaceListings(pageable);
-                } else {
-                    listingsPage = gemListingRepository.findMarketplaceListings(pageable);
-                }
+                // Get all marketplace listings - always include sold items
+                listingsPage = gemListingRepository.findAllMarketplaceListings(pageable);
             }
             
             // Additional filtering in memory if needed
