@@ -84,6 +84,9 @@ public class User {
     private String adminNotes; // Internal admin notes
     private String accessLevel; // FULL, LIMITED, READ_ONLY (for admin users)
     
+    // User bio/description
+    private String bio;
+    
     @CreatedDate
     private LocalDateTime createdAt;
     
@@ -195,4 +198,7 @@ public class User {
     
     public String getAccessLevel() { return accessLevel; }
     public void setAccessLevel(String accessLevel) { this.accessLevel = accessLevel; }
+    
+    public String getBio() { return bio; }
+    public void setBio(String bio) { this.bio = bio; }
 }

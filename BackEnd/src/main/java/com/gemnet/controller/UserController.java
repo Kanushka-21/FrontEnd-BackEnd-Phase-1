@@ -1,0 +1,164 @@
+package com.gemnet.controller;
+
+import com.gemnet.dto.ApiResponse;
+import com.gemnet.dto.UserProfileUpdateRequest;
+import com.gemnet.model.User;
+import com.gemnet.service.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+
+@RestController
+@RequestMapping("/api/users")
+@Tag(name = "User Management", description = "User profile management APIs")
+@CrossOrigin(origins = "*")
+public class UserController {
+
+    @Autowired
+    private UserService userService;
+
+    @GetMapping("/profile/{userId}")
+    @Operation(summary = "Get user profile", description = "Fetch user profile information by user ID")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getUserProfile(@PathVariable String userId) {
+        try {
+            System.out.println("👤 Fetching profile for user: " + userId);
+            
+            Optional<User> userOpt = userService.findById(userId);
+            if (!userOpt.isPresent()) {
+                System.err.println("❌ User not found: " + userId);
+                return ResponseEntity.ok(ApiResponse.error("User not found"));
+            }
+
+            User user = userOpt.get();
+            Map<String, Object> profileData = new HashMap<>();
+            
+            // Basic profile information
+            profileData.put("userId", user.getId());
+            profileData.put("firstName", user.getFirstName());
+            profileData.put("lastName", user.getLastName());
+            profileData.put("email", user.getEmail());
+            profileData.put("phoneNumber", user.getPhoneNumber());
+            profileData.put("address", user.getAddress());
+            profileData.put("dateOfBirth", user.getDateOfBirth());
+            profileData.put("nicNumber", user.getNicNumber());
+            profileData.put("bio", user.getBio());
+            
+            // Account information
+            profileData.put("userRole", user.getUserRole());
+            profileData.put("isVerified", user.getIsVerified());
+            profileData.put("verificationStatus", user.getVerificationStatus());
+            profileData.put("isFaceVerified", user.getIsFaceVerified());
+            profileData.put("isNicVerified", user.getIsNicVerified());
+            profileData.put("isActive", user.getIsActive());
+            profileData.put("createdAt", user.getCreatedAt());
+            profileData.put("updatedAt", user.getUpdatedAt());
+
+            System.out.println("✅ Profile fetched successfully for user: " + userId);
+            return ResponseEntity.ok(ApiResponse.success("Profile fetched successfully", profileData));
+
+        } catch (Exception e) {
+            System.err.println("❌ Error fetching profile for user " + userId + ": " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.ok(ApiResponse.error("Failed to fetch user profile: " + e.getMessage()));
+        }
+    }
+
+    @PutMapping("/profile/{userId}")
+    @Operation(summary = "Update user profile", description = "Update user profile information")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> updateUserProfile(
+            @PathVariable String userId,
+            @Valid @RequestBody UserProfileUpdateRequest request) {
+        try {
+            System.out.println("✏️ Updating profile for user: " + userId);
+            
+            Optional<User> userOpt = userService.findById(userId);
+            if (!userOpt.isPresent()) {
+                System.err.println("❌ User not found: " + userId);
+                return ResponseEntity.ok(ApiResponse.error("User not found"));
+            }
+
+            User user = userOpt.get();
+            
+            // Update profile fields if provided
+            if (request.getFirstName() != null && !request.getFirstName().isEmpty()) {
+                user.setFirstName(request.getFirstName());
+            }
+            if (request.getLastName() != null && !request.getLastName().isEmpty()) {
+                user.setLastName(request.getLastName());
+            }
+            if (request.getPhoneNumber() != null && !request.getPhoneNumber().isEmpty()) {
+                user.setPhoneNumber(request.getPhoneNumber());
+            }
+            if (request.getAddress() != null && !request.getAddress().isEmpty()) {
+                user.setAddress(request.getAddress());
+            }
+            if (request.getBio() != null && !request.getBio().isEmpty()) {
+                user.setBio(request.getBio());
+            }
+            
+            // Save updated user
+            User updatedUser = userService.save(user);
+            
+            // Prepare response data
+            Map<String, Object> profileData = new HashMap<>();
+            profileData.put("userId", updatedUser.getId());
+            profileData.put("firstName", updatedUser.getFirstName());
+            profileData.put("lastName", updatedUser.getLastName());
+            profileData.put("email", updatedUser.getEmail());
+            profileData.put("phoneNumber", updatedUser.getPhoneNumber());
+            profileData.put("address", updatedUser.getAddress());
+            profileData.put("dateOfBirth", updatedUser.getDateOfBirth());
+            profileData.put("nicNumber", updatedUser.getNicNumber());
+            profileData.put("bio", updatedUser.getBio());
+            profileData.put("userRole", updatedUser.getUserRole());
+            profileData.put("isVerified", updatedUser.getIsVerified());
+            profileData.put("verificationStatus", updatedUser.getVerificationStatus());
+            profileData.put("updatedAt", updatedUser.getUpdatedAt());
+
+            System.out.println("✅ Profile updated successfully for user: " + userId);
+            return ResponseEntity.ok(ApiResponse.success("Profile updated successfully", profileData));
+
+        } catch (Exception e) {
+            System.err.println("❌ Error updating profile for user " + userId + ": " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.ok(ApiResponse.error("Failed to update user profile: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/profile/current")
+    @Operation(summary = "Get current user profile", description = "Fetch current authenticated user's profile")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getCurrentUserProfile() {
+        try {
+            // This would typically extract user ID from JWT token
+            // For now, we'll use a placeholder implementation
+            System.out.println("👤 Fetching current user profile from token");
+            
+            // TODO: Extract user ID from JWT token in security context
+            String currentUserId = extractUserIdFromToken();
+            
+            if (currentUserId == null) {
+                return ResponseEntity.ok(ApiResponse.error("User not authenticated"));
+            }
+            
+            return getUserProfile(currentUserId);
+
+        } catch (Exception e) {
+            System.err.println("❌ Error fetching current user profile: " + e.getMessage());
+            return ResponseEntity.ok(ApiResponse.error("Failed to fetch current user profile: " + e.getMessage()));
+        }
+    }
+
+    // Helper method to extract user ID from JWT token
+    private String extractUserIdFromToken() {
+        // TODO: Implement JWT token extraction logic
+        // This is a placeholder implementation
+        return null;
+    }
+}

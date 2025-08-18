@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, Edit, Save, X, Camera, Shield, Mail, Phone, MapPin } from 'lucide-react';
+import { api } from '@/services/api';
+import { authUtils } from '@/utils';
 
 interface ProfileProps {
   user: any;
@@ -7,36 +9,149 @@ interface ProfileProps {
 
 const Profile: React.FC<ProfileProps> = ({ user }) => {
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [profileData, setProfileData] = useState({
-    firstName: user?.firstName || '',
-    lastName: user?.lastName || '',
-    email: user?.email || '',
-    phone: '+94 77 123 4567',
-    address: 'No 109/A, Mellawa, Lihiriyagama, Dankotuwa',
-    dateOfBirth: '1997-10-17',
-    nicNumber: '972914177V',
+    firstName: '',
+    lastName: '',
+    email: '',
+    phoneNumber: '',
+    address: '',
+    dateOfBirth: '',
+    nicNumber: '',
     bio: 'Passionate gemstone collector and buyer with over 5 years of experience in the industry.'
   });
+  const [originalData, setOriginalData] = useState(profileData);
 
-  const handleSave = () => {
-    // Here you would typically send the data to your backend
-    console.log('Saving profile data:', profileData);
-    setIsEditing(false);
-    alert('Profile updated successfully!');
+  // Fetch user profile data on component mount
+  useEffect(() => {
+    fetchUserProfile();
+  }, []);
+
+  const fetchUserProfile = async () => {
+    try {
+      setLoading(true);
+      const currentUserId = authUtils.getCurrentUserId();
+      
+      if (!currentUserId) {
+        console.error('No user ID found');
+        // Fallback to user prop data
+        if (user) {
+          const fallbackData = {
+            firstName: user.firstName || '',
+            lastName: user.lastName || '',
+            email: user.email || '',
+            phoneNumber: user.phoneNumber || '+94 77 123 4567',
+            address: user.address || 'No 109/A, Mellawa, Lihiriyagama, Dankotuwa',
+            dateOfBirth: user.dateOfBirth || '1997-10-17',
+            nicNumber: user.nicNumber || '972914177V',
+            bio: 'Passionate gemstone collector and buyer with over 5 years of experience in the industry.'
+          };
+          setProfileData(fallbackData);
+          setOriginalData(fallbackData);
+        }
+        return;
+      }
+
+      const response = await api.getUserProfile(currentUserId);
+      
+      if (response.success && response.data) {
+        const userData = {
+          firstName: response.data.firstName || '',
+          lastName: response.data.lastName || '',
+          email: response.data.email || '',
+          phoneNumber: response.data.phoneNumber || '',
+          address: response.data.address || '',
+          dateOfBirth: response.data.dateOfBirth || '',
+          nicNumber: response.data.nicNumber || '',
+          bio: response.data.bio || 'Passionate gemstone collector and buyer with over 5 years of experience in the industry.'
+        };
+        setProfileData(userData);
+        setOriginalData(userData);
+      } else {
+        console.error('Failed to fetch user profile:', response.message);
+        // Use fallback data from props
+        if (user) {
+          const fallbackData = {
+            firstName: user.firstName || '',
+            lastName: user.lastName || '',
+            email: user.email || '',
+            phoneNumber: user.phoneNumber || '+94 77 123 4567',
+            address: user.address || 'No 109/A, Mellawa, Lihiriyagama, Dankotuwa',
+            dateOfBirth: user.dateOfBirth || '1997-10-17',
+            nicNumber: user.nicNumber || '972914177V',
+            bio: 'Passionate gemstone collector and buyer with over 5 years of experience in the industry.'
+          };
+          setProfileData(fallbackData);
+          setOriginalData(fallbackData);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      // Use fallback data from props
+      if (user) {
+        const fallbackData = {
+          firstName: user.firstName || '',
+          lastName: user.lastName || '',
+          email: user.email || '',
+          phoneNumber: user.phoneNumber || '+94 77 123 4567',
+          address: user.address || 'No 109/A, Mellawa, Lihiriyagama, Dankotuwa',
+          dateOfBirth: user.dateOfBirth || '1997-10-17',
+          nicNumber: user.nicNumber || '972914177V',
+          bio: 'Passionate gemstone collector and buyer with over 5 years of experience in the industry.'
+        };
+        setProfileData(fallbackData);
+        setOriginalData(fallbackData);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      setLoading(true);
+      const currentUserId = authUtils.getCurrentUserId();
+      
+      if (!currentUserId) {
+        alert('User not authenticated');
+        return;
+      }
+
+      const updateData = {
+        firstName: profileData.firstName,
+        lastName: profileData.lastName,
+        phoneNumber: profileData.phoneNumber,
+        address: profileData.address,
+        bio: profileData.bio
+      };
+
+      const response = await api.updateUserProfile(currentUserId, updateData);
+      
+      if (response.success) {
+        setIsEditing(false);
+        setOriginalData(profileData);
+        alert('Profile updated successfully!');
+        
+        // Update the user data in localStorage if available
+        const userData = authUtils.getUserData();
+        if (userData) {
+          userData.firstName = profileData.firstName;
+          userData.lastName = profileData.lastName;
+          authUtils.saveAuthData(userData, authUtils.getAuthToken() || '');
+        }
+      } else {
+        alert('Failed to update profile: ' + response.message);
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      alert('Failed to update profile. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCancel = () => {
-    // Reset to original data
-    setProfileData({
-      firstName: user?.firstName || '',
-      lastName: user?.lastName || '',
-      email: user?.email || '',
-      phone: '+94 77 123 4567',
-      address: 'No 109/A, Mellawa, Lihiriyagama, Dankotuwa',
-      dateOfBirth: '1997-10-17',
-      nicNumber: '972914177V',
-      bio: 'Passionate gemstone collector and buyer with over 5 years of experience in the industry.'
-    });
+    setProfileData(originalData);
     setIsEditing(false);
   };
 
@@ -47,12 +162,20 @@ const Profile: React.FC<ProfileProps> = ({ user }) => {
 
   return (
     <div className="space-y-6">
+      {loading && (
+        <div className="flex justify-center items-center py-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <span className="ml-2 text-gray-600">Loading profile...</span>
+        </div>
+      )}
+      
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold text-gray-900">My Profile</h2>
         {!isEditing ? (
           <button
             onClick={() => setIsEditing(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center space-x-2"
+            disabled={loading}
+            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
           >
             <Edit size={16} />
             <span>Edit Profile</span>
@@ -61,17 +184,28 @@ const Profile: React.FC<ProfileProps> = ({ user }) => {
           <div className="flex space-x-2">
             <button
               onClick={handleCancel}
-              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
+              disabled={loading}
+              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
             >
               <X size={16} />
               <span>Cancel</span>
             </button>
             <button
               onClick={handleSave}
-              className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 flex items-center space-x-2"
+              disabled={loading}
+              className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
             >
-              <Save size={16} />
-              <span>Save Changes</span>
+              {loading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <>
+                  <Save size={16} />
+                  <span>Save Changes</span>
+                </>
+              )}
             </button>
           </div>
         )}
@@ -168,13 +302,13 @@ const Profile: React.FC<ProfileProps> = ({ user }) => {
               {isEditing ? (
                 <input
                   type="tel"
-                  name="phone"
-                  value={profileData.phone}
+                  name="phoneNumber"
+                  value={profileData.phoneNumber}
                   onChange={handleInputChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               ) : (
-                <p className="text-gray-900 py-2">{profileData.phone}</p>
+                <p className="text-gray-900 py-2">{profileData.phoneNumber}</p>
               )}
             </div>
 
