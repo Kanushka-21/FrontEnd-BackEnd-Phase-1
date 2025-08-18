@@ -410,6 +410,13 @@ public class UserService {
     }
     
     /**
+     * Save user entity
+     */
+    public User save(User user) {
+        return userRepository.save(user);
+    }
+    
+    /**
      * Update users with null roles to have default BUYER role
      */
     public ApiResponse<String> updateUsersWithNullRoles() {

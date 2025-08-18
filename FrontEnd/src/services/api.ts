@@ -7,12 +7,8 @@ import {
   FaceVerificationResult,
   NicVerificationResult,
   DetailedGemstone,
-  GemstoneFilters,
   PriceAttributes,
-  PricePrediction,
-  Bid,
-  Meeting,
-  MeetingData
+  PricePrediction
 } from '@/types';
 import { AdminLoginRequest, AdminAuthenticationResponse } from '@/Admin/types/AdminTypes';
 
@@ -151,7 +147,6 @@ export const authAPI = {
         data: {
           success: false,
           message: 'Network error occurred',
-          error: 'SYSTEM_ERROR',
           userMessage: 'Unable to connect to the server. Please check your internet connection and try again.',
           suggestions: [
             'Check your internet connection',
@@ -229,7 +224,7 @@ export const testAPI = {
 // Gemstone API
 export const gemstonesAPI = {
   // Get all gemstones with optional filtering
-  getAll: async (filters?: GemstoneFilters): Promise<ApiResponse<DetailedGemstone[]>> => {
+  getAll: async (filters?: any): Promise<ApiResponse<DetailedGemstone[]>> => {
     const params = new URLSearchParams();
     
     if (filters) {
@@ -298,20 +293,20 @@ export const gemstonesAPI = {
 // Bids API
 export const bidsAPI = {
   // Place a new bid
-  place: async (gemstoneId: string, amount: number): Promise<ApiResponse<Bid>> => {
-    const response: AxiosResponse<ApiResponse<Bid>> = await api.post('/api/bids', { gemstoneId, amount });
+  place: async (gemstoneId: string, amount: number): Promise<ApiResponse<any>> => {
+    const response: AxiosResponse<ApiResponse<any>> = await api.post('/api/bids', { gemstoneId, amount });
     return response.data;
   },
 
   // Get user's bids
-  getUserBids: async (): Promise<ApiResponse<Bid[]>> => {
-    const response: AxiosResponse<ApiResponse<Bid[]>> = await api.get('/api/bids/user');
+  getUserBids: async (): Promise<ApiResponse<any[]>> => {
+    const response: AxiosResponse<ApiResponse<any[]>> = await api.get('/api/bids/user');
     return response.data;
   },
 
   // Get bids for a specific gemstone
-  getByGemstoneId: async (gemstoneId: string): Promise<ApiResponse<Bid[]>> => {
-    const response: AxiosResponse<ApiResponse<Bid[]>> = await api.get(`/api/bids/gemstone/${gemstoneId}`);
+  getByGemstoneId: async (gemstoneId: string): Promise<ApiResponse<any[]>> => {
+    const response: AxiosResponse<ApiResponse<any[]>> = await api.get(`/api/bids/gemstone/${gemstoneId}`);
     return response.data;
   },
 
@@ -331,26 +326,26 @@ export const bidsAPI = {
 // Meetings API
 export const meetingsAPI = {
   // Schedule a new meeting
-  schedule: async (data: MeetingData): Promise<ApiResponse<Meeting>> => {
-    const response: AxiosResponse<ApiResponse<Meeting>> = await api.post('/api/meetings', data);
+  schedule: async (data: any): Promise<ApiResponse<any>> => {
+    const response: AxiosResponse<ApiResponse<any>> = await api.post('/api/meetings', data);
     return response.data;
   },
 
   // Get user's meetings
-  getUserMeetings: async (): Promise<ApiResponse<Meeting[]>> => {
-    const response: AxiosResponse<ApiResponse<Meeting[]>> = await api.get('/api/meetings/user');
+  getUserMeetings: async (): Promise<ApiResponse<any[]>> => {
+    const response: AxiosResponse<ApiResponse<any[]>> = await api.get('/api/meetings/user');
     return response.data;
   },
 
   // Update meeting status
-  updateStatus: async (id: string, status: string): Promise<ApiResponse<Meeting>> => {
-    const response: AxiosResponse<ApiResponse<Meeting>> = await api.patch(`/api/meetings/${id}/status`, { status });
+  updateStatus: async (id: string, status: string): Promise<ApiResponse<any>> => {
+    const response: AxiosResponse<ApiResponse<any>> = await api.patch(`/api/meetings/${id}/status`, { status });
     return response.data;
   },
 
   // Update meeting details
-  updateDetails: async (id: string, data: Partial<MeetingData>): Promise<ApiResponse<Meeting>> => {
-    const response: AxiosResponse<ApiResponse<Meeting>> = await api.put(`/api/meetings/${id}`, data);
+  updateDetails: async (id: string, data: Partial<any>): Promise<ApiResponse<any>> => {
+    const response: AxiosResponse<ApiResponse<any>> = await api.put(`/api/meetings/${id}`, data);
     return response.data;
   },
 
@@ -602,7 +597,7 @@ const extendedAPI = {
     }
   },
 
-  scheduleMeeting: async (meetingData: MeetingData): Promise<ApiResponse> => {
+  scheduleMeeting: async (meetingData: any): Promise<ApiResponse> => {
     try {
       const response = await api.post('/admin/meetings', meetingData);
       return response.data;
@@ -1005,6 +1000,37 @@ const extendedAPI = {
         console.error('Error fetching user bids:', error);
         return { success: false, message: apiUtils.formatErrorMessage(error) };
       }
+    }
+  },
+
+  // User Profile APIs
+  getUserProfile: async (userId: string): Promise<ApiResponse<any>> => {
+    try {
+      const response = await api.get(`/api/users/profile/${userId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      return { success: false, message: apiUtils.formatErrorMessage(error) };
+    }
+  },
+
+  updateUserProfile: async (userId: string, profileData: any): Promise<ApiResponse<any>> => {
+    try {
+      const response = await api.put(`/api/users/profile/${userId}`, profileData);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating user profile:', error);
+      return { success: false, message: apiUtils.formatErrorMessage(error) };
+    }
+  },
+
+  getCurrentUserProfile: async (): Promise<ApiResponse<any>> => {
+    try {
+      const response = await api.get('/api/users/profile/current');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching current user profile:', error);
+      return { success: false, message: apiUtils.formatErrorMessage(error) };
     }
   },
 };
