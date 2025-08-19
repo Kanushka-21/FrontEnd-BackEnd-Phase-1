@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { 
   User, Menu, 
-  Home, Trophy, Calendar, Gem
+  Home, Trophy, Calendar, Gem, Megaphone
 } from 'lucide-react';
 import RoleAwareDashboardLayout from '@/components/layout/RoleAwareDashboardLayout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,7 +12,8 @@ import {
   Listings,
   Bids,
   Meetings,
-  Profile
+  Profile,
+  Advertisements
 } from './SellerDashbaordComponents';
 
 import { SidebarItem } from './SellerDashbaordComponents/shared';
@@ -26,6 +27,7 @@ const SellerDashboard = () => {
   const sidebarItems: SidebarItem[] = [
     { id: 'overview', label: 'Overview', icon: <Home size={24} /> },
     { id: 'listings', label: 'List Items', icon: <Gem size={24} /> },
+    { id: 'advertisements', label: 'Advertisements', icon: <Megaphone size={24} /> },
     { id: 'bids', label: 'Bids', icon: <Trophy size={24} /> },
     { id: 'meetings', label: 'Meetings', icon: <Calendar size={24} /> },
     { id: 'profile', label: 'Profile', icon: <User size={24} /> }
@@ -37,6 +39,8 @@ const SellerDashboard = () => {
         return <Overview user={user} onTabChange={setActiveTab} />;
       case 'listings':
         return <Listings user={user} />;
+      case 'advertisements':
+        return <Advertisements user={user} />;
       case 'bids':
         return <Bids user={user} />;
       case 'meetings':

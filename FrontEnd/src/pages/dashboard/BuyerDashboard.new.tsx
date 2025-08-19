@@ -3,14 +3,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLocation } from 'react-router-dom';
 import { 
   ShoppingBag, User, 
-  TrendingUp, Menu, Home, FileText
+  TrendingUp, Menu, Home
 } from 'lucide-react';
 import RoleAwareDashboardLayout from '@/components/layout/RoleAwareDashboardLayout';
 
 // Import modular components
 import {
   Overview,
-  Advertisements,
   Purchases,
   Bids,
   Profile
@@ -31,7 +30,7 @@ const BuyerDashboard = () => {
     
     console.log('🔧 BuyerDashboard URL params:', { section, pathname: location.pathname });
     
-    if (section && ['overview', 'advertisements', 'purchases', 'bids', 'profile'].includes(section)) {
+    if (section && ['overview', 'purchases', 'bids', 'profile'].includes(section)) {
       console.log('🔧 Setting active tab from URL parameter:', section);
       setActiveTab(section);
     }
@@ -49,7 +48,6 @@ const BuyerDashboard = () => {
   // Sidebar navigation items
   const sidebarItems: SidebarItem[] = [
     { id: 'overview', label: 'Overview', icon: <Home size={24} /> },
-    { id: 'advertisements', label: 'Advertisements', icon: <FileText size={24} /> },
     { id: 'purchases', label: 'Purchases', icon: <ShoppingBag size={24} /> },
     { id: 'bids', label: 'My Bids', icon: <TrendingUp size={24} /> },
     { id: 'profile', label: 'Profile', icon: <User size={24} /> }
@@ -59,9 +57,7 @@ const BuyerDashboard = () => {
   const renderContent = () => {
     switch (activeTab) {
       case 'overview':
-        return <Overview user={user} onTabChange={setActiveTab} />;
-      case 'advertisements':
-        return <Advertisements />;
+        return <Overview user={user} />;
       case 'purchases':
         return <Purchases user={user} />;
       case 'bids':
@@ -69,7 +65,7 @@ const BuyerDashboard = () => {
       case 'profile':
         return <Profile user={user} />;
       default:
-        return <Overview user={user} onTabChange={setActiveTab} />;
+        return <Overview user={user} />;
     }
   };
 
