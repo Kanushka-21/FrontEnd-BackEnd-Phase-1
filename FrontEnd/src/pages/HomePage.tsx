@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Layout as AntLayout, Row, Col, Card, Button, Badge, Rate, Tag, Typography, 
-  Space, Statistic, Carousel, Spin
+  Space, Statistic, Carousel, Spin, Modal
 } from 'antd';
 import { 
   CheckCircleOutlined, UserOutlined, 
   SearchOutlined, UserAddOutlined,
   GlobalOutlined, ShopOutlined,
-  StarFilled, SafetyOutlined, TrophyOutlined
+  StarFilled, SafetyOutlined, TrophyOutlined,
+  CloseOutlined, LeftOutlined, RightOutlined
 } from '@ant-design/icons';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -15,9 +16,27 @@ import { DetailedGemstone } from '@/types';
 import RoleAwareHeader from '@/components/layout/RoleAwareHeader';
 import GemstoneCard from '@/components/ui/GemstoneCard';
 import { api } from '@/services/api';
+import axios from 'axios';
+import '../styles/advertisement-popup.css';
 
 const { Content } = AntLayout;
 const { Title, Text, Paragraph } = Typography;
+
+// Advertisement interface
+interface Advertisement {
+  _id: string;
+  title: string;
+  category: string;
+  description: string;
+  price: string;
+  mobileNo: string;
+  images: string[];
+  sellerId: string;
+  sellerName: string;
+  approved: boolean;
+  createdOn: string;
+  modifiedOn: string;
+}
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
@@ -26,6 +45,11 @@ const HomePage: React.FC = () => {
   const [featuredGemstones, setFeaturedGemstones] = useState<DetailedGemstone[]>([]);
   const [featuredLoading, setFeaturedLoading] = useState<boolean>(true);
   const [featuredError, setFeaturedError] = useState<string | null>(null);
+
+  // Advertisement popup state
+  const [advertisements, setAdvertisements] = useState<Advertisement[]>([]);
+  const [currentAdIndex, setCurrentAdIndex] = useState(0);
+  const [showAdPopup, setShowAdPopup] = useState(false);
 
   // Helper to fetch countdown data for a gemstone
   const fetchGemstoneCountdown = async (listingId: string) => {
@@ -337,6 +361,129 @@ const HomePage: React.FC = () => {
       console.log(`📋 Gemstone ${index + 1}: ${gemstone.name} - remainingTimeSeconds: ${gemstone.remainingTimeSeconds}, biddingActive: ${gemstone.biddingActive}`);
     });
   }, [featuredGemstones]);
+
+  // Fetch approved advertisements
+  const fetchApprovedAdvertisements = async () => {
+    try {
+      console.log('🔄 Fetching approved advertisements from database...');
+      const response = await axios.get('http://localhost:9092/api/advertisements/approved');
+      console.log('📡 Backend API Response:', response.data);
+      
+      if (response.data && response.data.success && response.data.data && response.data.data.length > 0) {
+        // Filter for admin-approved advertisements only
+        const approvedAds = response.data.data.filter((ad: Advertisement) => 
+          ad.approved === true || ad.approved === "true"
+        );
+        
+        console.log('✅ Found', approvedAds.length, 'admin-approved advertisements');
+        console.log('📋 Approved advertisements:', approvedAds);
+        
+        if (approvedAds.length > 0) {
+          setAdvertisements(approvedAds);
+          setCurrentAdIndex(0);
+          console.log('🎉 Showing popup with', approvedAds.length, 'admin-approved advertisements!');
+          setShowAdPopup(true);
+          
+          if (approvedAds.length > 1) {
+            console.log('🔄 Auto-rotation enabled for', approvedAds.length, 'advertisements');
+          }
+        } else {
+          console.log('⚠️ No admin-approved advertisements found in database');
+          setAdvertisements([]);
+          setShowAdPopup(false);
+        }
+      } else {
+        console.log('⚠️ No advertisements returned from database');
+        setAdvertisements([]);
+        setShowAdPopup(false);
+      }
+    } catch (error) {
+      console.error('❌ Error connecting to backend:', error);
+      console.log('💡 Make sure backend is running on http://localhost:9092');
+      console.log('💡 Ensure there are approved advertisements in the database');
+      setAdvertisements([]);
+      setShowAdPopup(false);
+    }
+  };
+
+  // Close advertisement popup
+  const closeAdvertisement = () => {
+    console.log('🚫 Closing advertisement popup');
+    setShowAdPopup(false);
+    
+    // Move to next ad for future display
+    if (currentAdIndex < advertisements.length - 1) {
+      setCurrentAdIndex(currentAdIndex + 1);
+    } else {
+      setCurrentAdIndex(0);
+    }
+  };
+
+  // Navigate to next advertisement
+  const nextAdvertisement = () => {
+    if (advertisements.length > 1) {
+      const nextIndex = (currentAdIndex + 1) % advertisements.length;
+      console.log(`➡️ Moving to next advertisement: ${nextIndex + 1} of ${advertisements.length}`);
+      setCurrentAdIndex(nextIndex);
+    }
+  };
+
+  // Navigate to previous advertisement
+  const previousAdvertisement = () => {
+    if (advertisements.length > 1) {
+      const prevIndex = (currentAdIndex - 1 + advertisements.length) % advertisements.length;
+      console.log(`⬅️ Moving to previous advertisement: ${prevIndex + 1} of ${advertisements.length}`);
+      setCurrentAdIndex(prevIndex);
+    }
+  };
+
+  // Debug: Log state changes
+  useEffect(() => {
+    console.log('📊 Advertisement popup state:', showAdPopup);
+    console.log('📊 Advertisements count:', advertisements.length);
+    console.log('📊 Current ad index:', currentAdIndex);
+    if (advertisements.length > 0) {
+      console.log('📊 Current advertisement:', advertisements[currentAdIndex]);
+    }
+  }, [showAdPopup, advertisements, currentAdIndex]);
+
+  // Format image URL for advertisements
+  const formatAdImageUrl = (imagePath: string): string => {
+    if (!imagePath) return 'https://via.placeholder.com/400x300?text=Advertisement';
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      return imagePath;
+    }
+    // Check if it's a file system path, convert it
+    const fileName = imagePath.split('/').pop() || imagePath.split('\\').pop();
+    return `http://localhost:9092/uploads/advertisement-images/${fileName}`;
+  };
+
+  // Fetch advertisements on component mount
+  useEffect(() => {
+    console.log('🏁 HomePage component mounted - connecting to database...');
+    console.log('🔍 Looking for admin-approved advertisements...');
+    fetchApprovedAdvertisements();
+  }, []);
+
+  // Automatic advertisement rotation
+  useEffect(() => {
+    if (advertisements.length > 1 && showAdPopup) {
+      console.log('🔄 Starting automatic advertisement rotation...');
+      const rotationInterval = setInterval(() => {
+        setCurrentAdIndex((prevIndex) => {
+          const nextIndex = (prevIndex + 1) % advertisements.length;
+          console.log(`🔄 Rotating to advertisement ${nextIndex + 1} of ${advertisements.length}`);
+          return nextIndex;
+        });
+      }, 8000); // Change advertisement every 8 seconds
+
+      return () => {
+        console.log('🛑 Clearing advertisement rotation interval');
+        clearInterval(rotationInterval);
+      };
+    }
+  }, [advertisements.length, showAdPopup]);
+
   const statistics = [
     { title: 'Verified Gems', value: 2847, icon: <CheckCircleOutlined className="text-blue-500" /> },
     { title: 'Active Traders', value: 1230, icon: <UserOutlined className="text-green-500" /> },
@@ -374,6 +521,21 @@ const HomePage: React.FC = () => {
     <AntLayout className="min-h-screen bg-gray-50 overflow-x-hidden w-full max-w-[100vw]">
       {/* Modern Header */}
       <RoleAwareHeader transparent={false} />
+      
+      {/* Debug: Test Advertisement Button (Remove in production) */}
+      <div style={{ position: 'fixed', top: '80px', right: '20px', zIndex: 9998 }}>
+        <Button 
+          type="primary" 
+          onClick={() => {
+            console.log('🧪 Manual test: Fetching and showing advertisements...');
+            fetchApprovedAdvertisements();
+          }}
+          style={{ background: '#f59e0b', borderColor: '#f59e0b' }}
+        >
+          Test Ad Popup
+        </Button>
+      </div>
+      
       <Content className="overflow-x-hidden w-full max-w-[100vw]">        {/* Enhanced Hero Section with Carousel */}
         <section className="relative text-white overflow-hidden overflow-x-hidden min-h-[320px] xxs:min-h-[330px] xs:min-h-[360px] sm:min-h-[450px] lg:min-h-[600px] xl:min-h-[700px] w-full max-w-[100vw]">
           {/* Blurred background image */}
@@ -1045,7 +1207,170 @@ const HomePage: React.FC = () => {
               </Space>
             </motion.div>
           </div>
-        </section>      </Content>      
+        </section>
+      </Content>
+      
+      {/* Advertisement Popup Modal */}
+      <Modal
+        open={showAdPopup}
+        onCancel={closeAdvertisement}
+        footer={null}
+        centered
+        width={700}
+        closable={false}
+        className="advertisement-popup"
+        maskStyle={{ backgroundColor: 'rgba(0, 0, 0, 0.8)' }}
+        zIndex={9999}
+        destroyOnClose={false}
+        maskClosable={true}
+      >
+        <div className="relative">
+          {/* Close Button */}
+          <Button
+            type="text"
+            icon={<CloseOutlined />}
+            onClick={closeAdvertisement}
+            className="absolute top-2 right-2 z-10 bg-white bg-opacity-80 hover:bg-opacity-100 rounded-full w-8 h-8 flex items-center justify-center close-button"
+            style={{ minWidth: '32px', border: 'none' }}
+          />
+          
+          {/* Advertisement Navigation Header */}
+          {advertisements.length > 1 && (
+            <div className="absolute top-2 left-2 right-12 z-10 flex items-center justify-between">
+              <Button
+                type="text"
+                icon={<LeftOutlined />}
+                onClick={previousAdvertisement}
+                className="bg-white bg-opacity-80 hover:bg-opacity-100 rounded-full w-8 h-8 flex items-center justify-center"
+                style={{ minWidth: '32px', border: 'none' }}
+              />
+              
+              <div className="bg-white bg-opacity-90 rounded-full px-3 py-1">
+                <span className="text-sm font-medium text-gray-800">
+                  {currentAdIndex + 1} of {advertisements.length}
+                </span>
+              </div>
+              
+              <Button
+                type="text"
+                icon={<RightOutlined />}
+                onClick={nextAdvertisement}
+                className="bg-white bg-opacity-80 hover:bg-opacity-100 rounded-full w-8 h-8 flex items-center justify-center"
+                style={{ minWidth: '32px', border: 'none' }}
+              />
+            </div>
+          )}
+          
+          <div className="p-6">
+            {advertisements.length > 0 ? (
+              <div>
+                {/* Advertisement Content */}
+                <div className="space-y-4">
+                  {/* Advertisement Image */}
+                  {advertisements[currentAdIndex].images && advertisements[currentAdIndex].images.length > 0 && (
+                    <div className="relative w-full h-64 mb-4 rounded-lg overflow-hidden">
+                      <img
+                        src={formatAdImageUrl(advertisements[currentAdIndex].images[0])}
+                        alt={advertisements[currentAdIndex].title}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'https://via.placeholder.com/400x300?text=Advertisement';
+                        }}
+                      />
+                    </div>
+                  )}
+                  
+                  {/* Advertisement Details */}
+                  <div className="space-y-3">
+                    <div className="text-center">
+                      <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                        {advertisements[currentAdIndex].title}
+                      </h3>
+                      <div className="flex items-center justify-center space-x-4 text-sm text-gray-600 mb-4">
+                        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
+                          {advertisements[currentAdIndex].category}
+                        </span>
+                        <span className="text-lg font-semibold text-green-600">
+                          LKR {parseFloat(advertisements[currentAdIndex].price).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="text-gray-700 text-center">
+                      <p className="mb-4">
+                        {advertisements[currentAdIndex].description}
+                      </p>
+                    </div>
+                    
+                    {/* Contact Information */}
+                    <div className="bg-gray-50 p-4 rounded-lg text-center">
+                      <p className="text-sm text-gray-600 mb-2">Contact Information:</p>
+                      <div className="space-y-1">
+                        {advertisements[currentAdIndex].mobileNo && (
+                          <p className="font-semibold text-gray-900">
+                            📞 {advertisements[currentAdIndex].mobileNo}
+                          </p>
+                        )}
+                        <p className="text-sm text-gray-600">
+                          Seller: {advertisements[currentAdIndex].sellerName || 'GemNet Seller'}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {/* Action Buttons */}
+                    <div className="flex space-x-3 pt-4">
+                      <Button
+                        type="primary"
+                        size="large"
+                        className="flex-1 bg-blue-600 hover:bg-blue-700 border-blue-600 hover:border-blue-700 h-12 font-semibold"
+                        onClick={() => {
+                          closeAdvertisement();
+                        }}
+                      >
+                        Learn More
+                      </Button>
+                      <Button
+                        size="large"
+                        className="flex-1 h-12 font-semibold"
+                        onClick={closeAdvertisement}
+                      >
+                        Maybe Later
+                      </Button>
+                    </div>
+                    
+                    {/* Pagination Dots */}
+                    {advertisements.length > 1 && (
+                      <div className="flex justify-center space-x-2 pt-4">
+                        {advertisements.map((_, index) => (
+                          <button
+                            key={index}
+                            className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                              index === currentAdIndex 
+                                ? 'bg-blue-600 scale-125' 
+                                : 'bg-gray-300 hover:bg-gray-400'
+                            }`}
+                            onClick={() => {
+                              console.log(`🎯 Jumping to advertisement ${index + 1}`);
+                              setCurrentAdIndex(index);
+                            }}
+                            aria-label={`Go to advertisement ${index + 1}`}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="p-6 text-center">
+                <h3 className="text-lg font-semibold text-gray-900">No advertisements available</h3>
+                <p className="text-gray-600">Check back later for exciting offers!</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </Modal>
+      
     </AntLayout>
   );
 };

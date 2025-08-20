@@ -52,8 +52,15 @@ public class AdvertisementService {
         advertisement.setMobileNo(requestDto.getMobileNo().trim());
         advertisement.setEmail(requestDto.getEmail().trim());
         advertisement.setUserId(requestDto.getUserId().trim());
+        
+        // Set sellerId for frontend compatibility
+        advertisement.setSellerId(requestDto.getUserId().trim());
+        // You can set sellerName from user service if available
+        advertisement.setSellerName("Seller"); // Default name, can be improved
+        
         advertisement.setImages(imagePaths);
         advertisement.setApproved("pending");
+        advertisement.setStatus("pending"); // Set status for frontend compatibility
 
 
         Advertisement webImageURLs = transformImagePathsToUrls(advertisement);
@@ -91,21 +98,44 @@ public class AdvertisementService {
      * Delete advertisement
      */
     public boolean deleteAdvertisement(String id) {
+        System.out.println("🗑️ Starting deleteAdvertisement - ID: " + id);
+        
         Optional<Advertisement> advertisementOptional = advertisementRepository.findById(id);
         
         if (advertisementOptional.isPresent()) {
             Advertisement advertisement = advertisementOptional.get();
+            System.out.println("✅ Found advertisement to delete: " + advertisement.getId());
             
             // Delete associated images
             if (advertisement.getImages() != null && !advertisement.getImages().isEmpty()) {
+                System.out.println("🖼️ Deleting " + advertisement.getImages().size() + " associated images");
+                
                 for (String imagePath : advertisement.getImages()) {
-                    fileStorageService.deleteFile(imagePath);
+                    try {
+                        // Extract filename from URL using the helper method
+                        String fileName = extractFilenameFromUrl(imagePath);
+                        System.out.println("🔍 Extracted filename: '" + fileName + "' from URL: '" + imagePath + "'");
+                        
+                        if (fileName != null && !fileName.isEmpty()) {
+                            fileStorageService.deleteFile(fileName);
+                            System.out.println("✅ Deleted image file: " + fileName);
+                        } else {
+                            System.out.println("⚠️ Could not extract filename from: " + imagePath);
+                        }
+                    } catch (Exception e) {
+                        System.err.println("❌ Failed to delete image: " + imagePath + " - " + e.getMessage());
+                        e.printStackTrace();
+                        // Continue with other images even if one fails
+                    }
                 }
             }
             
             // Delete advertisement from database
             advertisementRepository.deleteById(id);
+            System.out.println("✅ Advertisement deleted from database: " + id);
             return true;
+        } else {
+            System.out.println("❌ Advertisement not found for deletion: " + id);
         }
         
         return false;
@@ -115,43 +145,70 @@ public class AdvertisementService {
      * Update advertisement
      */
     public Optional<Advertisement> updateAdvertisement(String id, AdvertisementRequestDto requestDto) throws IOException {
+        System.out.println("🔄 Starting updateAdvertisement - ID: " + id + ", DTO: " + requestDto);
+        
         Optional<Advertisement> advertisementOptional = advertisementRepository.findById(id);
         
         if (!advertisementOptional.isPresent()) {
+            System.out.println("❌ Advertisement not found for update: " + id);
             return Optional.empty();
         }
         
         Advertisement advertisement = advertisementOptional.get();
+        System.out.println("✅ Found advertisement for update: " + advertisement.getId());
         
         // Update fields if provided
         if (requestDto.getTitle() != null && !requestDto.getTitle().trim().isEmpty()) {
             advertisement.setTitle(requestDto.getTitle().trim());
+            System.out.println("📝 Updated title: " + requestDto.getTitle().trim());
         }
         if (requestDto.getCategory() != null && !requestDto.getCategory().trim().isEmpty()) {
             advertisement.setCategory(requestDto.getCategory().trim());
+            System.out.println("📝 Updated category: " + requestDto.getCategory().trim());
         }
         if (requestDto.getDescription() != null) {
             advertisement.setDescription(requestDto.getDescription().trim());
+            System.out.println("📝 Updated description");
         }
         if (requestDto.getPrice() != null && !requestDto.getPrice().trim().isEmpty()) {
             advertisement.setPrice(requestDto.getPrice().trim());
+            System.out.println("📝 Updated price: " + requestDto.getPrice().trim());
         }
         if (requestDto.getMobileNo() != null && !requestDto.getMobileNo().trim().isEmpty()) {
             advertisement.setMobileNo(requestDto.getMobileNo().trim());
+            System.out.println("📝 Updated mobile: " + requestDto.getMobileNo().trim());
         }
         if (requestDto.getEmail() != null && !requestDto.getEmail().trim().isEmpty()) {
             advertisement.setEmail(requestDto.getEmail().trim());
+            System.out.println("📝 Updated email: " + requestDto.getEmail().trim());
         }
         if (requestDto.getApproved() != null) {
             advertisement.setApproved(requestDto.getApproved());
+            System.out.println("📝 Updated approval status: " + requestDto.getApproved());
         }
+        
+        // Set compatibility fields for frontend
+        advertisement.setSellerId(advertisement.getUserId());
+        advertisement.setSellerName(advertisement.getEmail());
+        advertisement.setStatus("active");
+        System.out.println("✅ Set compatibility fields - sellerId: " + advertisement.getSellerId() + ", sellerName: " + advertisement.getSellerName());
         
         // Handle image updates
         if (requestDto.getImages() != null && !requestDto.getImages().isEmpty()) {
             // Delete old images
             if (advertisement.getImages() != null && !advertisement.getImages().isEmpty()) {
                 for (String imagePath : advertisement.getImages()) {
-                    fileStorageService.deleteFile(imagePath);
+                    try {
+                        // Extract filename from URL if it's a full URL
+                        String fileName = imagePath;
+                        if (imagePath.contains("/")) {
+                            fileName = imagePath.substring(imagePath.lastIndexOf("/") + 1);
+                        }
+                        fileStorageService.deleteFile(fileName);
+                    } catch (Exception e) {
+                        System.err.println("Failed to delete old image: " + imagePath + " - " + e.getMessage());
+                        // Continue with other images even if one fails
+                    }
                 }
             }
             
