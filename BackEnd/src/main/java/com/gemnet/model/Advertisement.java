@@ -9,8 +9,6 @@ import org.springframework.data.mongodb.core.index.Indexed;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -18,7 +16,6 @@ import java.util.List;
 public class Advertisement {
     
     @Id
-    @JsonProperty("_id")
     private String id;
     
     @NotBlank(message = "Title is required")
@@ -43,20 +40,10 @@ public class Advertisement {
     @Indexed
     private String userId;
     
-    // Add sellerId for frontend compatibility
-    @Indexed
-    private String sellerId;
-    
-    // Add sellerName for frontend compatibility
-    private String sellerName;
-    
     private List<String> images;
     
     @Indexed
     private String approved;
-    
-    // Status field for frontend compatibility (maps to approved)
-    private String status;
     
     @CreatedDate
     private LocalDateTime createdOn;
@@ -71,7 +58,7 @@ public class Advertisement {
     }
     
     public Advertisement(String title, String category, String description, String price, 
-                        String mobileNo, String email, String userId, List<String> images) {
+                        String contactInfo, String userId, List<String> images) {
         this();
         this.title = title;
         this.category = category;
@@ -176,31 +163,6 @@ public class Advertisement {
 
     public void setModifiedOn(LocalDateTime modifiedOn) {
         this.modifiedOn = modifiedOn;
-    }
-
-    public String getSellerId() {
-        return sellerId != null ? sellerId : userId; // Use userId as sellerId for compatibility
-    }
-
-    public void setSellerId(String sellerId) {
-        this.sellerId = sellerId;
-    }
-
-    public String getSellerName() {
-        return sellerName;
-    }
-
-    public void setSellerName(String sellerName) {
-        this.sellerName = sellerName;
-    }
-
-    public String getStatus() {
-        return status != null ? status : approved; // Use approved as status for compatibility
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-        this.approved = status; // Keep both fields in sync
     }
 
     // Helper methods

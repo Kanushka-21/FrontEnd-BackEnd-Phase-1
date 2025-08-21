@@ -9,25 +9,21 @@ const API_BASE_URL = 'http://localhost:9092';
 
 // Define Advertisement type
 interface Advertisement {
-  _id?: string;
-  id?: string;
+  id: string;  // Changed from _id to id to match Spring Boot MongoDB
   title: string;
   category: string;
   description: string;
   price: string;
   mobileNo: string;
+  email: string;
   images: string[];
   sellerId: string;
   sellerName: string;
-  status: 'pending' | 'approved' | 'rejected';
-  createdAt: string;
-  updatedAt: string;
+  approved: string; // Changed from status to approved to match backend
+  userId: string;
+  createdOn: string;
+  modifiedOn: string;
 }
-
-// Helper function to get advertisement ID (handles both _id and id)
-const getAdvertisementId = (ad: Advertisement): string => {
-  return ad._id || ad.id || '';
-};
 
 // Define form data type
 interface AdvertisementFormData {
@@ -61,7 +57,7 @@ const getStatusConfig = (status: string) => {
       return {
         className: 'bg-green-100 text-green-800',
         displayText: 'Approved',
-        canEdit: true // Allow editing even for approved advertisements
+        canEdit: false
       };
     case 'rejected':
       return {
@@ -103,10 +99,6 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
       const token = authUtils.getAuthToken();
       const userId = authUtils.getCurrentUserId();
       
-      console.log('🔍 Fetching advertisements...');
-      console.log('Token exists:', !!token);
-      console.log('User ID:', userId);
-      
       if (!token || !userId) {
         toast.error('Please login to view your advertisements');
         return;
@@ -119,43 +111,11 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
         }
       });
 
-      console.log('📥 Advertisements response:', response.data);
-      console.log('Response structure check:');
-      console.log('- response.data type:', typeof response.data);
-      console.log('- response.data.data exists:', !!response.data.data);
-      console.log('- response.data is array:', Array.isArray(response.data));
-
-      let adsToSet = [];
       if (response.data && response.data.data) {
-        adsToSet = response.data.data;
-        console.log('✅ Using response.data.data format');
-      } else if (Array.isArray(response.data)) {
-        adsToSet = response.data;
-        console.log('✅ Using direct array format');
-      } else {
-        console.warn('⚠️ Unexpected response format:', response.data);
-        setAdvertisements([]);
-        return;
+        setAdvertisements(response.data.data);
       }
-
-      // Debug each advertisement structure
-      console.log('🔍 Advertisement structures:');
-      adsToSet.forEach((ad, index) => {
-        console.log(`Advertisement ${index + 1}:`, {
-          rawAd: ad,
-          id: ad.id,
-          _id: ad._id,
-          hasId: !!ad.id,
-          has_id: !!ad._id,
-          keys: Object.keys(ad)
-        });
-      });
-
-      setAdvertisements(adsToSet);
-      console.log('✅ Loaded advertisements:', adsToSet.length, adsToSet);
     } catch (error: any) {
-      console.error('❌ Error fetching advertisements:', error);
-      console.error('Error response:', error.response?.data);
+      console.error('Error fetching advertisements:', error);
       toast.error(error.response?.data?.message || 'Failed to fetch advertisements');
     } finally {
       setLoading(false);
@@ -201,10 +161,6 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    console.log('🆕 CREATE: Starting advertisement creation...');
-    console.log('Form data:', formData);
-    console.log('Selected images:', selectedImages);
-    
     if (!formData.title || !formData.category || !formData.description || !formData.price) {
       toast.error('Please fill in all required fields');
       return;
@@ -220,35 +176,24 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
       const token = authUtils.getAuthToken();
       const userId = authUtils.getCurrentUserId();
       
-      console.log('🔐 CREATE authentication check:');
-      console.log('Token exists:', !!token);
-      console.log('User ID:', userId);
-      
       if (!token || !userId) {
         toast.error('Please login to create advertisements');
         return;
       }
 
       const submitFormData = new FormData();
-      submitFormData.append('title', formData.title.trim());
-      submitFormData.append('category', formData.category.trim());
-      submitFormData.append('description', formData.description.trim());
-      submitFormData.append('price', formData.price.trim());
-      submitFormData.append('mobileNo', formData.mobileNo.trim());
+      submitFormData.append('title', formData.title);
+      submitFormData.append('category', formData.category);
+      submitFormData.append('description', formData.description);
+      submitFormData.append('price', formData.price);
+      submitFormData.append('mobileNo', formData.mobileNo);
       submitFormData.append('userId', userId);
       submitFormData.append('email', user?.email || '');
 
       // Add images
-      selectedImages.forEach((image, index) => {
-        console.log(`Adding image ${index + 1}:`, image.name);
+      selectedImages.forEach((image) => {
         submitFormData.append('images', image);
       });
-
-      console.log('🚀 Sending CREATE request to:', `${API_BASE_URL}/api/advertisements`);
-      console.log('Form data entries:');
-      for (let [key, value] of submitFormData.entries()) {
-        console.log(`${key}:`, value instanceof File ? `File: ${value.name}` : value);
-      }
 
       const response = await axios.post(`${API_BASE_URL}/api/advertisements`, submitFormData, {
         headers: {
@@ -257,30 +202,15 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
         }
       });
 
-      console.log('✅ CREATE response:', response.data);
       if (response.data) {
-        console.log('🎉 Advertisement created successfully!');
         toast.success('Advertisement created successfully! It will be reviewed by admins.');
         setShowAddForm(false);
         resetForm();
-        fetchAdvertisements(); // Refresh the list
+        fetchAdvertisements();
       }
     } catch (error: any) {
-      console.error('❌ Error creating advertisement:', error);
-      console.error('Error response:', error.response);
-      console.error('Error status:', error.response?.status);
-      console.error('Error data:', error.response?.data);
-      
-      if (error.response?.status === 401) {
-        toast.error('Authentication failed. Please login again.');
-      } else if (error.response?.status === 400) {
-        toast.error(error.response?.data?.message || 'Invalid data provided.');
-      } else if (error.response?.status === 413) {
-        toast.error('File size too large. Please use smaller images.');
-      } else {
-        const errorMessage = error.response?.data?.message || error.response?.data || 'Failed to create advertisement';
-        toast.error(errorMessage);
-      }
+      console.error('Error creating advertisement:', error);
+      toast.error(error.response?.data?.message || 'Failed to create advertisement');
     } finally {
       setLoading(false);
     }
@@ -300,24 +230,7 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
   };
 
   // Handle edit advertisement
-  const handleEdit = (advertisement: Advertisement) => {
-    const adId = getAdvertisementId(advertisement);
-    console.log('✏️ Edit button clicked for advertisement:', advertisement);
-    console.log('Advertisement ID:', adId);
-    console.log('Advertisement Title:', advertisement.title);
-    console.log('Advertisement Status:', advertisement.status);
-    
-    const userId = authUtils.getCurrentUserId();
-    console.log('Current user ID:', userId);
-    console.log('Advertisement seller ID:', advertisement.sellerId);
-    
-    // Check if user owns this advertisement
-    if (userId && advertisement.sellerId && userId !== advertisement.sellerId) {
-      toast.error('You can only edit your own advertisements');
-      console.log('❌ User ID mismatch - cannot edit');
-      return;
-    }
-    
+  const handleEdit = async (advertisement: Advertisement) => {
     setEditingAd(advertisement);
     setFormData({
       title: advertisement.title,
@@ -326,17 +239,9 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
       price: advertisement.price,
       mobileNo: advertisement.mobileNo,
     });
-    // Clear any existing image selections when editing
+    // Reset image selection when editing
     setSelectedImages([]);
     setImagePreviewUrls([]);
-    
-    console.log('📝 Edit modal opened with data:', {
-      title: advertisement.title,
-      category: advertisement.category,
-      description: advertisement.description,
-      price: advertisement.price,
-      mobileNo: advertisement.mobileNo,
-    });
   };
 
   // Submit edit
@@ -346,17 +251,9 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
     if (!editingAd) return;
 
     try {
-      console.log('🔄 Starting edit submission...');
-      const editingAdId = getAdvertisementId(editingAd);
-      console.log('Editing advertisement ID:', editingAdId);
-      
       setEditLoading(true);
       const token = authUtils.getAuthToken();
       const userId = authUtils.getCurrentUserId();
-      
-      console.log('🔐 Edit authentication check:');
-      console.log('Token exists:', !!token);
-      console.log('User ID:', userId);
       
       if (!token || !userId) {
         toast.error('Please login to update advertisements');
@@ -372,61 +269,29 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
       submitFormData.append('userId', userId);
       submitFormData.append('email', user?.email || '');
 
-      // Add new images if any, otherwise keep existing images
+      // Add new images only if selected (backend now handles optional images)
       if (selectedImages.length > 0) {
-        console.log('📷 Adding new images:', selectedImages.length);
         selectedImages.forEach((image) => {
           submitFormData.append('images', image);
         });
-      } else {
-        console.log('📷 No new images selected, keeping existing');
-        // If no new images selected, we need to handle existing images
-        // For now, we'll create a minimal placeholder since the backend requires images
-        // In production, you'd modify the backend to handle image updates better
-        const blob = new Blob(['existing'], { type: 'text/plain' });
-        const file = new File([blob], 'keep-existing.txt', { type: 'text/plain' });
-        submitFormData.append('images', file);
       }
 
-      console.log('🚀 Sending PUT request to:', `${API_BASE_URL}/api/advertisements/${editingAdId}`);
-      console.log('Form data contents:');
-      for (let [key, value] of submitFormData.entries()) {
-        console.log(`${key}:`, value instanceof File ? `File: ${value.name}` : value);
-      }
-
-      const response = await axios.put(`${API_BASE_URL}/api/advertisements/${editingAdId}`, submitFormData, {
+      const response = await axios.put(`${API_BASE_URL}/api/advertisements/${editingAd.id}`, submitFormData, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
         }
       });
 
-      console.log('✅ Edit response:', response.data);
       if (response.data) {
-        console.log('Advertisement updated successfully:', response.data);
         toast.success('Advertisement updated successfully!');
         setEditingAd(null);
         resetForm();
         fetchAdvertisements();
       }
     } catch (error: any) {
-      console.error('❌ Error updating advertisement:', error);
-      console.error('Error response:', error.response);
-      console.error('Error status:', error.response?.status);
-      console.error('Error data:', error.response?.data);
-      
-      if (error.response?.status === 401) {
-        toast.error('Authentication failed. Please login again.');
-      } else if (error.response?.status === 404) {
-        toast.error('Advertisement not found. It may have been deleted.');
-      } else if (error.response?.status === 400) {
-        toast.error(error.response?.data?.message || 'Invalid data provided.');
-      } else if (error.response?.status === 403) {
-        toast.error('You do not have permission to edit this advertisement.');
-      } else {
-        const errorMessage = error.response?.data?.message || error.response?.data || 'Failed to update advertisement';
-        toast.error(errorMessage);
-      }
+      console.error('Error updating advertisement:', error);
+      toast.error(error.response?.data?.message || 'Failed to update advertisement');
     } finally {
       setEditLoading(false);
     }
@@ -434,62 +299,40 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
 
   // Handle delete advertisement
   const handleDelete = async (advertisement: Advertisement) => {
-    const adId = getAdvertisementId(advertisement);
-    console.log('🗑️ Delete button clicked for advertisement:', advertisement);
-    console.log('Advertisement ID:', adId);
-    console.log('Advertisement Title:', advertisement.title);
-    
-    if (window.confirm(`Are you sure you want to delete the advertisement "${advertisement.title}"?`)) {
+    if (window.confirm(`Are you sure you want to delete "${advertisement.title}"? This action cannot be undone.`)) {
       try {
+        setLoading(true);
         const token = authUtils.getAuthToken();
-        const userId = authUtils.getCurrentUserId();
-        
-        console.log('🔐 Delete authentication check:');
-        console.log('Token exists:', !!token);
-        console.log('User ID:', userId);
-        console.log('Advertisement seller ID:', advertisement.sellerId);
         
         if (!token) {
           toast.error('Please login to delete advertisements');
           return;
         }
 
-        // Check if user owns this advertisement
-        if (userId && advertisement.sellerId && userId !== advertisement.sellerId) {
-          toast.error('You can only delete your own advertisements');
-          console.log('❌ User ID mismatch - cannot delete');
-          return;
-        }
-
-        console.log('🚀 Attempting to delete advertisement:', adId);
-        console.log('API URL:', `${API_BASE_URL}/api/advertisements/${adId}`);
-
-        const response = await axios.delete(`${API_BASE_URL}/api/advertisements/${adId}`, {
+        const response = await axios.delete(`${API_BASE_URL}/api/advertisements/${advertisement.id}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
         });
 
-        console.log('✅ Delete response:', response.data);
-        toast.success('Advertisement deleted successfully');
-        fetchAdvertisements(); // Refresh the list
-      } catch (error: any) {
-        console.error('❌ Error deleting advertisement:', error);
-        console.error('Error response:', error.response);
-        console.error('Error status:', error.response?.status);
-        console.error('Error data:', error.response?.data);
-        
-        if (error.response?.status === 401) {
-          toast.error('Authentication failed. Please login again.');
-        } else if (error.response?.status === 404) {
-          toast.error('Advertisement not found. It may have been already deleted.');
-        } else if (error.response?.status === 403) {
-          toast.error('You do not have permission to delete this advertisement.');
+        if (response.data && (response.data.success || response.data.message)) {
+          toast.success('Advertisement deleted successfully');
+          fetchAdvertisements(); // Refresh the list
         } else {
-          const errorMessage = error.response?.data?.message || error.response?.data || 'Failed to delete advertisement';
-          toast.error(errorMessage);
+          toast.error('Failed to delete advertisement');
         }
+      } catch (error: any) {
+        console.error('Error deleting advertisement:', error);
+        if (error.response?.status === 404) {
+          toast.error('Advertisement not found');
+        } else if (error.response?.status === 403) {
+          toast.error('You are not authorized to delete this advertisement');
+        } else {
+          toast.error(error.response?.data?.message || 'Failed to delete advertisement');
+        }
+      } finally {
+        setLoading(false);
       }
     }
   };
@@ -533,24 +376,9 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
           </div>
         ) : (
           advertisements.map((ad) => {
-            const statusConfig = getStatusConfig(ad.status);
-            const adId = getAdvertisementId(ad);
-            
-            // Debug logging for each advertisement
-            console.log('🔍 Advertisement render data:', {
-              rawAd: ad,
-              extractedId: adId,
-              _id: ad._id,
-              id: ad.id,
-              title: ad.title,
-              status: ad.status,
-              sellerId: ad.sellerId,
-              currentUserId: authUtils.getCurrentUserId(),
-              canEdit: statusConfig.canEdit
-            });
-            
+            const statusConfig = getStatusConfig(ad.approved);
             return (
-              <div key={adId} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
+              <div key={ad.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
                 {/* Image */}
                 {ad.images && ad.images.length > 0 && (
                   <div className="aspect-w-16 aspect-h-9 bg-gray-200">
@@ -575,18 +403,6 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
                   <p className="text-gray-700 text-sm mb-3 line-clamp-2">{ad.description}</p>
                   <p className="text-lg font-bold text-purple-600 mb-4">LKR {parseFloat(ad.price).toLocaleString()}</p>
                   
-                  {/* Debug Info - Remove in production */}
-                  <div className="text-xs text-gray-400 mb-3 p-2 bg-gray-50 rounded border-l-2 border-blue-200">
-                    <div><strong>Debug Info:</strong></div>
-                    <div>ID: {adId}</div>
-                    <div>_id: {ad._id}</div>
-                    <div>id: {ad.id}</div>
-                    <div>Seller ID: {ad.sellerId}</div>
-                    <div>Current User: {authUtils.getCurrentUserId()}</div>
-                    <div>Can Edit: {statusConfig.canEdit ? 'Yes' : 'No'}</div>
-                    <div>Status: {ad.status}</div>
-                  </div>
-                  
                   {/* Actions */}
                   <div className="flex space-x-2">
                     <button
@@ -599,11 +415,8 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
                     
                     {statusConfig.canEdit && (
                       <button
-                        onClick={() => {
-                          console.log('Edit button clicked!');
-                          handleEdit(ad);
-                        }}
-                        className="flex-1 bg-purple-100 hover:bg-purple-200 text-purple-700 px-3 py-2 rounded text-sm flex items-center justify-center space-x-1 transition-colors"
+                        onClick={() => handleEdit(ad)}
+                        className="flex-1 bg-purple-100 hover:bg-purple-200 text-purple-700 px-3 py-2 rounded text-sm flex items-center justify-center space-x-1"
                       >
                         <Edit size={16} />
                         <span>Edit</span>
@@ -611,11 +424,8 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
                     )}
                     
                     <button
-                      onClick={() => {
-                        console.log('Delete button clicked!');
-                        handleDelete(ad);
-                      }}
-                      className="flex-1 bg-red-100 hover:bg-red-200 text-red-700 px-3 py-2 rounded text-sm flex items-center justify-center space-x-1 transition-colors"
+                      onClick={() => handleDelete(ad)}
+                      className="flex-1 bg-red-100 hover:bg-red-200 text-red-700 px-3 py-2 rounded text-sm flex items-center justify-center space-x-1"
                     >
                       <Trash2 size={16} />
                       <span>Delete</span>
@@ -884,8 +694,35 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Add New Images (up to 5)
+                  Current Images
                 </label>
+                {editingAd.images && editingAd.images.length > 0 ? (
+                  <div className="mb-4 grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {editingAd.images.map((image, index) => (
+                      <div key={index} className="relative">
+                        <img
+                          src={image}
+                          alt={`Current ${index + 1}`}
+                          className="w-full h-24 object-cover rounded-md border-2 border-gray-200"
+                        />
+                        <div className="absolute top-1 left-1 bg-blue-500 text-white text-xs px-1 py-0.5 rounded">
+                          Current
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="mb-4 p-4 border border-gray-200 rounded-md text-center text-gray-500">
+                    No current images
+                  </div>
+                )}
+
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Add New Images (up to 5) - Optional
+                </label>
+                <p className="text-sm text-gray-500 mb-2">
+                  Only upload new images if you want to replace all current images. Leave empty to keep existing images.
+                </p>
                 <input
                   type="file"
                   accept="image/*"
@@ -894,25 +731,31 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
                 
-                {/* Image Previews */}
+                {/* New Image Previews */}
                 {imagePreviewUrls.length > 0 && (
-                  <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {imagePreviewUrls.map((url, index) => (
-                      <div key={index} className="relative">
-                        <img
-                          src={url}
-                          alt={`Preview ${index + 1}`}
-                          className="w-full h-24 object-cover rounded-md"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removeImage(index)}
-                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center"
-                        >
-                          <X size={14} />
-                        </button>
-                      </div>
-                    ))}
+                  <div className="mt-4">
+                    <p className="text-sm font-medium text-gray-700 mb-2">New Images Preview:</p>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {imagePreviewUrls.map((url, index) => (
+                        <div key={index} className="relative">
+                          <img
+                            src={url}
+                            alt={`New Preview ${index + 1}`}
+                            className="w-full h-24 object-cover rounded-md border-2 border-green-200"
+                          />
+                          <div className="absolute top-1 left-1 bg-green-500 text-white text-xs px-1 py-0.5 rounded">
+                            New
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeImage(index)}
+                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -996,8 +839,8 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
                     
                     <div className="flex justify-between">
                       <span className="font-medium text-gray-700">Status:</span>
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusConfig(viewingAd.status).className}`}>
-                        {getStatusConfig(viewingAd.status).displayText}
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusConfig(viewingAd.approved).className}`}>
+                        {getStatusConfig(viewingAd.approved).displayText}
                       </span>
                     </div>
                     

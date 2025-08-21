@@ -46,54 +46,35 @@ public class AdvertisementController {
             @RequestParam("images") List<MultipartFile> images) {
 
         try {
-            // Debug logging
-            System.out.println("🆕 CREATE Advertisement request received:");
-            System.out.println("Title: " + title);
-            System.out.println("Category: " + category);
-            System.out.println("Description: " + description);
-            System.out.println("Price: " + price);
-            System.out.println("Email: " + email);
-            System.out.println("Mobile: " + mobileNo);
-            System.out.println("User ID: " + userId);
-            System.out.println("Images count: " + (images != null ? images.size() : 0));
-            
             // Validate required parameters
             if (title == null || title.trim().isEmpty()) {
-                System.out.println("❌ Title validation failed");
                 return ResponseEntity.badRequest()
                         .body(ApiResponse.error("Title is required"));
             }
             if (category == null || category.trim().isEmpty()) {
-                System.out.println("❌ Category validation failed");
                 return ResponseEntity.badRequest()
                         .body(ApiResponse.error("Category is required"));
             }
             if (userId == null || userId.trim().isEmpty()) {
-                System.out.println("❌ User ID validation failed");
                 return ResponseEntity.badRequest()
                         .body(ApiResponse.error("User ID is required"));
             }
             if (images == null || images.isEmpty()) {
-                System.out.println("❌ Images validation failed");
                 return ResponseEntity.badRequest()
                         .body(ApiResponse.error("At least one image is required"));
             }
 
-            System.out.println("✅ All validations passed, creating advertisement...");
-
             AdvertisementRequestDto advertisementRequestDto = new AdvertisementRequestDto();
-            advertisementRequestDto.setTitle(title.trim());
-            advertisementRequestDto.setCategory(category.trim());
-            advertisementRequestDto.setDescription(description != null ? description.trim() : "");
-            advertisementRequestDto.setPrice(price != null ? price.trim() : "");
-            advertisementRequestDto.setEmail(email != null ? email.trim() : "");
-            advertisementRequestDto.setMobileNo(mobileNo != null ? mobileNo.trim() : "");
-            advertisementRequestDto.setUserId(userId.trim());
+            advertisementRequestDto.setTitle(title);
+            advertisementRequestDto.setCategory(category);
+            advertisementRequestDto.setDescription(description);
+            advertisementRequestDto.setPrice(price);
+            advertisementRequestDto.setEmail(email);
+            advertisementRequestDto.setMobileNo(mobileNo);
+            advertisementRequestDto.setUserId(userId);
             advertisementRequestDto.setImages(images);
 
             Advertisement savedAdvertisement = advertisementService.createAdvertisement(advertisementRequestDto, advertisementRequestDto.getImages());
-            
-            System.out.println("🎉 Advertisement created successfully with ID: " + savedAdvertisement.getId());
 
             return ResponseEntity.ok(
                     ApiResponse.success("Advertisement created successfully", savedAdvertisement));
@@ -135,25 +116,6 @@ public class AdvertisementController {
     }
 
     /**
-     * Get approved advertisements for homepage
-     */
-    @GetMapping("/approved")
-    public ResponseEntity<ApiResponse<List<Advertisement>>> getApprovedAdvertisements() {
-        try {
-            List<Advertisement> approvedAdvertisements = advertisementRepository.findByApproved("true");
-            
-            return ResponseEntity.ok(
-                ApiResponse.success("Approved advertisements retrieved successfully", approvedAdvertisements)
-            );
-            
-        } catch (Exception e) {
-            System.err.println("❌ Error retrieving approved advertisements: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error("Failed to retrieve approved advertisements"));
-        }
-    }
-
-    /**
      * Get advertisement by ID
      */
     @GetMapping("/{id}")
@@ -179,57 +141,25 @@ public class AdvertisementController {
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<String>> deleteAdvertisement(@PathVariable String id) {
         try {
-            // Debug logging
-            System.out.println("🗑️ DELETE request received for advertisement ID: " + id);
-            System.out.println("ID length: " + (id != null ? id.length() : "null"));
-            System.out.println("ID trimmed: '" + (id != null ? id.trim() : "null") + "'");
-            
             // Validate id parameter
             if (id == null || id.trim().isEmpty()) {
-                System.out.println("❌ Invalid ID: null or empty");
                 return ResponseEntity.badRequest()
                         .body(ApiResponse.error("Advertisement ID is required"));
             }
             
-            System.out.println("🔍 Searching for advertisement with ID: " + id);
             Optional<Advertisement> advertisementOptional = advertisementRepository.findById(id);
             
             if (!advertisementOptional.isPresent()) {
-                System.out.println("❌ Advertisement not found in database with ID: " + id);
-                System.out.println("Checking all advertisements in database:");
-                
-                // Debug: List all advertisements
-                var allAds = advertisementRepository.findAll();
-                System.out.println("Total advertisements in DB: " + allAds.size());
-                allAds.forEach(ad -> {
-                    System.out.println("  - ID: '" + ad.getId() + "', Title: '" + ad.getTitle() + "'");
-                });
-                
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(ApiResponse.error("Advertisement not found"));
             }
             
             Advertisement advertisement = advertisementOptional.get();
-            System.out.println("✅ Found advertisement: " + advertisement.getTitle());
             
             // Delete associated images
             if (advertisement.getImages() != null && !advertisement.getImages().isEmpty()) {
-                System.out.println("🗑️ Deleting associated images: " + advertisement.getImages().size());
                 for (String imagePath : advertisement.getImages()) {
-                    System.out.println("Processing image path: " + imagePath);
-                    try {
-                        // Extract filename from URL if it's a full URL
-                        String fileName = imagePath;
-                        if (imagePath.contains("/")) {
-                            fileName = imagePath.substring(imagePath.lastIndexOf("/") + 1);
-                        }
-                        System.out.println("Extracted filename: " + fileName);
-                        fileStorageService.deleteFile(fileName);
-                        System.out.println("✅ Deleted image: " + fileName);
-                    } catch (Exception e) {
-                        System.err.println("⚠️ Failed to delete image: " + imagePath + " - " + e.getMessage());
-                        // Continue with other images even if one fails
-                    }
+                    fileStorageService.deleteFile(imagePath);
                 }
             }
             
@@ -260,15 +190,9 @@ public class AdvertisementController {
             @RequestParam("email") String email,
             @RequestParam("mobileNo") String mobileNo,
             @RequestParam("userId") String userId,
-            @RequestParam("images") List<MultipartFile> image) {
+            @RequestParam(value = "images", required = false) List<MultipartFile> image) {
 
         try {
-            // Debug logging
-            System.out.println("✏️ PUT request received for advertisement ID: " + id);
-            System.out.println("Title: " + title);
-            System.out.println("User ID: " + userId);
-            System.out.println("ID length: " + (id != null ? id.length() : "null"));
-            System.out.println("ID trimmed: '" + (id != null ? id.trim() : "null") + "'");
 
             // Validate required parameters
             if (title == null || title.trim().isEmpty()) {
@@ -283,36 +207,20 @@ public class AdvertisementController {
                 return ResponseEntity.badRequest()
                         .body(ApiResponse.error("User ID is required"));
             }
-            if (image == null || image.isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body(ApiResponse.error("At least one image is required"));
-            }
-
-            // Validate that the advertisement exists and user owns it
-            Optional<Advertisement> existingAdOptional = advertisementRepository.findById(id);
-            if (!existingAdOptional.isPresent()) {
-                System.out.println("❌ Advertisement not found for update: " + id);
-                return ResponseEntity.notFound().build();
-            }
-            
-            Advertisement existingAd = existingAdOptional.get();
-            if (!existingAd.getUserId().equals(userId)) {
-                System.out.println("❌ User does not own advertisement: " + existingAd.getUserId() + " vs " + userId);
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                        .body(ApiResponse.error("You can only update your own advertisements"));
-            }
-            
-            System.out.println("✅ Ownership validated, proceeding with update");
 
             AdvertisementRequestDto advertisementRequestDto = new AdvertisementRequestDto();
-            advertisementRequestDto.setTitle(title.trim());
-            advertisementRequestDto.setCategory(category.trim());
-            advertisementRequestDto.setDescription(description != null ? description.trim() : "");
-            advertisementRequestDto.setPrice(price != null ? price.trim() : "");
-            advertisementRequestDto.setEmail(email != null ? email.trim() : "");
-            advertisementRequestDto.setMobileNo(mobileNo != null ? mobileNo.trim() : "");
-            advertisementRequestDto.setUserId(userId.trim());
-            advertisementRequestDto.setImages(image);
+            advertisementRequestDto.setTitle(title);
+            advertisementRequestDto.setCategory(category);
+            advertisementRequestDto.setDescription(description);
+            advertisementRequestDto.setPrice(price);
+            advertisementRequestDto.setEmail(email);
+            advertisementRequestDto.setMobileNo(mobileNo);
+            advertisementRequestDto.setUserId(userId);
+            // Only set images if they are provided
+            if (image != null && !image.isEmpty()) {
+                advertisementRequestDto.setImages(image);
+            }
+            
             // Update advertisement using service
             Optional<Advertisement> updatedAdvertisement = advertisementService.updateAdvertisement(id, advertisementRequestDto);
 
