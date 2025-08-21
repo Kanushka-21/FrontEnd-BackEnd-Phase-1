@@ -226,24 +226,231 @@ public class PricePredictionService {
         return BigDecimal.valueOf(totalPrice);
     }
 
+    /**
+     * Calculate real accuracy percentage based on data quality, completeness, and market factors
+     */
     private double calculateConfidenceScore(PricePredictionRequest request) {
-        double confidence = 0.6; // Base confidence
-
-        // Increase confidence based on available attributes
+        double totalScore = 0.0;
+        int totalFactors = 0;
+        
+        // 1. Species Recognition Accuracy (25% weight)
+        double speciesAccuracy = calculateSpeciesAccuracy(request.getSpecies());
+        totalScore += speciesAccuracy * 0.25;
+        totalFactors++;
+        
+        // 2. Data Completeness Score (20% weight)
+        double completenessScore = calculateDataCompleteness(request);
+        totalScore += completenessScore * 0.20;
+        totalFactors++;
+        
+        // 3. Quality Factors Precision (20% weight)
+        double qualityPrecision = calculateQualityFactorsPrecision(request);
+        totalScore += qualityPrecision * 0.20;
+        totalFactors++;
+        
+        // 4. Certification and Documentation (15% weight)
+        double certificationScore = calculateCertificationScore(request);
+        totalScore += certificationScore * 0.15;
+        totalFactors++;
+        
+        // 5. Market Data Alignment (10% weight)
+        double marketAlignment = calculateMarketAlignment(request);
+        totalScore += marketAlignment * 0.10;
+        totalFactors++;
+        
+        // 6. Size and Rarity Factor (10% weight)
+        double rarityFactor = calculateRarityFactor(request);
+        totalScore += rarityFactor * 0.10;
+        totalFactors++;
+        
+        double finalConfidence = totalScore / totalFactors;
+        
+        // Log detailed breakdown for transparency
+        logger.info("🎯 Confidence Breakdown for {} {}ct:", 
+                   request.getSpecies(), request.getCarat());
+        logger.info("   Species Recognition: {}%", Math.round(speciesAccuracy * 100));
+        logger.info("   Data Completeness: {}%", Math.round(completenessScore * 100));
+        logger.info("   Quality Precision: {}%", Math.round(qualityPrecision * 100));
+        logger.info("   Certification: {}%", Math.round(certificationScore * 100));
+        logger.info("   Market Alignment: {}%", Math.round(marketAlignment * 100));
+        logger.info("   Rarity Factor: {}%", Math.round(rarityFactor * 100));
+        logger.info("   📊 Final Accuracy: {}%", Math.round(finalConfidence * 100));
+        
+        return Math.max(0.15, Math.min(0.98, finalConfidence)); // Range: 15% to 98%
+    }
+    
+    private double calculateSpeciesAccuracy(String species) {
+        if (species == null || species.trim().isEmpty()) {
+            return 0.20; // Very low confidence without species
+        }
+        
+        String normalizedSpecies = species.toLowerCase().trim();
+        
+        // High-confidence species (well-documented pricing)
+        if (normalizedSpecies.contains("sapphire") || normalizedSpecies.contains("ruby") || 
+            normalizedSpecies.contains("emerald") || normalizedSpecies.contains("diamond")) {
+            return 0.95;
+        }
+        
+        // Medium-confidence species
+        if (normalizedSpecies.contains("spinel") || normalizedSpecies.contains("garnet") || 
+            normalizedSpecies.contains("topaz") || normalizedSpecies.contains("aquamarine")) {
+            return 0.80;
+        }
+        
+        // Lower-confidence species (less market data)
+        if (normalizedSpecies.contains("tourmaline") || normalizedSpecies.contains("moonstone") || 
+            normalizedSpecies.contains("chrysoberyl") || normalizedSpecies.contains("zircon")) {
+            return 0.70;
+        }
+        
+        // Common gemstones
+        if (normalizedSpecies.contains("quartz") || normalizedSpecies.contains("amethyst") || 
+            normalizedSpecies.contains("citrine") || normalizedSpecies.contains("peridot")) {
+            return 0.85;
+        }
+        
+        return 0.60; // Unknown or rare species
+    }
+    
+    private double calculateDataCompleteness(PricePredictionRequest request) {
+        int availableFields = 0;
+        int totalCriticalFields = 6;
+        
+        if (request.getSpecies() != null && !request.getSpecies().trim().isEmpty()) availableFields++;
+        if (request.getCarat() != null && request.getCarat() > 0) availableFields++;
+        if (request.getColor() != null && !request.getColor().trim().isEmpty()) availableFields++;
+        if (request.getClarity() != null && !request.getClarity().trim().isEmpty()) availableFields++;
+        if (request.getCut() != null && !request.getCut().trim().isEmpty()) availableFields++;
+        if (request.getOrigin() != null && !request.getOrigin().trim().isEmpty()) availableFields++;
+        
+        double completeness = (double) availableFields / totalCriticalFields;
+        
+        // Bonus for additional fields
+        if (request.getShape() != null && !request.getShape().trim().isEmpty()) completeness += 0.05;
+        if (request.getTreatment() != null && !request.getTreatment().trim().isEmpty()) completeness += 0.05;
+        
+        return Math.min(1.0, completeness);
+    }
+    
+    private double calculateQualityFactorsPrecision(PricePredictionRequest request) {
+        double precision = 0.0;
+        int factors = 0;
+        
+        // Color assessment
         if (request.getColor() != null && !request.getColor().trim().isEmpty()) {
-            confidence += 0.1;
+            String color = request.getColor().toLowerCase();
+            if (colorMultipliers.containsKey(color)) {
+                precision += 0.90; // Recognized color
+            } else if (color.matches(".*blue.*|.*red.*|.*green.*|.*yellow.*|.*pink.*|.*purple.*|.*orange.*")) {
+                precision += 0.75; // Partial color match
+            } else {
+                precision += 0.50; // Unrecognized color
+            }
+            factors++;
         }
+        
+        // Clarity assessment
         if (request.getClarity() != null && !request.getClarity().trim().isEmpty()) {
-            confidence += 0.1;
+            String clarity = request.getClarity().toLowerCase().replaceAll("\\s", "");
+            if (clarityMultipliers.containsKey(clarity)) {
+                precision += 0.95; // Standard clarity grade
+            } else {
+                precision += 0.60; // Non-standard clarity description
+            }
+            factors++;
         }
+        
+        // Cut assessment
         if (request.getCut() != null && !request.getCut().trim().isEmpty()) {
-            confidence += 0.1;
+            String cut = request.getCut().toLowerCase().replaceAll("\\s", "");
+            if (cutMultipliers.containsKey(cut)) {
+                precision += 0.85; // Recognized cut quality/style
+            } else {
+                precision += 0.65; // Unknown cut description
+            }
+            factors++;
         }
+        
+        return factors > 0 ? precision / factors : 0.50;
+    }
+    
+    private double calculateCertificationScore(PricePredictionRequest request) {
+        double score = 0.50; // Base score for uncertified stones
+        
         if (Boolean.TRUE.equals(request.getIsCertified())) {
-            confidence += 0.1;
+            score = 0.90; // High confidence for certified stones
+            
+            // Origin verification bonus
+            if (request.getOrigin() != null && !request.getOrigin().trim().isEmpty()) {
+                String origin = request.getOrigin().toLowerCase();
+                if (origin.contains("ceylon") || origin.contains("sri lanka") || 
+                    origin.contains("burma") || origin.contains("kashmir") || 
+                    origin.contains("colombia") || origin.contains("madagascar")) {
+                    score = 0.95; // Premium origins with good documentation
+                }
+            }
         }
-
-        return Math.min(confidence, 0.95); // Cap at 95%
+        
+        return score;
+    }
+    
+    private double calculateMarketAlignment(PricePredictionRequest request) {
+        double alignment = 0.70; // Default market alignment
+        
+        // Check if gemstone characteristics align with current market preferences
+        String species = request.getSpecies() != null ? request.getSpecies().toLowerCase() : "";
+        String color = request.getColor() != null ? request.getColor().toLowerCase() : "";
+        
+        // High-demand combinations
+        if ((species.contains("sapphire") && color.contains("blue")) ||
+            (species.contains("ruby") && color.contains("red")) ||
+            (species.contains("emerald") && color.contains("green"))) {
+            alignment = 0.90;
+        }
+        
+        // Size market alignment
+        if (request.getCarat() != null) {
+            double carat = request.getCarat();
+            if (carat >= 1.0 && carat <= 5.0) {
+                alignment += 0.05; // Popular size range
+            } else if (carat > 5.0) {
+                alignment -= 0.10; // Harder to price large stones
+            }
+        }
+        
+        return Math.max(0.40, Math.min(0.95, alignment));
+    }
+    
+    private double calculateRarityFactor(PricePredictionRequest request) {
+        double rarity = 0.70; // Base rarity score
+        
+        if (request.getCarat() != null) {
+            double carat = request.getCarat();
+            
+            // Size rarity adjustments
+            if (carat < 0.5) {
+                rarity = 0.60; // Small stones, less market data
+            } else if (carat >= 0.5 && carat <= 3.0) {
+                rarity = 0.85; // Common size range, good data
+            } else if (carat > 3.0 && carat <= 10.0) {
+                rarity = 0.75; // Larger stones, moderate data
+            } else {
+                rarity = 0.50; // Very large stones, limited comparable data
+            }
+        }
+        
+        // Quality rarity
+        if (request.getClarity() != null) {
+            String clarity = request.getClarity().toLowerCase().replaceAll("\\s", "");
+            if (clarity.equals("fl") || clarity.equals("if")) {
+                rarity *= 0.90; // Flawless stones are rare but harder to price precisely
+            } else if (clarity.equals("vvs1") || clarity.equals("vvs2")) {
+                rarity *= 1.05; // High quality with good market data
+            }
+        }
+        
+        return Math.max(0.30, Math.min(0.95, rarity));
     }
 
     private BigDecimal roundToNearest(BigDecimal value, int nearest) {

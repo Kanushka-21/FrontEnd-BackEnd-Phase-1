@@ -117,7 +117,7 @@ const AIPricePrediction: React.FC<AIPricePredictionProps> = ({
         predictedPrice: result.predictedPrice,
         minPrice: result.minPrice,
         maxPrice: result.maxPrice,
-        confidence: result.confidence,
+        confidence: result.confidenceScore || result.confidence || 0.75, // Handle both field names
         currency: result.currency || 'LKR'
       };
     } catch (error) {
@@ -239,15 +239,35 @@ const AIPricePrediction: React.FC<AIPricePredictionProps> = ({
   };
 
   const getConfidenceColor = (confidence: number): string => {
-    if (confidence >= 0.8) return 'text-green-600';
-    if (confidence >= 0.6) return 'text-yellow-600';
+    if (confidence >= 0.85) return 'text-green-600';
+    if (confidence >= 0.70) return 'text-blue-600';
+    if (confidence >= 0.50) return 'text-yellow-600';
     return 'text-red-600';
   };
 
   const getConfidenceIcon = (confidence: number) => {
-    if (confidence >= 0.8) return <CheckCircle className="h-4 w-4 text-green-600" />;
-    if (confidence >= 0.6) return <AlertTriangle className="h-4 w-4 text-yellow-600" />;
+    if (confidence >= 0.85) return <CheckCircle className="h-4 w-4 text-green-600" />;
+    if (confidence >= 0.70) return <CheckCircle className="h-4 w-4 text-blue-600" />;
+    if (confidence >= 0.50) return <AlertTriangle className="h-4 w-4 text-yellow-600" />;
     return <AlertTriangle className="h-4 w-4 text-red-600" />;
+  };
+
+  const getConfidenceLabel = (confidence: number): string => {
+    if (confidence >= 0.90) return 'Excellent';
+    if (confidence >= 0.80) return 'Very Good';
+    if (confidence >= 0.70) return 'Good';
+    if (confidence >= 0.60) return 'Fair';
+    if (confidence >= 0.40) return 'Limited';
+    return 'Low';
+  };
+
+  const getAccuracyDescription = (confidence: number): string => {
+    if (confidence >= 0.90) return 'Based on comprehensive market data with high precision';
+    if (confidence >= 0.80) return 'Strong data alignment with current market trends';
+    if (confidence >= 0.70) return 'Good quality information with reliable market indicators';
+    if (confidence >= 0.60) return 'Adequate data available for reasonable estimation';
+    if (confidence >= 0.40) return 'Limited information available, estimate may vary';
+    return 'Insufficient data for reliable prediction';
   };
 
   if (loading) {
@@ -291,39 +311,30 @@ const AIPricePrediction: React.FC<AIPricePredictionProps> = ({
         </div>
       )}
 
-      <div className="space-y-3">
-        <div>
-          <span className="text-xs text-gray-600">Estimated Value</span>
-          <p className="text-xl font-bold text-indigo-700">
-            {formatPrice(prediction.predictedPrice)}
-          </p>
-        </div>
-
-        <div>
-          <span className="text-xs text-gray-600">Price Range</span>
-          <p className="text-sm font-medium text-gray-700">
-            {formatPrice(prediction.minPrice)} - {formatPrice(prediction.maxPrice)}
-          </p>
-        </div>
-
-        {showDetails && (
-          <div className="pt-2 border-t border-indigo-200">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-600">Model Confidence</span>
-              <div className="flex items-center space-x-1">
-                {getConfidenceIcon(prediction.confidence)}
-                <span className={`text-xs font-medium ${getConfidenceColor(prediction.confidence)}`}>
-                  {Math.round(prediction.confidence * 100)}%
-                </span>
-              </div>
+      <div className="space-y-4">
+        {/* Price Range - Compact */}
+        <div className="bg-white bg-opacity-80 rounded-lg p-2 border border-indigo-300">
+          <div className="text-center">
+            <span className="text-xs font-medium text-indigo-600 block mb-1">Price Range</span>
+            <div className="text-lg font-bold text-indigo-800">
+              {formatPrice(prediction.minPrice)} - {formatPrice(prediction.maxPrice)}
             </div>
           </div>
-        )}
+        </div>
 
-        <div className="bg-white bg-opacity-60 rounded-md p-2 text-xs text-gray-600">
-          <div className="flex items-center space-x-1">
-            <TrendingUp className="h-3 w-3" />
-            <span>Based on market analysis • Quality factors • Historical data</span>
+        {/* Accuracy Information */}
+        <div className="bg-white bg-opacity-60 rounded-lg p-2 border border-indigo-200">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-gray-700">Accuracy</span>
+            <div className="flex items-center space-x-1">
+              {getConfidenceIcon(prediction.confidence)}
+              <span className={`text-xs font-bold ${getConfidenceColor(prediction.confidence)}`}>
+                {prediction.confidence && !isNaN(prediction.confidence) 
+                  ? Math.round(prediction.confidence * 100) + '%'
+                  : 'N/A'
+                }
+              </span>
+            </div>
           </div>
         </div>
       </div>

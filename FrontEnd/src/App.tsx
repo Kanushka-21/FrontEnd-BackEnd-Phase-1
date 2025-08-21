@@ -10,6 +10,7 @@ import MarketplacePage from '@/pages/MarketplacePage';
 
 // Demo Pages
 import PricePredictionDemo from '@/components/demo/PricePredictionDemo';
+import AccuracyAnalysis from '@/components/common/AccuracyAnalysis';
 
 // Dashboard Pages
 import AdminDashboard from '@/pages/dashboard/AdminDashboard';
@@ -219,6 +220,10 @@ const AppRoutes: React.FC = () => {
           <Route 
             path="/demo/ai-prediction" 
             element={<PricePredictionDemo />} 
+          />
+          <Route 
+            path="/demo/accuracy-analysis" 
+            element={<AccuracyAnalysis />} 
           />
           
           {/* Default Route - Changed to Home */}

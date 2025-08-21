@@ -30,6 +30,9 @@ public interface GemListingRepository extends MongoRepository<GemListing, String
     // Find active listings
     List<GemListing> findByIsActive(Boolean isActive);
     
+    // Find active listings with specific statuses
+    List<GemListing> findByIsActiveTrueAndListingStatusIn(List<String> statuses);
+    
     // Find certified/non-certified listings
     List<GemListing> findByIsCertified(Boolean isCertified);
     

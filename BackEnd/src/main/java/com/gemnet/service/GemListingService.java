@@ -5,6 +5,7 @@ import com.gemnet.repository.GemListingRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -51,5 +52,21 @@ public class GemListingService {
      */
     public boolean existsById(String id) {
         return gemListingRepository.existsById(id);
+    }
+
+    /**
+     * Get all active gem listings for accuracy analysis
+     */
+    public List<GemListing> getAllActiveListings() {
+        return gemListingRepository.findByIsActiveTrueAndListingStatusIn(
+            List.of("ACTIVE", "APPROVED")
+        );
+    }
+
+    /**
+     * Get all gem listings (for admin purposes)
+     */
+    public List<GemListing> getAllListings() {
+        return gemListingRepository.findAll();
     }
 }
