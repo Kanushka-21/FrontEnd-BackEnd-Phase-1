@@ -60,6 +60,7 @@ public class SecurityConfig {
                 .requestMatchers("/uploads/**").permitAll() // Allow access to uploaded files
                 .requestMatchers("/api/gemstones/**").permitAll() // Allow access to gemstones endpoints
                 .requestMatchers("/api/marketplace/**").permitAll() // Allow access to marketplace endpoints
+                .requestMatchers("/api/predictions/**").permitAll() // Allow access to price prediction endpoints
                 .requestMatchers("/api/public/**").permitAll()
                 .requestMatchers("/api/bidding/**").permitAll() // Allow access to bidding endpoints
                 .requestMatchers("/api/notifications/**").permitAll() // Allow access to notification endpoints
