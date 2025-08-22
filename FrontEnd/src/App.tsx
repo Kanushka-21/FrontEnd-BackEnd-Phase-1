@@ -8,6 +8,10 @@ import RegisterPage from '@/pages/RegisterPage';
 import HomePage from '@/pages/HomePage';
 import MarketplacePage from '@/pages/MarketplacePage';
 
+// Demo Pages
+import PricePredictionDemo from '@/components/demo/PricePredictionDemo';
+import AccuracyAnalysis from '@/components/common/AccuracyAnalysis';
+
 // Dashboard Pages
 import AdminDashboard from '@/pages/dashboard/AdminDashboard';
 import SellerDashboard from '@/pages/dashboard/SellerDashboard.new';
@@ -210,6 +214,16 @@ const AppRoutes: React.FC = () => {
           <Route path="/" element={<HomePage />} />          <Route
             path="/marketplace"
             element={<MarketplacePage />}
+          />
+          
+          {/* Demo Routes */}
+          <Route 
+            path="/demo/ai-prediction" 
+            element={<PricePredictionDemo />} 
+          />
+          <Route 
+            path="/demo/accuracy-analysis" 
+            element={<AccuracyAnalysis />} 
           />
           
           {/* Default Route - Changed to Home */}

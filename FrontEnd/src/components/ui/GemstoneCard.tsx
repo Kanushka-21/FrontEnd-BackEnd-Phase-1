@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Gem, Shield, User } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import CountdownTimer from '@/components/CountdownTimer';
+import AIPricePrediction from '@/components/common/AIPricePrediction';
 import { GemstoneCardProps } from '@/types';
 
 // Helper function to format price in LKR
@@ -160,14 +161,23 @@ const GemstoneCard: React.FC<GemstoneCardProps> = ({ gemstone, onViewDetails }) 
             />
           </div>
           
-          {gemstone.predictedPriceRange && (
-            <div className="mt-2 py-1 bg-indigo-50 px-3 rounded-md">
-              <p className="text-sm font-semibold text-indigo-800">Estimated Price Range:</p>
-              <p className="text-base sm:text-lg font-bold text-indigo-700">
-                {formatLKR(gemstone.predictedPriceRange.min)} - {formatLKR(gemstone.predictedPriceRange.max)}
-              </p>
-            </div>
-          )}
+          {/* AI-Powered Dynamic Price Prediction */}
+          <div className="mt-3">
+            <AIPricePrediction 
+              gemData={{
+                weight: gemstone.weight || '1.0',
+                color: gemstone.color || 'Blue',
+                cut: gemstone.cut || 'Good',
+                clarity: gemstone.clarity || 'SI1',
+                species: gemstone.species || gemstone.type || gemstone.name?.split(' ')[0] || 'Sapphire',
+                isCertified: gemstone.certified || false,
+                shape: gemstone.shape || 'Round',
+                treatment: gemstone.treatment || 'Heat Treatment'
+              }}
+              showDetails={false}
+              className="transform transition-all duration-300 hover:scale-102"
+            />
+          </div>
           
           <p className="text-sm text-secondary-600 mt-2">
             {gemstone.weight} carats · {gemstone.color}

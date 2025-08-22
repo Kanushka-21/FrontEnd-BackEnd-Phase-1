@@ -9,18 +9,20 @@ const API_BASE_URL = 'http://localhost:9092';
 
 // Define Advertisement type
 interface Advertisement {
-  _id: string;
+  id: string;  // Changed from _id to id to match Spring Boot MongoDB
   title: string;
   category: string;
   description: string;
   price: string;
   mobileNo: string;
+  email: string;
   images: string[];
   sellerId: string;
   sellerName: string;
-  status: 'pending' | 'approved' | 'rejected';
-  createdAt: string;
-  updatedAt: string;
+  approved: string; // Changed from status to approved to match backend
+  userId: string;
+  createdOn: string;
+  modifiedOn: string;
 }
 
 // Define form data type
@@ -237,6 +239,9 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
       price: advertisement.price,
       mobileNo: advertisement.mobileNo,
     });
+    // Reset image selection when editing
+    setSelectedImages([]);
+    setImagePreviewUrls([]);
   };
 
   // Submit edit
@@ -264,20 +269,14 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
       submitFormData.append('userId', userId);
       submitFormData.append('email', user?.email || '');
 
-      // Add new images if any, otherwise use existing images as placeholders
+      // Add new images only if selected (backend now handles optional images)
       if (selectedImages.length > 0) {
         selectedImages.forEach((image) => {
           submitFormData.append('images', image);
         });
-      } else {
-        // Backend requires at least one image, so we'll send a placeholder
-        // In a real app, you'd want to handle existing images better
-        const blob = new Blob([''], { type: 'image/jpeg' });
-        const file = new File([blob], 'placeholder.jpg', { type: 'image/jpeg' });
-        submitFormData.append('images', file);
       }
 
-      const response = await axios.put(`${API_BASE_URL}/api/advertisements/${editingAd._id}`, submitFormData, {
+      const response = await axios.put(`${API_BASE_URL}/api/advertisements/${editingAd.id}`, submitFormData, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
@@ -300,21 +299,40 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
 
   // Handle delete advertisement
   const handleDelete = async (advertisement: Advertisement) => {
-    if (window.confirm('Are you sure you want to delete this advertisement?')) {
+    if (window.confirm(`Are you sure you want to delete "${advertisement.title}"? This action cannot be undone.`)) {
       try {
+        setLoading(true);
         const token = authUtils.getAuthToken();
         
-        await axios.delete(`${API_BASE_URL}/api/advertisements/${advertisement._id}`, {
+        if (!token) {
+          toast.error('Please login to delete advertisements');
+          return;
+        }
+
+        const response = await axios.delete(`${API_BASE_URL}/api/advertisements/${advertisement.id}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
           }
         });
 
-        toast.success('Advertisement deleted successfully');
-        fetchAdvertisements();
+        if (response.data && (response.data.success || response.data.message)) {
+          toast.success('Advertisement deleted successfully');
+          fetchAdvertisements(); // Refresh the list
+        } else {
+          toast.error('Failed to delete advertisement');
+        }
       } catch (error: any) {
         console.error('Error deleting advertisement:', error);
-        toast.error(error.response?.data?.message || 'Failed to delete advertisement');
+        if (error.response?.status === 404) {
+          toast.error('Advertisement not found');
+        } else if (error.response?.status === 403) {
+          toast.error('You are not authorized to delete this advertisement');
+        } else {
+          toast.error(error.response?.data?.message || 'Failed to delete advertisement');
+        }
+      } finally {
+        setLoading(false);
       }
     }
   };
@@ -358,9 +376,9 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
           </div>
         ) : (
           advertisements.map((ad) => {
-            const statusConfig = getStatusConfig(ad.status);
+            const statusConfig = getStatusConfig(ad.approved);
             return (
-              <div key={ad._id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
+              <div key={ad.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
                 {/* Image */}
                 {ad.images && ad.images.length > 0 && (
                   <div className="aspect-w-16 aspect-h-9 bg-gray-200">
@@ -676,8 +694,35 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Add New Images (up to 5)
+                  Current Images
                 </label>
+                {editingAd.images && editingAd.images.length > 0 ? (
+                  <div className="mb-4 grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {editingAd.images.map((image, index) => (
+                      <div key={index} className="relative">
+                        <img
+                          src={image}
+                          alt={`Current ${index + 1}`}
+                          className="w-full h-24 object-cover rounded-md border-2 border-gray-200"
+                        />
+                        <div className="absolute top-1 left-1 bg-blue-500 text-white text-xs px-1 py-0.5 rounded">
+                          Current
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="mb-4 p-4 border border-gray-200 rounded-md text-center text-gray-500">
+                    No current images
+                  </div>
+                )}
+
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Add New Images (up to 5) - Optional
+                </label>
+                <p className="text-sm text-gray-500 mb-2">
+                  Only upload new images if you want to replace all current images. Leave empty to keep existing images.
+                </p>
                 <input
                   type="file"
                   accept="image/*"
@@ -686,25 +731,31 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 />
                 
-                {/* Image Previews */}
+                {/* New Image Previews */}
                 {imagePreviewUrls.length > 0 && (
-                  <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {imagePreviewUrls.map((url, index) => (
-                      <div key={index} className="relative">
-                        <img
-                          src={url}
-                          alt={`Preview ${index + 1}`}
-                          className="w-full h-24 object-cover rounded-md"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removeImage(index)}
-                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center"
-                        >
-                          <X size={14} />
-                        </button>
-                      </div>
-                    ))}
+                  <div className="mt-4">
+                    <p className="text-sm font-medium text-gray-700 mb-2">New Images Preview:</p>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {imagePreviewUrls.map((url, index) => (
+                        <div key={index} className="relative">
+                          <img
+                            src={url}
+                            alt={`New Preview ${index + 1}`}
+                            className="w-full h-24 object-cover rounded-md border-2 border-green-200"
+                          />
+                          <div className="absolute top-1 left-1 bg-green-500 text-white text-xs px-1 py-0.5 rounded">
+                            New
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeImage(index)}
+                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -788,8 +839,8 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
                     
                     <div className="flex justify-between">
                       <span className="font-medium text-gray-700">Status:</span>
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusConfig(viewingAd.status).className}`}>
-                        {getStatusConfig(viewingAd.status).displayText}
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusConfig(viewingAd.approved).className}`}>
+                        {getStatusConfig(viewingAd.approved).displayText}
                       </span>
                     </div>
                     

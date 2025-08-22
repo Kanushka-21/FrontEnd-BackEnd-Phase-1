@@ -1,0 +1,73 @@
+{
+  "model_type": "catboost",
+  "version": "1.0",
+  "features": [
+    {
+      "name": "carat",
+      "type": "numerical",
+      "index": 0
+    },
+    {
+      "name": "species",
+      "type": "categorical",
+      "index": 1,
+      "mapping": {
+        "sapphire": 0,
+        "ruby": 1,
+        "emerald": 2,
+        "diamond": 3,
+        "spinel": 4,
+        "garnet": 5
+      }
+    },
+    {
+      "name": "color",
+      "type": "categorical", 
+      "index": 2,
+      "mapping": {
+        "blue": 0,
+        "red": 1,
+        "green": 2,
+        "yellow": 3,
+        "pink": 4,
+        "white": 5
+      }
+    },
+    {
+      "name": "clarity",
+      "type": "categorical",
+      "index": 3,
+      "mapping": {
+        "fl": 0,
+        "if": 1,
+        "vvs1": 2,
+        "vvs2": 3,
+        "vs1": 4,
+        "vs2": 5,
+        "si1": 6,
+        "si2": 7,
+        "i1": 8,
+        "i2": 9,
+        "i3": 10
+      }
+    },
+    {
+      "name": "cut",
+      "type": "categorical",
+      "index": 4,
+      "mapping": {
+        "excellent": 0,
+        "very good": 1,
+        "good": 2,
+        "fair": 3,
+        "poor": 4
+      }
+    },
+    {
+      "name": "certified",
+      "type": "boolean",
+      "index": 5
+    }
+  ],
+  "target": "price_lkr"
+}
