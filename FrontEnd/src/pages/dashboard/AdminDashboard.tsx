@@ -1,306 +1,178 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Modal, message, Badge, Divider, Alert } from 'antd';
-import { 
-  LockOutlined, UnlockOutlined, CheckCircleOutlined, ExclamationCircleOutlined
-} from '@ant-design/icons';
-import { 
-  Home, Users, FileText, DollarSign, TrendingUp, 
-  Settings, Bell, LogOut, Shield, Database, 
-  BarChart3, UserCheck, MessageSquare, Calendar,
-  Award, Search, Menu as MenuIcon, Activity,
-  Megaphone, Eye, CheckCircle, AlertTriangle
-} from 'lucide-react';
+import { Modal, Divider, Alert } from 'antd';
 import dayjs from 'dayjs';
+import RoleAwareDashboardLayout from '@/components/layout/RoleAwareDashboardLayout';
+import { BarChart3, Users, Package, Clock, Settings, Menu as MenuIcon, Shield, Bell, Search } from 'lucide-react';
 
 // Import modular components
 import {
   Overview,
   UserManagement,
   ListingsManagement,
-  AdvertisementsManagement,
-  Transactions,
   Meetings,
-  Analytics,
   SystemSettings,
-  SecurityAudit,
-  // Import shared types and data
-  SidebarItem,
-  User,
-  Advertisement,
-  Meeting,
   ModalState,
-  ActionHandlers,
-  pendingUsers,
-  pendingMeetings,
-  generateStats,
+  AdvertisementsManagement,
   formatLKR
 } from './AdminDashboardComponents';
 
 const AdminDashboard: React.FC = () => {
-  const { user, logout, loading } = useAuth();
-  const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('overview');
+  const { user } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  
-  // Modal states
+  const [activeTab, setActiveTab] = useState('overview');
   const [modalState, setModalState] = useState<ModalState>({
     isUserModalVisible: false,
-    isListingModalVisible: false,
     isMeetingModalVisible: false,
     isAdvertisementModalVisible: false,
+    isListingModalVisible: false,
     selectedUser: null,
-    selectedListing: null,
     selectedMeeting: null,
     selectedAdvertisement: null,
+    selectedListing: null,
   });
 
-  const stats = generateStats();
-
-  // Handle logout
-  const handleLogout = () => {
-    logout();
-  };
-
-  // Show loading state
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
-  // Sidebar navigation items
-  const sidebarItems: SidebarItem[] = [
-    { id: 'overview', label: 'Dashboard Overview', icon: <Home size={20} />, count: stats.pendingApprovals },
-    { id: 'users', label: 'User Management', icon: <Users size={20} />, count: pendingUsers.length },
-    { id: 'listings', label: 'Listings Management', icon: <FileText size={20} /> },
-    { id: 'advertisements', label: 'Manage Advertisements', icon: <Megaphone size={20} />, count: stats.pendingAdvertisements },
-    { id: 'transactions', label: 'Transactions', icon: <DollarSign size={20} /> },
-    { id: 'meetings', label: 'Meeting Requests', icon: <Calendar size={20} />, count: pendingMeetings.length },
-    { id: 'analytics', label: 'Analytics & Reports', icon: <BarChart3 size={20} /> },
-    { id: 'system', label: 'System Settings', icon: <Settings size={20} /> },
-    { id: 'security', label: 'Security & Audit', icon: <Shield size={20} /> }
+  // Sidebar items for admin
+  const sidebarItems = [
+    { id: 'overview', label: 'Dashboard Overview', icon: <BarChart3 size={24} /> },
+    { id: 'users', label: 'User Management', icon: <Users size={24} /> },
+    { id: 'listings', label: 'Listing Management', icon: <Package size={24} /> },
+    { id: 'advertisements', label: 'Manage Advertisement', icon: <Package size={24} /> },
+    { id: 'meetings', label: 'Meeting Requests', icon: <Clock size={24} /> },
+    { id: 'settings', label: 'System Settings', icon: <Settings size={24} /> }
   ];
 
-  // Action handlers
-  const actionHandlers: ActionHandlers = {
-    handleViewUser: (user: User) => {
-      setModalState(prev => ({ ...prev, selectedUser: user, isUserModalVisible: true }));
-    },
-    handleViewListing: (listing: any) => {
-      setModalState(prev => ({ ...prev, selectedListing: listing, isListingModalVisible: true }));
-    },
-    handleViewMeeting: (meeting: Meeting) => {
-      setModalState(prev => ({ ...prev, selectedMeeting: meeting, isMeetingModalVisible: true }));
-    },
-    handleViewAdvertisement: (advertisement: Advertisement) => {
-      setModalState(prev => ({ ...prev, selectedAdvertisement: advertisement, isAdvertisementModalVisible: true }));
-    },
-    handleToggleUserStatus: (user: User, active: boolean) => {
-      const action = active ? 'unblock' : 'block';
-      Modal.confirm({
-        title: `Confirm ${action} user`,
-        icon: active ? <UnlockOutlined className="text-green-500" /> : <LockOutlined className="text-red-500" />,
-        content: `Are you sure you want to ${action} ${user.name}?`,
-        okText: 'Yes',
-        okType: active ? 'primary' : 'danger',
-        cancelText: 'No',
-        onOk() {
-          message.success(`User has been ${action}ed successfully`);
-        },
-      });
-    },
-    handleApproveUser: (user: User) => {
-      Modal.confirm({
-        title: 'Approve User',
-        icon: <CheckCircleOutlined style={{ color: 'green' }} />,
-        content: `Are you sure you want to approve ${user.name} as a ${user.role}?`,
-        onOk() {
-          message.success('User approved successfully');
-        }
-      });
-    },
-    handleRejectUser: (user: User) => {
-      Modal.confirm({
-        title: 'Reject User',
-        icon: <ExclamationCircleOutlined style={{ color: 'red' }} />,
-        content: `Are you sure you want to reject ${user.name}'s ${user.role} application?`,
-        onOk() {
-          message.success('User rejected successfully');
-        }
-      });
-    },
-    handleApproveListing: (listing: any) => {
-      Modal.confirm({
-        title: 'Approve Listing',
-        icon: <CheckCircleOutlined style={{ color: 'green' }} />,
-        content: `Are you sure you want to approve this listing?`,
-        onOk() {
-          message.success('Listing approved successfully');
-        }
-      });
-    },
-    handleApproveMeeting: (meeting: Meeting) => {
-      Modal.confirm({
-        title: 'Approve Meeting',
-        icon: <CheckCircleOutlined style={{ color: 'green' }} />,
-        content: `Are you sure you want to approve the meeting between ${meeting.buyer} and ${meeting.seller}?`,
-        onOk() {
-          message.success('Meeting approved successfully');
-        }
-      });
-    },
-    handleToggleAdvertisementStatus: (advertisement: Advertisement, status: string) => {
-      Modal.confirm({
-        title: `${status === 'active' ? 'Activate' : 'Deactivate'} Advertisement`,
-        icon: status === 'active' ? <CheckCircleOutlined style={{ color: 'green' }} /> : <ExclamationCircleOutlined style={{ color: 'red' }} />,
-        content: `Are you sure you want to ${status === 'active' ? 'activate' : 'deactivate'} "${advertisement.title}"?`,
-        onOk() {
-          message.success(`Advertisement ${status === 'active' ? 'activated' : 'deactivated'} successfully`);
-        }
-      });
-    }
+  // Define all required action handlers
+  const actionHandlers = {
+    handleViewUser: () => {},
+    handleViewListing: () => {},
+    handleViewMeeting: () => {},
+    handleViewAdvertisement: () => {},
+    handleApproveUser: () => {},
+    handleRejectUser: () => {},
+    handleApproveListing: () => {},
+    handleRejectListing: () => {},
+    handleApproveMeeting: () => {},
+    handleRejectMeeting: () => {},
+    handleApproveAdvertisement: () => {},
+    handleRejectAdvertisement: () => {},
   };
 
-  // Render content based on active tab
+  // Render main content based on active tab
   const renderContent = () => {
-    const commonProps = {
-      user,
-      onTabChange: setActiveTab,
-      actionHandlers
-    };
-
     switch (activeTab) {
       case 'overview':
-        return <Overview {...commonProps} />;
+        return <Overview user={user} onTabChange={setActiveTab} />;
       case 'users':
-        return <UserManagement {...commonProps} />;
+        return <UserManagement actionHandlers={actionHandlers} />;
       case 'listings':
-        return <ListingsManagement {...commonProps} />;
+        return <ListingsManagement />;
       case 'advertisements':
-        return <AdvertisementsManagement {...commonProps} />;
-      case 'transactions':
-        return <Transactions {...commonProps} />;
+        return <AdvertisementsManagement actionHandlers={actionHandlers} />;
       case 'meetings':
-        return <Meetings {...commonProps} />;
-      case 'analytics':
-        return <Analytics {...commonProps} />;
-      case 'system':
-        return <SystemSettings {...commonProps} />;
-      case 'security':
-        return <SecurityAudit {...commonProps} />;
+        return <Meetings actionHandlers={actionHandlers} />;
+      case 'settings':
+        return <SystemSettings />;
       default:
-        return <Overview {...commonProps} />;
+        return <Overview user={user} onTabChange={setActiveTab} />;
     }
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
-      <div className={`bg-white shadow-lg border-r border-gray-200 transition-all duration-300 ${
-        sidebarCollapsed ? 'w-16' : 'w-72'
-      }`}>
-        {/* Logo */}
-        <div className="p-4 border-b border-gray-200">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">G</span>
-            </div>
-            {!sidebarCollapsed && (
-              <span className="text-xl font-bold text-gray-900">GemNet Admin</span>
-            )}
-          </div>
-        </div>
-
-        {/* Admin Profile */}
-        <div className="p-4 border-b border-gray-200">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-              <Shield className="w-6 h-6 text-blue-600" />
-            </div>
-            {!sidebarCollapsed && (
-              <div>
-                <p className="text-sm font-medium text-gray-900">
-                  {user?.firstName} {user?.lastName}
-                </p>
-                <p className="text-xs text-blue-600">System Administrator</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Navigation */}
-        <nav className="p-4 space-y-2 flex-1 overflow-y-auto">
-          {sidebarItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-left transition-colors ${
-                activeTab === item.id
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
+    <RoleAwareDashboardLayout>
+      <div className="flex bg-gray-50 h-screen overflow-hidden">
+        {/* Sidebar */}
+        <div className={`bg-white shadow-lg border-r border-gray-200 transition-all duration-300 flex flex-col ${sidebarCollapsed ? 'w-16' : 'w-64'} h-full`}>
+          {/* User Profile */}
+          <div className={`border-b border-gray-200 ${sidebarCollapsed ? 'p-3' : 'p-6'} flex-shrink-0`}>
+            <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                {item.icon}
-                {!sidebarCollapsed && <span className="text-sm font-medium">{item.label}</span>}
+                <div className={`bg-blue-100 rounded-full flex items-center justify-center ${sidebarCollapsed ? 'w-8 h-8' : 'w-12 h-12'}`}> 
+                  <span className="flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={`text-blue-600 ${sidebarCollapsed ? 'w-5 h-5' : 'w-8 h-8'}`}> <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.25a7.5 7.5 0 1115 0v.75a.75.75 0 01-.75.75H5.25a.75.75 0 01-.75-.75v-.75z" /></svg>
+                  </span>
+                </div>
+                {!sidebarCollapsed && (
+                  <div className="min-w-0 flex-1">
+                    <p className="text-base font-medium text-gray-900 truncate">
+                      {user?.firstName || 'Admin User'}
+                    </p>
+                    <p className="text-sm text-blue-600 font-medium">Administrator</p>
+                  </div>
+                )}
               </div>
-              {!sidebarCollapsed && item.count && item.count > 0 && (
-                <Badge count={item.count} size="small" />
-              )}
-            </button>
-          ))}
-        </nav>
-
-        {/* Logout */}
-        <div className="p-4 border-t border-gray-200">
-          <button 
-            onClick={handleLogout}
-            className="w-full flex items-center space-x-3 px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
-          >
-            <LogOut size={20} />
-            {!sidebarCollapsed && <span className="text-sm font-medium">Logout</span>}
-          </button>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="bg-white border-b border-gray-200 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+              {/* Collapse/Expand button */}
               <button
                 onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className="p-2 rounded-lg hover:bg-gray-100"
+                className="p-2 rounded-lg hover:bg-gray-100 text-gray-600"
+                title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
               >
-                <MenuIcon size={20} />
-              </button>
-              <h1 className="text-2xl font-semibold text-gray-900">
-                {sidebarItems.find(item => item.id === activeTab)?.label || 'Admin Dashboard'}
-              </h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <button className="p-2 rounded-lg hover:bg-gray-100">
-                <Bell size={20} />
-              </button>
-              <button className="p-2 rounded-lg hover:bg-gray-100">
-                <Settings size={20} />
+                <MenuIcon size={18} />
               </button>
             </div>
           </div>
+          {/* Navigation */}
+          <nav className={`space-y-2 ${sidebarCollapsed ? 'p-2' : 'p-6'} flex-1 overflow-y-auto`}>
+            {sidebarItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`w-full flex items-center px-3 py-2 rounded-lg text-left transition-colors ${
+                  activeTab === item.id
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                <span className="mr-3">{item.icon}</span>
+                {!sidebarCollapsed && <span className="text-sm font-medium">{item.label}</span>}
+              </button>
+            ))}
+          </nav>
         </div>
-
-        {/* Content */}
-        <div className="flex-1 overflow-auto p-6">
-          {renderContent()}
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Header */}
+          <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4 flex-shrink-0">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-semibold text-gray-900">Admin Dashboard</h1>
+                <p className="text-sm text-gray-600 mt-1">
+                  Welcome back, {user?.firstName || 'Admin'}
+                </p>
+              </div>
+              <div className="flex items-center space-x-4">
+                {/* Notification Bell */}
+                <button className="p-2 rounded-lg hover:bg-gray-100 text-gray-600">
+                  <Bell size={20} />
+                </button>
+                {/* Search */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                  <input
+                    type="text"
+                    placeholder="Search..."
+                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-64"
+                  />
+                </div>
+                {/* User Menu */}
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                    <span className="text-blue-600 font-medium text-sm">
+                      {user?.firstName?.[0] || 'A'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </header>
+          
+          {/* Main Content Area */}
+          <div className="flex-1 overflow-auto bg-gray-50 p-6">
+            {renderContent()}
+          </div>
         </div>
       </div>
-
-      {/* User Details Modal */}
+      {/* Modals below main layout */}
       <Modal
         open={modalState.isUserModalVisible}
         title="User Details"
@@ -322,9 +194,7 @@ const AdminDashboard: React.FC = () => {
                   {modalState.selectedUser.status.toUpperCase()}
                 </span>
               </div>
-              
               <Divider />
-              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-gray-500">Role</p>
@@ -344,7 +214,6 @@ const AdminDashboard: React.FC = () => {
                 </div>
               </div>
             </div>
-            
             {modalState.selectedUser.status === 'blocked' && (
               <Alert
                 message="User Account Blocked"
@@ -356,8 +225,6 @@ const AdminDashboard: React.FC = () => {
           </div>
         )}
       </Modal>
-
-      {/* Meeting Details Modal */}
       <Modal
         open={modalState.isMeetingModalVisible}
         title="Meeting Request Details"
@@ -379,7 +246,6 @@ const AdminDashboard: React.FC = () => {
                   <p className="text-gray-600">Meeting ID: #M{modalState.selectedMeeting.id}</p>
                 </div>
               </div>
-              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-gray-500">Buyer</p>
@@ -412,8 +278,6 @@ const AdminDashboard: React.FC = () => {
           </div>
         )}
       </Modal>
-
-      {/* Advertisement Details Modal */}
       <Modal
         open={modalState.isAdvertisementModalVisible}
         title="Advertisement Details"
@@ -430,16 +294,14 @@ const AdminDashboard: React.FC = () => {
                   <p className="text-gray-500">{modalState.selectedAdvertisement.advertiser}</p>
                 </div>
                 <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                  modalState.selectedAdvertisement.status === 'active' ? 'bg-green-100 text-green-800' : 
+                  modalState.selectedAdvertisement.status === 'approved' ? 'bg-green-100 text-green-800' : 
                   modalState.selectedAdvertisement.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
-                  'bg-red-100 text-red-800'
+                  modalState.selectedAdvertisement.status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
                 }`}>
-                  {modalState.selectedAdvertisement.status.toUpperCase()}
+                  {modalState.selectedAdvertisement.status ? modalState.selectedAdvertisement.status.toUpperCase() : ''}
                 </span>
               </div>
-              
               <Divider />
-              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-gray-500">Category</p>
@@ -447,7 +309,7 @@ const AdminDashboard: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Price</p>
-                  <p className="font-medium">{formatLKR(parseFloat(modalState.selectedAdvertisement.price) || 0)}</p>
+                  <p className="font-medium">{formatLKR(parseFloat(modalState.selectedAdvertisement.price || '0'))}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Contact</p>
@@ -459,21 +321,18 @@ const AdminDashboard: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Created</p>
-                  <p className="font-medium">{dayjs(modalState.selectedAdvertisement.createdOn).format('MMMM D, YYYY')}</p>
+                  <p className="font-medium">{modalState.selectedAdvertisement.createdOn ? dayjs(modalState.selectedAdvertisement.createdOn).format('MMMM D, YYYY') : ''}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Modified</p>
-                  <p className="font-medium">{dayjs(modalState.selectedAdvertisement.modifiedOn).format('MMMM D, YYYY')}</p>
+                  <p className="font-medium">{modalState.selectedAdvertisement.modifiedOn ? dayjs(modalState.selectedAdvertisement.modifiedOn).format('MMMM D, YYYY') : ''}</p>
                 </div>
               </div>
-
               <Divider />
-
               <div>
                 <p className="text-sm text-gray-500 mb-2">Description</p>
                 <p className="text-gray-700">{modalState.selectedAdvertisement.description}</p>
               </div>
-
               {modalState.selectedAdvertisement.images && modalState.selectedAdvertisement.images.length > 0 && (
                 <>
                   <Divider />
@@ -484,7 +343,7 @@ const AdminDashboard: React.FC = () => {
                         <img 
                           key={index}
                           src={image} 
-                          alt={`${modalState.selectedAdvertisement.title} - ${index + 1}`}
+                          alt={`${modalState.selectedAdvertisement?.title || 'Advertisement'} - ${index + 1}`}
                           className="w-full h-24 object-cover rounded-lg"
                           onError={(e) => {
                             (e.target as HTMLImageElement).src = 'https://via.placeholder.com/100';
@@ -499,7 +358,7 @@ const AdminDashboard: React.FC = () => {
           </div>
         )}
       </Modal>
-    </div>
+    </RoleAwareDashboardLayout>
   );
 };
 

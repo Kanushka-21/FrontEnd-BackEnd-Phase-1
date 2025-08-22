@@ -146,9 +146,9 @@ public class AdvertisementService {
             advertisement.setApproved(requestDto.getApproved());
         }
         
-        // Handle image updates
+        // Handle image updates - only if new images are provided
         if (requestDto.getImages() != null && !requestDto.getImages().isEmpty()) {
-            // Delete old images
+            // Delete old images only if we're replacing them with new ones
             if (advertisement.getImages() != null && !advertisement.getImages().isEmpty()) {
                 for (String imagePath : advertisement.getImages()) {
                     fileStorageService.deleteFile(imagePath);
@@ -159,6 +159,7 @@ public class AdvertisementService {
             List<String> imagePaths = fileStorageService.storeAdvertisementImages(requestDto.getImages(), advertisement.getUserId());
             advertisement.setImages(imagePaths);
         }
+        // If no new images provided, keep existing images unchanged
         
         // Update timestamp
         advertisement.updateTimestamp();

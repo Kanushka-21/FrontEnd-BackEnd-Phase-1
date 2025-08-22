@@ -14,7 +14,11 @@ import { useNavigate } from 'react-router-dom';
 import { DetailedGemstone } from '@/types';
 import RoleAwareHeader from '@/components/layout/RoleAwareHeader';
 import GemstoneCard from '@/components/ui/GemstoneCard';
+import HomepageAdPopup from '@/components/ui/HomepageAdPopup';
+import ViewAdsButton from '@/components/ui/ViewAdsButton';
 import { api } from '@/services/api';
+import { advertisementService, Advertisement } from '@/services/advertisementService';
+import '@/styles/advertisement-popup.css';
 
 const { Content } = AntLayout;
 const { Title, Text, Paragraph } = Typography;
@@ -26,6 +30,10 @@ const HomePage: React.FC = () => {
   const [featuredGemstones, setFeaturedGemstones] = useState<DetailedGemstone[]>([]);
   const [featuredLoading, setFeaturedLoading] = useState<boolean>(true);
   const [featuredError, setFeaturedError] = useState<string | null>(null);
+
+  // Advertisement popup state
+  const [approvedAdvertisements, setApprovedAdvertisements] = useState<Advertisement[]>([]);
+  const [shouldReopenPopup, setShouldReopenPopup] = useState<boolean>(false);
 
   // Helper to fetch countdown data for a gemstone
   const fetchGemstoneCountdown = async (listingId: string) => {
@@ -337,6 +345,43 @@ const HomePage: React.FC = () => {
       console.log(`📋 Gemstone ${index + 1}: ${gemstone.name} - remainingTimeSeconds: ${gemstone.remainingTimeSeconds}, biddingActive: ${gemstone.biddingActive}`);
     });
   }, [featuredGemstones]);
+
+  // Load approved advertisements for homepage popup
+  useEffect(() => {
+    const loadApprovedAdvertisements = async () => {
+      try {
+        console.log('🚀 Loading approved advertisements...');
+        const advertisements = await advertisementService.getApprovedAdvertisements();
+        console.log('📢 Loaded advertisements:', advertisements);
+        
+        if (advertisements && advertisements.length > 0) {
+          console.log(`✅ Found ${advertisements.length} approved advertisements`);
+          setApprovedAdvertisements(advertisements);
+        } else {
+          console.log('❌ No approved advertisements found');
+        }
+      } catch (error) {
+        console.error('Error loading approved advertisements:', error);
+      }
+    };
+
+    loadApprovedAdvertisements();
+  }, []);
+
+  // Advertisement popup handlers
+  const handleCloseAdPopup = () => {
+    // This is called when popup is completely closed
+    setShouldReopenPopup(false);
+  };
+
+  const handleFirstCloseAdPopup = () => {
+    // Button is always visible, no need to change state
+  };
+
+  const handleViewAdsClick = () => {
+    // Re-open the advertisement popup when button is clicked
+    setShouldReopenPopup(true);
+  };
   const statistics = [
     { title: 'Verified Gems', value: 2847, icon: <CheckCircleOutlined className="text-blue-500" /> },
     { title: 'Active Traders', value: 1230, icon: <UserOutlined className="text-green-500" /> },
@@ -1045,7 +1090,21 @@ const HomePage: React.FC = () => {
               </Space>
             </motion.div>
           </div>
-        </section>      </Content>      
+        </section>      </Content>
+      
+      {/* Advertisement Popup */}
+      <HomepageAdPopup
+        advertisements={approvedAdvertisements}
+        onClose={handleCloseAdPopup}
+        onFirstClose={handleFirstCloseAdPopup}
+        shouldShow={shouldReopenPopup}
+      />
+
+      {/* View Advertisements Button */}
+      <ViewAdsButton 
+        visible={approvedAdvertisements.length > 0}
+        onClick={handleViewAdsClick} 
+      />      
     </AntLayout>
   );
 };

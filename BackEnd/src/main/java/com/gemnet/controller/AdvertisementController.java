@@ -190,7 +190,7 @@ public class AdvertisementController {
             @RequestParam("email") String email,
             @RequestParam("mobileNo") String mobileNo,
             @RequestParam("userId") String userId,
-            @RequestParam("images") List<MultipartFile> image) {
+            @RequestParam(value = "images", required = false) List<MultipartFile> image) {
 
         try {
 
@@ -207,10 +207,6 @@ public class AdvertisementController {
                 return ResponseEntity.badRequest()
                         .body(ApiResponse.error("User ID is required"));
             }
-            if (image == null || image.isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body(ApiResponse.error("At least one image is required"));
-            }
 
             AdvertisementRequestDto advertisementRequestDto = new AdvertisementRequestDto();
             advertisementRequestDto.setTitle(title);
@@ -220,7 +216,11 @@ public class AdvertisementController {
             advertisementRequestDto.setEmail(email);
             advertisementRequestDto.setMobileNo(mobileNo);
             advertisementRequestDto.setUserId(userId);
-            advertisementRequestDto.setImages(image);
+            // Only set images if they are provided
+            if (image != null && !image.isEmpty()) {
+                advertisementRequestDto.setImages(image);
+            }
+            
             // Update advertisement using service
             Optional<Advertisement> updatedAdvertisement = advertisementService.updateAdvertisement(id, advertisementRequestDto);
 

@@ -14,15 +14,15 @@ public interface AdvertisementRepository extends MongoRepository<Advertisement, 
     
     List<Advertisement> findByUserId(String userId);
     
-    List<Advertisement> findByApprovedAndUserId(Boolean approved, String userId);
+    List<Advertisement> findByApprovedAndUserId(String approved, String userId);
     
     List<Advertisement> findByCategory(String category);
     
-    List<Advertisement> findByApprovedAndCategory(Boolean approved, String category);
+    List<Advertisement> findByApprovedAndCategory(String approved, String category);
     
     @Query("{'title': {$regex: ?0, $options: 'i'}}")
     List<Advertisement> findByTitleContainingIgnoreCase(String title);
     
     @Query("{'approved': ?0, 'title': {$regex: ?1, $options: 'i'}}")
-    List<Advertisement> findByApprovedAndTitleContainingIgnoreCase(Boolean approved, String title);
+    List<Advertisement> findByApprovedAndTitleContainingIgnoreCase(String approved, String title);
 }
