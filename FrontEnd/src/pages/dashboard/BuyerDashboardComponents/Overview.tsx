@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-  CheckCircle, TrendingUp, ShoppingBag, Package
+  CheckCircle, TrendingUp, ShoppingBag, Package, Calendar
 } from 'lucide-react';
 import { StatsCard, MOCK_STATS, formatLKR } from './shared';
 
@@ -9,6 +9,40 @@ interface OverviewProps {
 }
 
 const Overview: React.FC<OverviewProps> = ({ user }) => {
+  const [meetingStats, setMeetingStats] = useState({
+    total: 0,
+    pending: 0,
+    confirmed: 0,
+    completed: 0
+  });
+
+  // Fetch meeting statistics
+  useEffect(() => {
+    const fetchMeetingStats = async () => {
+      try {
+        const userId = user?.userId || user?.id;
+        if (!userId) return;
+
+        const response = await fetch(`http://localhost:9092/api/meetings/user/${userId}`);
+        const data = await response.json();
+        
+        if (data.success && data.meetings) {
+          const meetings = data.meetings;
+          const stats = {
+            total: meetings.length,
+            pending: meetings.filter((m: any) => m.status === 'PENDING').length,
+            confirmed: meetings.filter((m: any) => m.status === 'CONFIRMED').length,
+            completed: meetings.filter((m: any) => m.status === 'COMPLETED').length
+          };
+          setMeetingStats(stats);
+        }
+      } catch (error) {
+        console.error('Error fetching meeting stats:', error);
+      }
+    };
+
+    fetchMeetingStats();
+  }, [user]);
   return (
     <div className="space-y-6">
       {/* Welcome Header */}
@@ -30,7 +64,7 @@ const Overview: React.FC<OverviewProps> = ({ user }) => {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         <StatsCard
           title="Total Purchases"
           value={MOCK_STATS.totalPurchases}
@@ -50,21 +84,30 @@ const Overview: React.FC<OverviewProps> = ({ user }) => {
         />
 
         <StatsCard
+          title="Meetings"
+          value={meetingStats.total}
+          change={meetingStats.pending > 0 ? `${meetingStats.pending} pending` : 'All up to date'}
+          icon={<Calendar className="w-6 h-6 text-purple-600" />}
+          iconBgColor="bg-purple-100"
+          textColor="text-purple-600"
+        />
+
+        <StatsCard
           title="Completed Orders"
           value={8}
           change="+2 from last month"
-          icon={<Package className="w-6 h-6 text-purple-600" />}
-          iconBgColor="bg-purple-100"
-          textColor="text-purple-600"
+          icon={<Package className="w-6 h-6 text-orange-600" />}
+          iconBgColor="bg-orange-100"
+          textColor="text-orange-600"
         />
 
         <StatsCard
           title="Total Spent"
           value={formatLKR(MOCK_STATS.totalSpent)}
           change="+12% from last month"
-          icon={<Package className="w-6 h-6 text-orange-600" />}
-          iconBgColor="bg-orange-100"
-          textColor="text-orange-600"
+          icon={<Package className="w-6 h-6 text-indigo-600" />}
+          iconBgColor="bg-indigo-100"
+          textColor="text-indigo-600"
         />
       </div>
     </div>

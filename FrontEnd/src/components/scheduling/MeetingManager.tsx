@@ -1,0 +1,515 @@
+import React, { useState, useEffect } from 'react';
+import { Calendar, Clock, MapPin, User, Phone, Mail, MessageSquare, CheckCircle, XCircle, AlertCircle, Edit, Archive } from 'lucide-react';
+
+interface Meeting {
+  id: string;
+  purchaseId: string;
+  buyerId: string;
+  sellerId: string;
+  buyerName: string;
+  sellerName: string;
+  gemName: string;
+  gemType: string;
+  finalPrice: number;
+  primaryImageUrl: string;
+  proposedDateTime: string;
+  confirmedDateTime?: string;
+  location: string;
+  meetingType: string;
+  status: string;
+  buyerNotes?: string;
+  sellerNotes?: string;
+  buyerContact?: {
+    fullName: string;
+    email: string;
+    phoneNumber: string;
+  };
+  sellerContact?: {
+    fullName: string;
+    email: string;
+    phoneNumber: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface MeetingManagerProps {
+  user: any;
+}
+
+const MeetingManager: React.FC<MeetingManagerProps> = ({ user }) => {
+  const [meetings, setMeetings] = useState<Meeting[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('ALL');
+  const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [rescheduleData, setRescheduleData] = useState({
+    newDateTime: '',
+    notes: ''
+  });
+  const [confirmData, setConfirmData] = useState({
+    sellerNotes: ''
+  });
+
+  // Fetch meetings
+  useEffect(() => {
+    fetchMeetings();
+  }, [user]);
+
+  const fetchMeetings = async () => {
+    setLoading(true);
+    try {
+      const userId = user.userId || user.id;
+      const response = await fetch(`http://localhost:9092/api/meetings/user/${userId}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setMeetings(data.meetings || []);
+      }
+    } catch (error) {
+      console.error('Error fetching meetings:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Filter meetings
+  const filteredMeetings = meetings.filter(meeting => {
+    if (filter === 'ALL') return true;
+    return meeting.status === filter;
+  });
+
+  // Get status color
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'PENDING': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'CONFIRMED': return 'bg-green-100 text-green-800 border-green-200';
+      case 'COMPLETED': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'CANCELLED': return 'bg-red-100 text-red-800 border-red-200';
+      case 'RESCHEDULED': return 'bg-purple-100 text-purple-800 border-purple-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  // Format date and time
+  const formatDateTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return {
+      date: date.toLocaleDateString(),
+      time: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+  };
+
+  // Format currency
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-LK', {
+      style: 'currency',
+      currency: 'LKR',
+    }).format(amount);
+  };
+
+  // Check if user is seller for this meeting
+  const isUserSeller = (meeting: Meeting) => {
+    return meeting.sellerId === (user.userId || user.id);
+  };
+
+  // Handle confirm meeting
+  const handleConfirmMeeting = async () => {
+    if (!selectedMeeting) return;
+
+    try {
+      const response = await fetch(`http://localhost:9092/api/meetings/${selectedMeeting.id}/confirm`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sellerNotes: confirmData.sellerNotes
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        await fetchMeetings();
+        setShowConfirmModal(false);
+        setSelectedMeeting(null);
+        setConfirmData({ sellerNotes: '' });
+      }
+    } catch (error) {
+      console.error('Error confirming meeting:', error);
+    }
+  };
+
+  // Handle reschedule meeting
+  const handleRescheduleMeeting = async () => {
+    if (!selectedMeeting || !rescheduleData.newDateTime) return;
+
+    try {
+      const response = await fetch(`http://localhost:9092/api/meetings/${selectedMeeting.id}/reschedule`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          newDateTime: rescheduleData.newDateTime,
+          notes: rescheduleData.notes
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        await fetchMeetings();
+        setShowRescheduleModal(false);
+        setSelectedMeeting(null);
+        setRescheduleData({ newDateTime: '', notes: '' });
+      }
+    } catch (error) {
+      console.error('Error rescheduling meeting:', error);
+    }
+  };
+
+  // Handle cancel meeting
+  const handleCancelMeeting = async (meetingId: string) => {
+    if (!confirm('Are you sure you want to cancel this meeting?')) return;
+
+    try {
+      const response = await fetch(`http://localhost:9092/api/meetings/${meetingId}/cancel`, {
+        method: 'PUT'
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        await fetchMeetings();
+      }
+    } catch (error) {
+      console.error('Error cancelling meeting:', error);
+    }
+  };
+
+  // Handle complete meeting
+  const handleCompleteMeeting = async (meetingId: string) => {
+    if (!confirm('Mark this meeting as completed?')) return;
+
+    try {
+      const response = await fetch(`http://localhost:9092/api/meetings/${meetingId}/complete`, {
+        method: 'PUT'
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        await fetchMeetings();
+      }
+    } catch (error) {
+      console.error('Error completing meeting:', error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-6xl mx-auto">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-500">Loading meetings...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-2xl font-bold text-gray-900">Meeting Management</h1>
+            <div className="text-sm text-gray-500">
+              {filteredMeetings.length} meeting{filteredMeetings.length !== 1 ? 's' : ''}
+            </div>
+          </div>
+
+          {/* Filter Tabs */}
+          <div className="flex space-x-2 overflow-x-auto">
+            {['ALL', 'PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED'].map((status) => (
+              <button
+                key={status}
+                onClick={() => setFilter(status)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                  filter === status
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {status}
+                <span className="ml-2 text-xs">
+                  ({meetings.filter(m => status === 'ALL' || m.status === status).length})
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Meetings List */}
+        {filteredMeetings.length === 0 ? (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+            <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No meetings found</h3>
+            <p className="text-gray-500">
+              {filter === 'ALL' 
+                ? "You don't have any meetings yet."
+                : `No meetings with status "${filter}".`}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {filteredMeetings.map((meeting) => {
+              const isSeller = isUserSeller(meeting);
+              const datetime = formatDateTime(meeting.confirmedDateTime || meeting.proposedDateTime);
+              const contact = isSeller ? meeting.buyerContact : meeting.sellerContact;
+              
+              return (
+                <div key={meeting.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-start space-x-4">
+                      <img
+                        src={meeting.primaryImageUrl || 'https://images.unsplash.com/photo-1506792006437-256b665541e2?w=300&h=200&fit=crop'}
+                        alt={meeting.gemName}
+                        className="w-20 h-20 object-cover rounded-lg"
+                      />
+                      <div>
+                        <h3 className="font-semibold text-gray-900">{meeting.gemName}</h3>
+                        <p className="text-sm text-gray-600">{meeting.gemType}</p>
+                        <p className="text-lg font-bold text-green-600 mt-1">
+                          {formatCurrency(meeting.finalPrice)}
+                        </p>
+                        <div className="flex items-center space-x-2 mt-2">
+                          <span className="text-sm text-gray-500">
+                            {isSeller ? 'Buyer:' : 'Seller:'}
+                          </span>
+                          <span className="text-sm font-medium">
+                            {isSeller ? meeting.buyerName : meeting.sellerName}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(meeting.status)}`}>
+                      {meeting.status}
+                    </div>
+                  </div>
+
+                  {/* Meeting Details */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                    <div className="flex items-center space-x-2">
+                      <Calendar className="w-4 h-4 text-gray-400" />
+                      <span className="text-sm text-gray-600">{datetime.date}</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Clock className="w-4 h-4 text-gray-400" />
+                      <span className="text-sm text-gray-600">{datetime.time}</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <MapPin className="w-4 h-4 text-gray-400" />
+                      <span className="text-sm text-gray-600">{meeting.location}</span>
+                    </div>
+                  </div>
+
+                  {/* Contact Information (only shown for confirmed meetings) */}
+                  {meeting.status === 'CONFIRMED' && contact && (
+                    <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                      <h4 className="font-medium text-gray-900 mb-2">Contact Information</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                        <div className="flex items-center space-x-2">
+                          <User className="w-4 h-4 text-gray-400" />
+                          <span>{contact.fullName}</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Mail className="w-4 h-4 text-gray-400" />
+                          <span>{contact.email}</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Phone className="w-4 h-4 text-gray-400" />
+                          <span>{contact.phoneNumber}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Notes */}
+                  {(meeting.buyerNotes || meeting.sellerNotes) && (
+                    <div className="bg-blue-50 rounded-lg p-4 mb-4">
+                      <h4 className="font-medium text-gray-900 mb-2">Notes</h4>
+                      {meeting.buyerNotes && (
+                        <div className="mb-2">
+                          <span className="text-sm font-medium text-gray-700">Buyer: </span>
+                          <span className="text-sm text-gray-600">{meeting.buyerNotes}</span>
+                        </div>
+                      )}
+                      {meeting.sellerNotes && (
+                        <div>
+                          <span className="text-sm font-medium text-gray-700">Seller: </span>
+                          <span className="text-sm text-gray-600">{meeting.sellerNotes}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="flex items-center justify-end space-x-2">
+                    {meeting.status === 'PENDING' && isSeller && (
+                      <>
+                        <button
+                          onClick={() => {
+                            setSelectedMeeting(meeting);
+                            setShowConfirmModal(true);
+                          }}
+                          className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm flex items-center space-x-1"
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          <span>Confirm</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedMeeting(meeting);
+                            setShowRescheduleModal(true);
+                          }}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm flex items-center space-x-1"
+                        >
+                          <Edit className="w-4 h-4" />
+                          <span>Reschedule</span>
+                        </button>
+                      </>
+                    )}
+
+                    {meeting.status === 'CONFIRMED' && (
+                      <button
+                        onClick={() => handleCompleteMeeting(meeting.id)}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm flex items-center space-x-1"
+                      >
+                        <Archive className="w-4 h-4" />
+                        <span>Mark Complete</span>
+                      </button>
+                    )}
+
+                    {['PENDING', 'CONFIRMED'].includes(meeting.status) && (
+                      <button
+                        onClick={() => handleCancelMeeting(meeting.id)}
+                        className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm flex items-center space-x-1"
+                      >
+                        <XCircle className="w-4 h-4" />
+                        <span>Cancel</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Confirm Meeting Modal */}
+        {showConfirmModal && selectedMeeting && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Confirm Meeting</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Confirm the meeting with {selectedMeeting.buyerName} for {selectedMeeting.gemName}?
+              </p>
+              
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Additional Notes (Optional)
+                </label>
+                <textarea
+                  value={confirmData.sellerNotes}
+                  onChange={(e) => setConfirmData({ sellerNotes: e.target.value })}
+                  placeholder="Any additional information for the buyer..."
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => {
+                    setShowConfirmModal(false);
+                    setSelectedMeeting(null);
+                    setConfirmData({ sellerNotes: '' });
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmMeeting}
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                >
+                  Confirm Meeting
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Reschedule Meeting Modal */}
+        {showRescheduleModal && selectedMeeting && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Reschedule Meeting</h3>
+              
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  New Date & Time
+                </label>
+                <input
+                  type="datetime-local"
+                  value={rescheduleData.newDateTime}
+                  onChange={(e) => setRescheduleData({ ...rescheduleData, newDateTime: e.target.value })}
+                  min={new Date().toISOString().slice(0, 16)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Reason for Rescheduling
+                </label>
+                <textarea
+                  value={rescheduleData.notes}
+                  onChange={(e) => setRescheduleData({ ...rescheduleData, notes: e.target.value })}
+                  placeholder="Please explain why you need to reschedule..."
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => {
+                    setShowRescheduleModal(false);
+                    setSelectedMeeting(null);
+                    setRescheduleData({ newDateTime: '', notes: '' });
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleRescheduleMeeting}
+                  disabled={!rescheduleData.newDateTime}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                >
+                  Reschedule
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default MeetingManager;
