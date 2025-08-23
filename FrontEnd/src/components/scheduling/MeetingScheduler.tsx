@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, MapPin, Clock, User, MessageSquare, Phone, Mail, ArrowLeft, CheckCircle, XCircle } from 'lucide-react';
+import MeetingService from '../../services/MeetingService';
 
 interface MeetingSchedulerProps {
   purchase: any;
@@ -35,12 +36,24 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
       
       setLoading(true);
       try {
-        const response = await fetch(`http://localhost:9092/api/users/${purchase.sellerId}`);
+        // Try to get seller info from the purchase or use MeetingService
+        const response = await fetch(`http://localhost:9092/api/users/${purchase.sellerId}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(localStorage.getItem('token') && { 'Authorization': `Bearer ${localStorage.getItem('token')}` })
+          }
+        });
+        
         if (response.ok) {
           const data = await response.json();
           if (data.success) {
             setSellerInfo(data.user);
+          } else {
+            console.error('Failed to fetch seller info:', data.message);
           }
+        } else {
+          console.error('Failed to fetch seller info: HTTP', response.status);
         }
       } catch (error) {
         console.error('Error fetching seller info:', error);
@@ -128,28 +141,19 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
       
       const requestData = {
         purchaseId: purchase.id,
-        buyerId: user.userId || user.id,
+        buyerId: user.id,
         proposedDateTime,
         location: formData.location,
         meetingType: formData.meetingType,
         buyerNotes: formData.buyerNotes
       };
 
-      const response = await fetch('http://localhost:9092/api/meetings/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestData)
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        onScheduled();
-      } else {
-        setErrors({ submit: data.message || 'Failed to create meeting request' });
-      }
+      console.log('Creating meeting with data:', requestData);
+      
+      const meeting = await MeetingService.createMeeting(requestData);
+      
+      console.log('Meeting created successfully:', meeting);
+      onScheduled();
 
     } catch (error) {
       console.error('Error creating meeting:', error);

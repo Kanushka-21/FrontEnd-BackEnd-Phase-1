@@ -1,6 +1,7 @@
 package com.gemnet.controller;
 
 import com.gemnet.dto.ApiResponse;
+import com.gemnet.model.Meeting;
 import com.gemnet.service.FaceRecognitionService;
 import com.gemnet.service.NicVerificationService;
 import com.gemnet.service.FileStorageService;
@@ -214,6 +215,51 @@ public class TestController {
             errorStatus.put("overallStatus", "Error checking service status");
             
             return ResponseEntity.ok(ApiResponse.error("Failed to get service status", errorStatus));
+        }
+    }
+    
+    @PostMapping("/meetings")
+    @Operation(summary = "Test meeting creation", description = "Test meeting model creation")
+    public ResponseEntity<ApiResponse<Meeting>> testMeetingCreation(@RequestBody Meeting meeting) {
+        try {
+            System.out.println("📅 Testing meeting creation: " + meeting.getBuyerId() + " -> " + meeting.getSellerId());
+            
+            // Just echo back the meeting data for testing
+            meeting.setId("test-meeting-" + System.currentTimeMillis());
+            meeting.setStatus("PENDING");
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("meeting", meeting);
+            response.put("message", "Meeting test endpoint working");
+            
+            return ResponseEntity.ok(ApiResponse.success("Meeting test successful", meeting));
+        } catch (Exception e) {
+            System.err.println("❌ Error in meeting test: " + e.getMessage());
+            return ResponseEntity.ok(ApiResponse.error("Meeting test failed: " + e.getMessage()));
+        }
+    }
+    
+    @GetMapping("/meetings/user/{userId}")
+    @Operation(summary = "Test get user meetings", description = "Test meetings retrieval for user")
+    public ResponseEntity<ApiResponse<java.util.List<Meeting>>> testGetUserMeetings(@PathVariable String userId) {
+        try {
+            System.out.println("📅 Testing get meetings for user: " + userId);
+            
+            java.util.List<Meeting> meetings = new java.util.ArrayList<>();
+            Meeting testMeeting = new Meeting();
+            testMeeting.setId("test-meeting-1");
+            testMeeting.setBuyerId(userId);
+            testMeeting.setSellerId("test-seller");
+            testMeeting.setStatus("PENDING");
+            testMeeting.setProposedDateTime(java.time.LocalDateTime.parse("2025-08-23T14:00:00"));
+            testMeeting.setLocation("Test Location");
+            testMeeting.setMeetingType("IN_PERSON");
+            meetings.add(testMeeting);
+            
+            return ResponseEntity.ok(ApiResponse.success("User meetings test successful", meetings));
+        } catch (Exception e) {
+            System.err.println("❌ Error in user meetings test: " + e.getMessage());
+            return ResponseEntity.ok(ApiResponse.error("User meetings test failed: " + e.getMessage()));
         }
     }
 }

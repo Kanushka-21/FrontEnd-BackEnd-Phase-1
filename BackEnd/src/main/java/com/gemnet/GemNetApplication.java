@@ -358,6 +358,32 @@ public class GemNetApplication {
                 mongoTemplate.insert(gemListing3, "gem_listings");
             }
             
+            // Check for meetings collection
+            boolean hasMeetings = mongoTemplate.collectionExists("meetings");
+            if (!hasMeetings) {
+                System.out.println("🤝 Creating meetings collection...");
+                mongoTemplate.createCollection("meetings");
+                
+                // Create indexes for the meetings collection
+                mongoTemplate.indexOps("meetings").ensureIndex(
+                    new org.springframework.data.mongodb.core.index.Index("buyerId", org.springframework.data.domain.Sort.Direction.ASC)
+                );
+                mongoTemplate.indexOps("meetings").ensureIndex(
+                    new org.springframework.data.mongodb.core.index.Index("sellerId", org.springframework.data.domain.Sort.Direction.ASC)
+                );
+                mongoTemplate.indexOps("meetings").ensureIndex(
+                    new org.springframework.data.mongodb.core.index.Index("status", org.springframework.data.domain.Sort.Direction.ASC)
+                );
+                mongoTemplate.indexOps("meetings").ensureIndex(
+                    new org.springframework.data.mongodb.core.index.Index("proposedDateTime", org.springframework.data.domain.Sort.Direction.ASC)
+                );
+                mongoTemplate.indexOps("meetings").ensureIndex(
+                    new org.springframework.data.mongodb.core.index.Index("purchaseId", org.springframework.data.domain.Sort.Direction.ASC).unique()
+                );
+                
+                System.out.println("🤝 Meetings collection created with indexes!");
+            }
+            
             System.out.println("✅ Database initialization completed successfully!");
         } catch (Exception e) {
             System.out.println("❌ Error during database initialization: " + e.getMessage());

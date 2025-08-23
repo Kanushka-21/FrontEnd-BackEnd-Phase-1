@@ -65,6 +65,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/bidding/**").permitAll() // Allow access to bidding endpoints
                 .requestMatchers("/api/notifications/**").permitAll() // Allow access to notification endpoints
                 .requestMatchers("/api/system/**").permitAll() // Allow access to system status endpoints
+                .requestMatchers("/api/meetings/**").permitAll() // Allow access to meeting endpoints
                 .requestMatchers("/uploads/**").permitAll() // Allow access to uploaded files
                 .requestMatchers("/swagger-ui/**").permitAll()
                 .requestMatchers("/v3/api-docs/**").permitAll()
