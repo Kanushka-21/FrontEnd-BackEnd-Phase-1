@@ -274,10 +274,12 @@ public class GemCertificateController {
     @CrossOrigin(origins = "*", allowedHeaders = "*", methods = {RequestMethod.POST})
     public ResponseEntity<ApiResponse<Map<String, Object>>> saveGemListingData(
             @RequestParam("gemListingData") String gemListingDataJson,
-            @RequestParam(value = "gemImages", required = false) MultipartFile[] gemImages) {
+            @RequestParam(value = "gemImages", required = false) MultipartFile[] gemImages,
+            @RequestParam(value = "certificateImages", required = false) MultipartFile[] certificateImages) {
         
         System.out.println("💎 Gem listing data with images save request received");
-        System.out.println("📁 Number of images: " + (gemImages != null ? gemImages.length : 0));
+        System.out.println("📁 Number of gem images: " + (gemImages != null ? gemImages.length : 0));
+        System.out.println("📋 Number of certificate images: " + (certificateImages != null ? certificateImages.length : 0));
         
         try {
             // Parse JSON data
@@ -313,11 +315,32 @@ public class GemCertificateController {
                     return ResponseEntity.badRequest()
                         .body(ApiResponse.error("Certificate number is required for certified stones"));
                 }
+                
+                // Validate that certificate images are provided for certified stones
+                if (certificateImages == null || certificateImages.length == 0) {
+                    System.err.println("❌ Certificate images required for certified stones");
+                    return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Certificate images are required for certified stones"));
+                }
+            } else {
+                // For non-certified stones, certificate images should not be provided
+                if (certificateImages != null && certificateImages.length > 0) {
+                    System.err.println("❌ Certificate images not allowed for non-certified stones");
+                    return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Certificate images are not allowed for non-certified stones"));
+                }
+            }
+            
+            // Validate that at least some gemstone images are provided
+            if (gemImages == null || gemImages.length == 0) {
+                System.err.println("❌ Gemstone images are required");
+                return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("At least one gemstone image is required"));
             }
             
             // Call service to save to database with images
             ApiResponse<Map<String, Object>> serviceResponse = 
-                gemCertificateService.saveGemListingData(gemListingData, gemImages);
+                gemCertificateService.saveGemListingData(gemListingData, gemImages, certificateImages);
             
             if (serviceResponse.isSuccess()) {
                 System.out.println("✅ Gem listing data and images saved successfully via service");

@@ -292,7 +292,7 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
                 {/* Specifications */}
                 <div className="space-y-4">
                   <h3 className="text-xl font-semibold">Specifications</h3>
-                  <div className="grid grid-cols-2 gap-6 bg-gray-50 p-6 rounded-xl">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-6 rounded-xl">
                     <div className="space-y-3">
                       <p className="flex justify-between text-base">
                         <span className="text-secondary-600">Weight:</span>
@@ -310,8 +310,6 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
                         <span className="text-secondary-600">Variety:</span>
                         <span className="font-medium">{gemstone.variety}</span>
                       </p>
-                    </div>
-                    <div className="space-y-3">
                       <p className="flex justify-between text-base">
                         <span className="text-secondary-600">Shape:</span>
                         <span className="font-medium">{gemstone.shape}</span>
@@ -320,10 +318,41 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
                         <span className="text-secondary-600">Cut:</span>
                         <span className="font-medium">{gemstone.cut}</span>
                       </p>
+                    </div>
+                    <div className="space-y-3">
+                      <p className="flex justify-between text-base">
+                        <span className="text-secondary-600">Clarity:</span>
+                        <span className="font-medium">{gemstone.clarity}</span>
+                      </p>
                       <p className="flex justify-between text-base">
                         <span className="text-secondary-600">Transparency:</span>
                         <span className="font-medium">{gemstone.transparency}</span>
                       </p>
+                      {gemstone.specifications?.treatment && (
+                        <p className="flex justify-between text-base">
+                          <span className="text-secondary-600">Treatment:</span>
+                          <span className="font-medium">{gemstone.specifications.treatment}</span>
+                        </p>
+                      )}
+                      {gemstone.specifications?.refractiveIndex && (
+                        <p className="flex justify-between text-base">
+                          <span className="text-secondary-600">Refractive Index:</span>
+                          <span className="font-medium">{gemstone.specifications.refractiveIndex}</span>
+                        </p>
+                      )}
+                      {gemstone.specifications?.specificGravity && (
+                        <p className="flex justify-between text-base">
+                          <span className="text-secondary-600">Specific Gravity:</span>
+                          <span className="font-medium">{gemstone.specifications.specificGravity}</span>
+                        </p>
+                      )}
+                      {/* Show origin if available */}
+                      {gemstone.origin && gemstone.origin !== 'Unknown' && (
+                        <p className="flex justify-between text-base">
+                          <span className="text-secondary-600">Origin:</span>
+                          <span className="font-medium">{gemstone.origin}</span>
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>

@@ -368,72 +368,25 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
     setCurrentStep(2); // Go to basic info step for certified gems
   };
 
-  // Handle certificate upload and backend API call
+  // Handle certificate upload (just store the file, no extraction)
   const handleCertificateUpload = async (file: File) => {
     setLoading(true);
     try {
-      // Create FormData to send file to backend
-      const formData = new FormData();
-      formData.append('certificate', file);
-
-      // Call backend API for certificate extraction (proxied through Vite to port 9092)
-      const response = await fetch('/api/gemsData/extract-certificate-data', {
-        method: 'POST',
-        body: formData,
-      });
-
-      console.log('📡 Certificate extraction response status:', response.status);
-
-      if (!response.ok) {
-        throw new Error('Failed to extract certificate data');
-      }
-
-      const extractedData = await response.json();
-      
-      // Update wizard data with extracted information
+      // Just store the certificate file for later upload
       setWizardData(prev => ({
         ...prev,
         certificationDetails: {
-          authority: extractedData.authority,
-          certificateNumber: extractedData.certificateNumber,
           certificateFile: file
-        },
-        basicInfo: {
-          name: extractedData.gemstoneName,
-          category: extractedData.category,
-          weight: extractedData.weight,
-          price: extractedData.estimatedValue || '',
-          description: extractedData.description || '',
-          color: extractedData.color,
-          clarity: extractedData.clarity,
-          cut: extractedData.cut,
-          origin: extractedData.origin
         }
       }));
 
-      // Update the basic info form with extracted data
-      basicInfoForm.setFieldsValue({
-        name: extractedData.gemstoneName,
-        category: extractedData.category,
-        weight: extractedData.weight,
-        price: extractedData.estimatedValue || '',
-        description: extractedData.description || '',
-        color: extractedData.color,
-        clarity: extractedData.clarity,
-        cut: extractedData.cut,
-        origin: extractedData.origin,
-        // Add certificate fields for the manual form
-        certificateNumber: extractedData.certificateNumber,
-        authority: extractedData.authority
-      });
-
-      message.success('Certificate data extracted successfully!');
+      message.success('Certificate image uploaded successfully!');
       // Auto-proceed to basic information step
       setCurrentStep(2);
       
     } catch (error) {
       console.error('Certificate upload error:', error);
-      message.error('Failed to extract certificate data. Please try again.');
+      message.error('Failed to upload certificate. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -502,11 +455,18 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
         isCertified: wizardData.certificationType === 'certified',
         
         // Basic gem information (common for both certified and non-certified)
-        color: wizardData.basicInfo.color || '',
+        // Convert arrays to strings for fields that might be arrays due to tags mode
+        color: Array.isArray(wizardData.basicInfo.color) 
+          ? wizardData.basicInfo.color[0] || '' 
+          : wizardData.basicInfo.color || '',
         shape: wizardData.basicInfo.shape || '',
         weight: wizardData.basicInfo.weight || '',
-        measurements: wizardData.basicInfo.measurements || '',
-        variety: wizardData.basicInfo.variety || '',
+        measurements: Array.isArray(wizardData.basicInfo.measurements) 
+          ? wizardData.basicInfo.measurements[0] || '' 
+          : wizardData.basicInfo.measurements || '',
+        variety: Array.isArray(wizardData.basicInfo.variety) 
+          ? wizardData.basicInfo.variety[0] || '' 
+          : wizardData.basicInfo.variety || '',
         species: wizardData.basicInfo.species || '',
         treatment: wizardData.basicInfo.treatment || '',
         price: parseFloat(wizardData.basicInfo.price) || 0,
@@ -528,15 +488,21 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
           certifyingAuthority: null,
         }),
         
-        // For certified stones
+        // For certified stones - include all enhanced fields
         ...(wizardData.certificationType === 'certified' && {
-          // Use manually entered certificate number first, fall back to extracted data
-          certificateNumber: wizardData.basicInfo.certificateNumber || wizardData.certificationDetails?.certificateNumber,
-          // Use manually entered authority first, fall back to extracted data
-          certifyingAuthority: wizardData.basicInfo.authority || wizardData.certificationDetails?.authority,
+          // Certificate information
+          certificateNumber: wizardData.basicInfo.certificateNumber,
+          certifyingAuthority: wizardData.basicInfo.authority,
+          issueDate: Array.isArray(wizardData.basicInfo.issueDate) 
+            ? wizardData.basicInfo.issueDate[0] || '' 
+            : wizardData.basicInfo.issueDate || '',
+          
+          // Enhanced gemstone properties
           clarity: wizardData.basicInfo.clarity,
           cut: wizardData.basicInfo.cut,
-          origin: wizardData.basicInfo.origin,
+          origin: Array.isArray(wizardData.basicInfo.origin) 
+            ? wizardData.basicInfo.origin[0] || '' 
+            : wizardData.basicInfo.origin || '',
         }),
       };
 
@@ -546,7 +512,7 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
       // Add gem listing data as JSON string
       formData.append('gemListingData', JSON.stringify(gemListingData));
       
-      // Add images if any
+      // Add gemstone images
       if (wizardData.images && wizardData.images.length > 0) {
         wizardData.images.forEach((image) => {
           if (image.originFileObj) {
@@ -554,9 +520,15 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
           }
         });
       }
+      
+      // Add certificate image for certified gemstones
+      if (wizardData.certificationType === 'certified' && wizardData.certificationDetails?.certificateFile) {
+        formData.append('certificateImages', wizardData.certificationDetails.certificateFile);
+      }
 
       console.log('📤 Sending data to backend:', gemListingData);
-      console.log('🖼️ Number of images:', wizardData.images?.length || 0);
+      console.log('🖼️ Number of gemstone images:', wizardData.images?.length || 0);
+      console.log('📄 Certificate image:', wizardData.certificationType === 'certified' && wizardData.certificationDetails?.certificateFile ? 'Yes' : 'No');
       console.log('🔗 API Endpoint: /api/gemsData/list-gem-data');
       console.log('🌐 Backend should be running on port 9092');
 
@@ -634,7 +606,7 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
         },
         {
           title: 'Basic Information',
-          description: 'Gemstone details (auto-populated)'
+          description: 'Enter gemstone details manually'
         },
         {
           title: 'Images & Review',
@@ -733,7 +705,7 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
           </Title>
           <Text type="secondary">
             {isFromCertificate 
-              ? 'Review and edit the auto-populated information from your certificate'
+              ? 'Enter detailed information about your certified gemstone'
               : isNonCertified
               ? 'Provide detailed CSL (Colored Stone Laboratory) format information'
               : 'Provide essential details about your gemstone'
@@ -745,16 +717,11 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
           <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
             <div className="flex items-center space-x-2 mb-2">
               <CheckCircleOutlined className="text-green-600" />
-              <Text strong className="text-green-800">Information extracted from certificate</Text>
+              <Text strong className="text-green-800">Certificate Uploaded</Text>
             </div>
             <Text type="secondary">
-              The following details have been automatically filled from your certificate. Please review and edit if needed.
+              Please enter all gemstone details manually. Make sure the information matches your uploaded certificate.
             </Text>
-            {(!wizardData.certificationDetails?.certificateNumber) && (
-              <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-red-600 font-medium">
-                ⚠️ Certificate number could not be extracted. Please manually enter it in the Certificate Information section below.
-              </div>
-            )}
           </div>
         )}
 
@@ -950,8 +917,9 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
             </div>
           </div>
         ) : (
-          /* Certified Gemstone Form (Original) */
+          /* Certified Gemstone Form (Enhanced) */
           <div className="space-y-6">
+            {/* Basic Gemstone Information */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
               <Title level={4} className="text-blue-600 mb-6 mt-0">
                 <SafetyCertificateOutlined className="mr-2" />
@@ -964,7 +932,7 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
                     name="name"
                     rules={[{ required: true, message: 'Please enter gemstone name' }]}
                   >
-                    <Input placeholder="e.g. Blue Sapphire" size="large" />
+                    <Input placeholder="e.g. Ceylon Blue Sapphire" size="large" />
                   </Form.Item>
                 </Col>
                 
@@ -980,6 +948,7 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
                       <Select.Option value="emerald">Emerald</Select.Option>
                       <Select.Option value="diamond">Diamond</Select.Option>
                       <Select.Option value="other">Other</Select.Option>
+                      <Select.Option value="unknown">Unknown</Select.Option>
                     </Select>
                   </Form.Item>
                 </Col>
@@ -988,16 +957,17 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
               <Row gutter={[24, 16]}>
                 <Col xs={24} md={12}>
                   <Form.Item
-                    label="Weight (Carats)"
+                    label="Carat Weight"
                     name="weight"
-                    rules={[{ required: true, message: 'Please enter weight' }]}
+                    rules={[{ required: true, message: 'Please enter carat weight' }]}
                   >
                     <InputNumber
-                      placeholder="Enter weight"
+                      placeholder="e.g. 3.09"
                       style={{ width: '100%' }}
                       size="large"
                       min={0}
                       step={0.01}
+                      precision={2}
                     />
                   </Form.Item>
                 </Col>
@@ -1018,14 +988,232 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
                   </Form.Item>
                 </Col>
               </Row>
+            </div>
 
-              {/* Certificate Number and Authority Fields */}
-              {wizardData.certificationType === 'certified' && (
-                <Row id="certificate-fields" gutter={[24, 16]} className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6 transition-all duration-300">
-                  <Col span={24}>
-                    <div className="text-green-700 font-medium mb-2">Certificate Information</div>
-                    <div className="text-green-600 text-sm mb-4">Please ensure this information matches your certificate exactly</div>
-                  </Col>
+            {/* Gemstone Properties */}
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
+              <Title level={4} className="text-purple-600 mb-6 mt-0">
+                <FileImageOutlined className="mr-2" />
+                Gemstone Properties
+              </Title>
+              
+              <Row gutter={[24, 16]}>
+                <Col xs={24} md={12}>
+                  <Form.Item
+                    label="Color Grade"
+                    name="color"
+                    rules={[{ required: true, message: 'Please select or enter color grade' }]}
+                  >
+                    <Select 
+                      placeholder="Select or enter color grade" 
+                      size="large"
+                      mode="tags"
+                      allowClear
+                      showSearch
+                    >
+                      <Select.Option value="Vivid Red">Vivid Red</Select.Option>
+                      <Select.Option value="Deep Blue">Deep Blue</Select.Option>
+                      <Select.Option value="Medium Blue">Medium Blue</Select.Option>
+                      <Select.Option value="Light Blue">Light Blue</Select.Option>
+                      <Select.Option value="Pink">Pink</Select.Option>
+                      <Select.Option value="Yellow">Yellow</Select.Option>
+                      <Select.Option value="Green">Green</Select.Option>
+                      <Select.Option value="Purple">Purple</Select.Option>
+                      <Select.Option value="Orange">Orange</Select.Option>
+                      <Select.Option value="Colorless">Colorless</Select.Option>
+                      <Select.Option value="Unknown">Unknown</Select.Option>
+                      <Select.Option value="Not specified">Not specified</Select.Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+                
+                <Col xs={24} md={12}>
+                  <Form.Item
+                    label="Cut / Shape"
+                    name="shape"
+                    rules={[{ required: true, message: 'Please select cut/shape' }]}
+                  >
+                    <Select placeholder="Select cut/shape" size="large">
+                      <Select.Option value="Round">Round</Select.Option>
+                      <Select.Option value="Oval">Oval</Select.Option>
+                      <Select.Option value="Pear">Pear</Select.Option>
+                      <Select.Option value="Cushion">Cushion</Select.Option>
+                      <Select.Option value="Emerald">Emerald Cut</Select.Option>
+                      <Select.Option value="Princess">Princess</Select.Option>
+                      <Select.Option value="Marquise">Marquise</Select.Option>
+                      <Select.Option value="Heart">Heart</Select.Option>
+                      <Select.Option value="Radiant">Radiant</Select.Option>
+                      <Select.Option value="Asscher">Asscher</Select.Option>
+                      <Select.Option value="Other">Other</Select.Option>
+                      <Select.Option value="Unknown">Unknown</Select.Option>
+                      <Select.Option value="Not specified">Not specified</Select.Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Row gutter={[24, 16]}>
+                <Col xs={24} md={12}>
+                  <Form.Item
+                    label="Clarity / Transparency"
+                    name="clarity"
+                    rules={[{ required: true, message: 'Please select clarity' }]}
+                  >
+                    <Select placeholder="Select clarity" size="large">
+                      <Select.Option value="Transparent">Transparent</Select.Option>
+                      <Select.Option value="Semi-transparent">Semi-transparent</Select.Option>
+                      <Select.Option value="Translucent">Translucent</Select.Option>
+                      <Select.Option value="Semi-translucent">Semi-translucent</Select.Option>
+                      <Select.Option value="Opaque">Opaque</Select.Option>
+                      <Select.Option value="FL">FL (Flawless)</Select.Option>
+                      <Select.Option value="IF">IF (Internally Flawless)</Select.Option>
+                      <Select.Option value="VVS1">VVS1</Select.Option>
+                      <Select.Option value="VVS2">VVS2</Select.Option>
+                      <Select.Option value="VS1">VS1</Select.Option>
+                      <Select.Option value="VS2">VS2</Select.Option>
+                      <Select.Option value="SI1">SI1</Select.Option>
+                      <Select.Option value="SI2">SI2</Select.Option>
+                      <Select.Option value="Unknown">Unknown</Select.Option>
+                      <Select.Option value="Not specified">Not specified</Select.Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+                
+                <Col xs={24} md={12}>
+                  <Form.Item
+                    label="Dimensions (L x W x H mm)"
+                    name="measurements"
+                    rules={[{ required: true, message: 'Please enter dimensions or select option' }]}
+                  >
+                    <Select 
+                      placeholder="Select or enter dimensions" 
+                      size="large"
+                      mode="tags"
+                      allowClear
+                      showSearch
+                    >
+                      <Select.Option value="Unknown">Unknown</Select.Option>
+                      <Select.Option value="Not measured">Not measured</Select.Option>
+                      <Select.Option value="Not specified">Not specified</Select.Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Row gutter={[24, 16]}>
+                <Col xs={24} md={12}>
+                  <Form.Item
+                    label="Species / Variety"
+                    name="variety"
+                    rules={[{ required: true, message: 'Please select or enter variety' }]}
+                  >
+                    <Select 
+                      placeholder="Select or enter variety" 
+                      size="large"
+                      mode="tags"
+                      allowClear
+                      showSearch
+                    >
+                      <Select.Option value="Sapphire">Sapphire</Select.Option>
+                      <Select.Option value="Ruby">Ruby</Select.Option>
+                      <Select.Option value="Emerald">Emerald</Select.Option>
+                      <Select.Option value="Aquamarine">Aquamarine</Select.Option>
+                      <Select.Option value="Tourmaline">Tourmaline</Select.Option>
+                      <Select.Option value="Garnet">Garnet</Select.Option>
+                      <Select.Option value="Spinel">Spinel</Select.Option>
+                      <Select.Option value="Zircon">Zircon</Select.Option>
+                      <Select.Option value="Unknown">Unknown</Select.Option>
+                      <Select.Option value="Not specified">Not specified</Select.Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+                
+                <Col xs={24} md={12}>
+                  <Form.Item
+                    label="Species"
+                    name="species"
+                    rules={[{ required: true, message: 'Please select species' }]}
+                  >
+                    <Select placeholder="Select species" size="large">
+                      <Select.Option value="Corundum">Corundum</Select.Option>
+                      <Select.Option value="Beryl">Beryl</Select.Option>
+                      <Select.Option value="Quartz">Quartz</Select.Option>
+                      <Select.Option value="Feldspar">Feldspar</Select.Option>
+                      <Select.Option value="Tourmaline">Tourmaline</Select.Option>
+                      <Select.Option value="Garnet">Garnet</Select.Option>
+                      <Select.Option value="Spinel">Spinel</Select.Option>
+                      <Select.Option value="Zircon">Zircon</Select.Option>
+                      <Select.Option value="Other">Other</Select.Option>
+                      <Select.Option value="Unknown">Unknown</Select.Option>
+                      <Select.Option value="Not specified">Not specified</Select.Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Row gutter={[24, 16]}>
+                <Col xs={24} md={12}>
+                  <Form.Item
+                    label="Treatment"
+                    name="treatment"
+                    rules={[{ required: true, message: 'Please select treatment' }]}
+                  >
+                    <Select placeholder="Select treatment" size="large">
+                      <Select.Option value="No Treatment">No Treatment</Select.Option>
+                      <Select.Option value="Heat treated">Heat Treated</Select.Option>
+                      <Select.Option value="Heated & Flux Healed">Heated & Flux Healed</Select.Option>
+                      <Select.Option value="Heated & Lead Glass Filled">Heated & Lead Glass Filled</Select.Option>
+                      <Select.Option value="Irradiated">Irradiated</Select.Option>
+                      <Select.Option value="Oiled">Oiled</Select.Option>
+                      <Select.Option value="Fracture Filled">Fracture Filled</Select.Option>
+                      <Select.Option value="Diffusion">Diffusion</Select.Option>
+                      <Select.Option value="Other">Other</Select.Option>
+                      <Select.Option value="Unknown">Unknown</Select.Option>
+                      <Select.Option value="Not specified">Not specified</Select.Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+                
+                <Col xs={24} md={12}>
+                  <Form.Item
+                    label="Origin (Optional)"
+                    name="origin"
+                  >
+                    <Select 
+                      placeholder="Select or enter origin" 
+                      size="large"
+                      mode="tags"
+                      allowClear
+                      showSearch
+                    >
+                      <Select.Option value="Sri Lanka">Sri Lanka</Select.Option>
+                      <Select.Option value="Myanmar (Burma)">Myanmar (Burma)</Select.Option>
+                      <Select.Option value="Kashmir">Kashmir</Select.Option>
+                      <Select.Option value="Madagascar">Madagascar</Select.Option>
+                      <Select.Option value="Tanzania">Tanzania</Select.Option>
+                      <Select.Option value="Thailand">Thailand</Select.Option>
+                      <Select.Option value="Australia">Australia</Select.Option>
+                      <Select.Option value="Brazil">Brazil</Select.Option>
+                      <Select.Option value="Colombia">Colombia</Select.Option>
+                      <Select.Option value="Afghanistan">Afghanistan</Select.Option>
+                      <Select.Option value="Unknown">Unknown</Select.Option>
+                      <Select.Option value="Not specified">Not specified</Select.Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+              </Row>
+            </div>
+
+            {/* Certificate Information */}
+            {wizardData.certificationType === 'certified' && (
+              <div id="certificate-fields" className="bg-green-50 border border-green-200 rounded-lg p-6">
+                <Title level={4} className="text-green-600 mb-6 mt-0">
+                  <SafetyCertificateOutlined className="mr-2" />
+                  Certificate Information
+                </Title>
+                <div className="text-green-600 text-sm mb-4">Please ensure this information matches your certificate exactly</div>
+                
+                <Row gutter={[24, 16]}>
                   <Col xs={24} md={12}>
                     <Form.Item 
                       label="Certificate Number" 
@@ -1039,13 +1227,67 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
                     <Form.Item 
                       label="Certifying Authority" 
                       name="authority"
+                      rules={[{ required: true, message: 'Please enter certifying authority' }]}
                     >
-                      <Input placeholder="e.g. GIA, IGI" size="large" />
+                      <Select placeholder="Select authority" size="large">
+                        <Select.Option value="GIA">GIA (Gemological Institute of America)</Select.Option>
+                        <Select.Option value="IGI">IGI (International Gemological Institute)</Select.Option>
+                        <Select.Option value="SSEF">SSEF (Swiss Gemmological Institute)</Select.Option>
+                        <Select.Option value="Gübelin">Gübelin Gem Lab</Select.Option>
+                        <Select.Option value="AIGS">AIGS (Asian Institute of Gemological Sciences)</Select.Option>
+                        <Select.Option value="CSL">CSL (Colored Stone Laboratory)</Select.Option>
+                        <Select.Option value="Other">Other</Select.Option>
+                        <Select.Option value="Unknown">Unknown</Select.Option>
+                        <Select.Option value="Not specified">Not specified</Select.Option>
+                      </Select>
                     </Form.Item>
                   </Col>
                 </Row>
-              )}
 
+                <Row gutter={[24, 16]}>
+                  <Col xs={24} md={12}>
+                    <Form.Item 
+                      label="Cut Grade (Optional)" 
+                      name="cut"
+                    >
+                      <Select placeholder="Select cut grade" size="large">
+                        <Select.Option value="Excellent">Excellent</Select.Option>
+                        <Select.Option value="Very Good">Very Good</Select.Option>
+                        <Select.Option value="Good">Good</Select.Option>
+                        <Select.Option value="Fair">Fair</Select.Option>
+                        <Select.Option value="Poor">Poor</Select.Option>
+                        <Select.Option value="Unknown">Unknown</Select.Option>
+                        <Select.Option value="Not specified">Not specified</Select.Option>
+                      </Select>
+                    </Form.Item>
+                  </Col>
+                  <Col xs={24} md={12}>
+                    <Form.Item 
+                      label="Issue Date (Optional)" 
+                      name="issueDate"
+                    >
+                      <Select 
+                        placeholder="Select or enter issue date" 
+                        size="large"
+                        mode="tags"
+                        allowClear
+                        showSearch
+                      >
+                        <Select.Option value="Unknown">Unknown</Select.Option>
+                        <Select.Option value="Not specified">Not specified</Select.Option>
+                      </Select>
+                    </Form.Item>
+                  </Col>
+                </Row>
+              </div>
+            )}
+
+            {/* Additional Information */}
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+              <Title level={4} className="text-gray-600 mb-6 mt-0">
+                Additional Information
+              </Title>
+              
               <Form.Item
                 label="Description"
                 name="description"
@@ -1053,7 +1295,18 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
               >
                 <Input.TextArea 
                   rows={4} 
-                  placeholder="Provide detailed description of your gemstone..." 
+                  placeholder="Provide detailed description of your certified gemstone..." 
+                  size="large"
+                />
+              </Form.Item>
+              
+              <Form.Item
+                label="Comments (Optional)"
+                name="comments"
+              >
+                <Input.TextArea 
+                  rows={2} 
+                  placeholder="Any additional comments or observations about the gemstone..." 
                   size="large"
                 />
               </Form.Item>
@@ -1105,9 +1358,9 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
         <Card>
           <div className="text-center mb-4">
             <SafetyCertificateOutlined className="text-3xl text-blue-600 mb-3" />
-            <Title level={4}>Upload Certification Documents</Title>
+            <Title level={4}>Upload Certificate Image</Title>
             <Text type="secondary">
-              Upload your gemstone certification documents to auto-extract information
+              Upload an image of your gemstone certificate for verification
             </Text>
           </div>
 
@@ -1129,7 +1382,7 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
               <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                 <div className="flex items-center space-x-2">
                   <CheckCircleOutlined className="text-green-600" />
-                  <Text strong>Ready to extract data from: {uploadedFile.name}</Text>
+                  <Text strong>Certificate uploaded: {uploadedFile.name}</Text>
                 </div>
               </div>
             )}
@@ -1143,7 +1396,7 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
                 onClick={() => uploadedFile && handleCertificateUpload(uploadedFile)}
                 className="px-6"
               >
-                {loading ? 'Extracting Data...' : 'Upload Certificate & Extract Data'}
+                {loading ? 'Uploading...' : 'Continue with Certificate'}
               </Button>
             </div>
 
@@ -1153,10 +1406,10 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
                 What happens next?
               </Title>
               <ul className="text-blue-700 space-y-1 text-sm">
-                <li>• Certificate will be analyzed using AI technology</li>
-                <li>• Gemstone details will be automatically extracted</li>
-                <li>• Basic information form will be pre-filled</li>
-                <li>• You can review and edit the extracted data</li>
+                <li>• Certificate image will be stored for verification</li>
+                <li>• You will manually enter all gemstone details</li>
+                <li>• Basic information form will need to be filled completely</li>
+                <li>• Certificate details must match your uploaded image</li>
               </ul>
             </div>
           </div>

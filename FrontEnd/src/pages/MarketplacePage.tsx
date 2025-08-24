@@ -217,22 +217,24 @@ const MarketplacePage: React.FC = () => {
       shape: listing.shape || 'Unknown',
       cut: listing.cut || 'Unknown',
       clarity: listing.clarity || 'Unknown',
+      origin: listing.origin || undefined, // Add origin field
+      treatment: listing.treatment || listing.treatments || 'Unknown', // Add treatment field
       dimensions: {
-        length: parseFloat(listing.measurements?.split('x')[0] || '0') || 0,
-        width: parseFloat(listing.measurements?.split('x')[1] || '0') || 0,
-        height: parseFloat(listing.measurements?.split('x')[2] || '0') || 0
+        length: parseFloat(listing.measurements?.split('x')[0]?.trim() || '0') || 0,
+        width: parseFloat(listing.measurements?.split('x')[1]?.trim() || '0') || 0,
+        height: parseFloat(listing.measurements?.split('x')[2]?.trim() || '0') || 0
       },
-      transparency: 'transparent' as const,
+      transparency: listing.clarity || 'transparent' as const,
       specifications: {
         species: listing.species || 'Unknown',
         variety: listing.variety || 'Unknown',
-        transparency: listing.transparency || 'transparent',
+        transparency: listing.clarity || 'transparent',
         treatment: listing.treatment || listing.treatments || 'Unknown',
         refractiveIndex: listing.refractiveIndex || undefined,
         specificGravity: listing.specificGravity || undefined
       },
       certificate: listing.isCertified ? {
-        issuingAuthority: listing.certifyingAuthority || 'Unknown',
+        issuingAuthority: listing.certifyingAuthority || listing.authority || 'Unknown',
         reportNumber: listing.certificateNumber || 'N/A',
         date: listing.issueDate || 'Unknown'
       } : undefined,

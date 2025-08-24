@@ -179,9 +179,39 @@ const GemstoneCard: React.FC<GemstoneCardProps> = ({ gemstone, onViewDetails }) 
             />
           </div>
           
-          <p className="text-sm text-secondary-600 mt-2">
-            {gemstone.weight} carats · {gemstone.color}
+          <p className="text-sm text-secondary-600 mt-2 line-clamp-2">
+            {gemstone.weight} carats · {gemstone.color} · {gemstone.shape}
+            {gemstone.clarity && gemstone.clarity !== 'Unknown' && (
+              <span> · {gemstone.clarity}</span>
+            )}
+            {gemstone.treatment && gemstone.treatment !== 'Unknown' && (
+              <span> · {gemstone.treatment}</span>
+            )}
           </p>
+
+          {/* Enhanced Gemstone Details */}
+          <div className="text-xs text-gray-500 mt-1 space-y-1">
+            {gemstone.variety && gemstone.variety !== 'Unknown' && (
+              <div className="flex items-center justify-between">
+                <span>Variety:</span>
+                <span className="font-medium text-gray-700">{gemstone.variety}</span>
+              </div>
+            )}
+            {gemstone.species && gemstone.species !== 'Unknown' && (
+              <div className="flex items-center justify-between">
+                <span>Species:</span>
+                <span className="font-medium text-gray-700">{gemstone.species}</span>
+              </div>
+            )}
+            {gemstone.dimensions && (gemstone.dimensions.length > 0 || gemstone.dimensions.width > 0) && (
+              <div className="flex items-center justify-between">
+                <span>Dimensions:</span>
+                <span className="font-medium text-gray-700">
+                  {gemstone.dimensions.length}×{gemstone.dimensions.width}×{gemstone.dimensions.height}mm
+                </span>
+              </div>
+            )}
+          </div>
           
           {gemstone.seller && gemstone.seller.name && (
             <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-100">

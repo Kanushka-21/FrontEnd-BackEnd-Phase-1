@@ -594,7 +594,7 @@ public class GemCertificateService {
     /**
      * Save gem listing data and images to database
      */
-    public ApiResponse<Map<String, Object>> saveGemListingData(GemListingDataDto gemListingData, MultipartFile[] gemImages) {
+    public ApiResponse<Map<String, Object>> saveGemListingData(GemListingDataDto gemListingData, MultipartFile[] gemImages, MultipartFile[] certificateImages) {
         System.out.println("💎 Starting gem listing data save to database...");
         System.out.println("👤 User: " + gemListingData.getUserName() + " (ID: " + gemListingData.getUserId() + ")");
         System.out.println("🔖 Certification Status: " + (gemListingData.getIsCertified() ? "Certified" : "Non-Certified"));
@@ -623,6 +623,8 @@ public class GemCertificateService {
             
             // Process and save gem images
             List<GemImage> processedImages = new ArrayList<>();
+            
+            // Process gemstone images
             if (gemImages != null && gemImages.length > 0) {
                 System.out.println("🖼️ Processing " + gemImages.length + " gem images for database storage...");
                 
@@ -631,7 +633,7 @@ public class GemCertificateService {
                     
                     try {
                         // Generate unique image ID
-                        String imageId = "IMG_" + System.currentTimeMillis() + "_" + i;
+                        String imageId = "GEM_" + System.currentTimeMillis() + "_" + i;
                         
                         // Store image using FileStorageService
                         String imageUrl = fileStorageService.storeGemImage(image, imageId);
@@ -646,27 +648,80 @@ public class GemCertificateService {
                         gemImage.setSize(image.getSize());
                         gemImage.setImageUrl(imageUrl);
                         gemImage.setThumbnailUrl(thumbnailUrl);
-                        gemImage.setIsPrimary(i == 0); // First image is primary
+                        gemImage.setIsPrimary(i == 0); // First gemstone image is primary
                         gemImage.setDisplayOrder(i);
+                        gemImage.setImageType("GEMSTONE");
                         
                         processedImages.add(gemImage);
                         
-                        System.out.println("✅ Image " + (i + 1) + " processed and stored: " + image.getOriginalFilename());
+                        System.out.println("✅ Gemstone image " + (i + 1) + " processed and stored: " + image.getOriginalFilename());
                         System.out.println("   📁 Stored at: " + imageUrl);
                         
                     } catch (Exception e) {
-                        System.err.println("❌ Error processing image " + (i + 1) + ": " + e.getMessage());
-                        return ApiResponse.error("Failed to process image " + (i + 1) + ": " + e.getMessage());
+                        System.err.println("❌ Error processing gemstone image " + (i + 1) + ": " + e.getMessage());
+                        return ApiResponse.error("Failed to process gemstone image " + (i + 1) + ": " + e.getMessage());
                     }
                 }
                 
-                // Set images and primary image URL
-                gemListing.setImages(processedImages);
-                if (!processedImages.isEmpty()) {
-                    gemListing.setPrimaryImageUrl(processedImages.get(0).getImageUrl());
+                System.out.println("✅ All " + gemImages.length + " gemstone images processed for database storage");
+            }
+            
+            // Process certificate images (only for certified stones)
+            if (certificateImages != null && certificateImages.length > 0 && gemListingData.isCertifiedStone()) {
+                System.out.println("📋 Processing " + certificateImages.length + " certificate images for database storage...");
+                
+                for (int i = 0; i < certificateImages.length; i++) {
+                    MultipartFile image = certificateImages[i];
+                    
+                    try {
+                        // Generate unique certificate image ID
+                        String imageId = "CERT_" + System.currentTimeMillis() + "_" + i;
+                        
+                        // Store certificate image using FileStorageService
+                        String imageUrl = fileStorageService.storeGemCertificateImage(image, imageId);
+                        // For now, use the same image as thumbnail
+                        String thumbnailUrl = imageUrl;
+                        
+                        // Create GemImage entity for certificate
+                        GemImage certImage = new GemImage();
+                        certImage.setImageId(imageId);
+                        certImage.setOriginalName(image.getOriginalFilename());
+                        certImage.setContentType(image.getContentType());
+                        certImage.setSize(image.getSize());
+                        certImage.setImageUrl(imageUrl);
+                        certImage.setThumbnailUrl(thumbnailUrl);
+                        certImage.setIsPrimary(false); // Certificate images are never primary
+                        certImage.setDisplayOrder(processedImages.size() + i); // After gemstone images
+                        certImage.setImageType("CERTIFICATE");
+                        certImage.setDescription("Certificate Image " + (i + 1));
+                        
+                        processedImages.add(certImage);
+                        
+                        System.out.println("✅ Certificate image " + (i + 1) + " processed and stored: " + image.getOriginalFilename());
+                        System.out.println("   📁 Stored at: " + imageUrl);
+                        
+                    } catch (Exception e) {
+                        System.err.println("❌ Error processing certificate image " + (i + 1) + ": " + e.getMessage());
+                        return ApiResponse.error("Failed to process certificate image " + (i + 1) + ": " + e.getMessage());
+                    }
                 }
                 
-                System.out.println("✅ All " + gemImages.length + " images processed for database storage");
+                System.out.println("✅ All " + certificateImages.length + " certificate images processed for database storage");
+            }
+            
+            // Set images and primary image URL
+            gemListing.setImages(processedImages);
+            if (!processedImages.isEmpty()) {
+                // Find the first gemstone image for primary image URL
+                GemImage primaryImage = processedImages.stream()
+                    .filter(img -> "GEMSTONE".equals(img.getImageType()) && img.getIsPrimary())
+                    .findFirst()
+                    .orElse(processedImages.stream()
+                        .filter(img -> "GEMSTONE".equals(img.getImageType()))
+                        .findFirst()
+                        .orElse(processedImages.get(0)));
+                
+                gemListing.setPrimaryImageUrl(primaryImage.getImageUrl());
             }
             
             // Save to database
@@ -744,6 +799,13 @@ public class GemCertificateService {
             
             return ApiResponse.error("Failed to save gem listing data to database: " + e.getMessage(), saveResult);
         }
+    }
+    
+    /**
+     * Backward compatibility method - Save gem listing data with only gem images
+     */
+    public ApiResponse<Map<String, Object>> saveGemListingData(GemListingDataDto gemListingData, MultipartFile[] gemImages) {
+        return saveGemListingData(gemListingData, gemImages, null);
     }
     
     /**

@@ -226,6 +226,8 @@ export interface Gemstone {
   shape?: string;
   cut?: string;
   clarity?: string;
+  origin?: string; // Add origin field
+  treatment?: string; // Add treatment field
   dimensions?: {
     length: number;
     width: number;

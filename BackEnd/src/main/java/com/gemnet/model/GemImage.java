@@ -19,6 +19,9 @@ public class GemImage {
     private Integer displayOrder;
     private String description;
     
+    // New field to distinguish between gem images and certificate images
+    private String imageType; // "GEMSTONE" or "CERTIFICATE"
+    
     @CreatedDate
     private LocalDateTime uploadedAt;
     
@@ -34,6 +37,17 @@ public class GemImage {
         this.contentType = contentType;
         this.size = size;
         this.imageUrl = imageUrl;
+        this.imageType = "GEMSTONE"; // Default to gemstone image
+    }
+    
+    public GemImage(String imageId, String originalName, String contentType, Long size, String imageUrl, String imageType) {
+        this();
+        this.imageId = imageId;
+        this.originalName = originalName;
+        this.contentType = contentType;
+        this.size = size;
+        this.imageUrl = imageUrl;
+        this.imageType = imageType;
     }
     
     // Getters and Setters
@@ -117,6 +131,23 @@ public class GemImage {
         this.uploadedAt = uploadedAt;
     }
     
+    public String getImageType() {
+        return imageType;
+    }
+    
+    public void setImageType(String imageType) {
+        this.imageType = imageType;
+    }
+    
+    // Helper methods
+    public boolean isGemstoneImage() {
+        return "GEMSTONE".equals(imageType);
+    }
+    
+    public boolean isCertificateImage() {
+        return "CERTIFICATE".equals(imageType);
+    }
+    
     @Override
     public String toString() {
         return "GemImage{" +
@@ -125,6 +156,7 @@ public class GemImage {
                 ", contentType='" + contentType + '\'' +
                 ", size=" + size +
                 ", imageUrl='" + imageUrl + '\'' +
+                ", imageType='" + imageType + '\'' +
                 ", isPrimary=" + isPrimary +
                 ", uploadedAt=" + uploadedAt +
                 '}';
