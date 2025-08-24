@@ -72,25 +72,23 @@ const Advertisements: React.FC<AdvertisementsProps> = () => {
       
       if (response.success && response.data) {
         // Transform backend data to match UI expectations
-        const transformedData = response.data.map(ad => ({
-          ...ad,
-          status: ad.approved || 'pending', // Use the string value directly
-          dateCreated: new Date(ad.createdOn).toLocaleDateString(),
-          views: 0, // Default values for now
-          inquiries: 0,
-          // Transform image paths if needed (for backward compatibility)
-          images: ad.images ? ad.images.map(imagePath => {
-            // Check if it's already a web URL
-            if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-              return imagePath;
-            }
-            // If it's still a file system path, convert it
-            const fileName = imagePath.split('/').pop() || imagePath.split('\\').pop();
-            return `http://localhost:9092/uploads/advertisement-images/${fileName}`;
-          }) : []
-        }));
+        const transformedData = response.data.map(ad => {
+          console.log('Transforming advertisement:', ad);
+          return {
+            ...ad,
+            status: ad.approved || 'pending', // Use the string value directly
+            dateCreated: new Date(ad.createdOn).toLocaleDateString(),
+            views: 0, // Default values for now
+            inquiries: 0,
+            // Keep images as they are since backend already returns full URLs
+            images: ad.images || []
+          };
+        });
         setAdvertisements(transformedData);
+        console.log('Original response data:', response.data);
         console.log('Transformed advertisements:', transformedData);
+        console.log('First advertisement ID:', transformedData[0]?.id);
+        console.log('First advertisement images:', transformedData[0]?.images);
       } else {
         console.warn('Failed to fetch advertisements:', response);
         toast.error('Failed to load advertisements');
@@ -470,6 +468,10 @@ const Advertisements: React.FC<AdvertisementsProps> = () => {
 
   const confirmDelete = async () => {
     if (!deletingAd) return;
+    
+    console.log('Deleting advertisement:', deletingAd);
+    console.log('Advertisement ID to delete:', deletingAd.id);
+    console.log('Advertisement ID type:', typeof deletingAd.id);
     
     const toastId = toast.loading('Deleting advertisement...');
     

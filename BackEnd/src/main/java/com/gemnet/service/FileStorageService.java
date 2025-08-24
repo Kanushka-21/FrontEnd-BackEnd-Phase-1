@@ -202,10 +202,54 @@ public class FileStorageService {
      */
     public boolean deleteFile(String filePath) {
         try {
-            Path path = Paths.get(filePath);
+            Path path;
+            
+            // Check if the input is a URL (starts with http:// or https://)
+            if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
+                // Extract the filename from the URL
+                String filename = extractFilenameFromUrl(filePath);
+                
+                // Determine which directory to use based on URL path
+                if (filePath.contains("/advertisement-images/")) {
+                    path = advertisementImagesPath.resolve(filename);
+                } else if (filePath.contains("/face-images/")) {
+                    path = faceImagesPath.resolve(filename);
+                } else if (filePath.contains("/nic-images/")) {
+                    path = nicImagesPath.resolve(filename);
+                } else if (filePath.contains("/extracted-photos/")) {
+                    path = extractedPhotosPath.resolve(filename);
+                } else if (filePath.contains("/gems/")) {
+                    path = gemImagesPath.resolve(filename);
+                } else {
+                    // Default to advertisement images if can't determine
+                    path = advertisementImagesPath.resolve(filename);
+                }
+            } else {
+                // Treat as a direct file path
+                path = Paths.get(filePath);
+            }
+            
             return Files.deleteIfExists(path);
         } catch (IOException e) {
+            System.err.println("❌ Error deleting file: " + filePath + " - " + e.getMessage());
             return false;
+        }
+    }
+    
+    /**
+     * Extract filename from URL
+     */
+    private String extractFilenameFromUrl(String url) {
+        try {
+            // Get the part after the last '/'
+            int lastSlashIndex = url.lastIndexOf('/');
+            if (lastSlashIndex != -1 && lastSlashIndex < url.length() - 1) {
+                return url.substring(lastSlashIndex + 1);
+            }
+            return url; // Return original if can't extract
+        } catch (Exception e) {
+            System.err.println("❌ Error extracting filename from URL: " + url + " - " + e.getMessage());
+            return url;
         }
     }
     
