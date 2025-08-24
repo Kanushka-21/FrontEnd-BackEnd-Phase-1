@@ -1476,17 +1476,16 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
           >
             Edit
           </Button>
-          {record.status !== 'sold' && (
-            <Button 
-              size="small" 
-              icon={<DeleteOutlined />} 
-              danger
-              type="text"
-              onClick={() => handleDeleteListing(record)}
-            >
-              Remove
-            </Button>
-          )}
+          <Button 
+            size="small" 
+            icon={<DeleteOutlined />} 
+            danger
+            type="text"
+            onClick={() => handleDeleteListing(record)}
+            title={record.status === 'sold' ? 'Delete completed listing' : 'Delete listing'}
+          >
+            Delete
+          </Button>
         </Space>
       )
     }
@@ -1748,7 +1747,15 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
           <div>
             <p>Are you sure you want to delete the listing:</p>
             <p className="font-semibold text-lg mt-2">"{selectedListing.name}"</p>
-            <p className="text-gray-600 mt-2">This action cannot be undone.</p>
+            {selectedListing.status === 'sold' ? (
+              <div className="mt-3">
+                <p className="text-orange-600 font-medium">⚠️ This is a completed/sold listing</p>
+                <p className="text-gray-600 mt-1">Deleting this will remove it from your sales history.</p>
+              </div>
+            ) : (
+              <p className="text-gray-600 mt-2">This will remove the listing from the marketplace.</p>
+            )}
+            <p className="text-red-600 mt-2 font-medium">This action cannot be undone.</p>
           </div>
         )}
       </Modal>
