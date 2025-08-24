@@ -34,18 +34,8 @@ const AIPricePrediction: React.FC<AIPricePredictionProps> = ({
   const [prediction, setPrediction] = useState<PredictionResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
 
   console.log('🎯 AIPricePrediction state - loading:', loading, 'prediction:', prediction, 'error:', error);
-
-  // Manual retry function
-  const handleRetry = () => {
-    console.log('🔄 Manual retry initiated');
-    setRetryCount(prev => prev + 1);
-    setError(null);
-    setPrediction(null);
-    setLoading(true);
-  };
 
   // Early return if gemstone is not certified
   if (!gemData.isCertified) {
@@ -54,18 +44,7 @@ const AIPricePrediction: React.FC<AIPricePredictionProps> = ({
         <div className="flex items-center space-x-2">
           <Brain className="h-4 w-4 text-gray-500" />
           <h3 className="text-sm font-semibold text-gray-600">AI Price Prediction</h3>
-          <div className="ml-auto flex items-center space-x-2">
-            <button
-              onClick={handleRetry}
-              disabled={loading}
-              className="flex items-center space-x-1 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md border border-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Reload prediction"
-            >
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              <span>{loading ? 'Loading...' : 'Reload'}</span>
-            </button>
+          <div className="ml-auto">
             <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
               Certification Required
             </span>
@@ -310,7 +289,7 @@ const AIPricePrediction: React.FC<AIPricePredictionProps> = ({
 
     console.log('🎯 About to call generatePrediction');
     generatePrediction();
-  }, [gemData, retryCount]);
+  }, [gemData]);
 
   const formatPrice = (price: number): string => {
     return new Intl.NumberFormat('en-LK', {
@@ -458,48 +437,12 @@ const AIPricePrediction: React.FC<AIPricePredictionProps> = ({
     );
   }
 
-  // Show error state with reload button
+  // Show error state 
   if (error) {
     return (
-      <div className={`bg-gradient-to-r from-orange-50 to-red-50 rounded-lg p-3 border border-orange-200 ${className}`}>
-        <div className="flex items-center space-x-2">
-          <Brain className="h-4 w-4 text-orange-600" />
-          <h3 className="text-sm font-semibold text-orange-800">AI Price Prediction</h3>
-          <div className="ml-auto flex items-center space-x-2">
-            <button
-              onClick={handleRetry}
-              disabled={loading}
-              className="flex items-center space-x-1 px-2 py-1 text-xs bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-md border border-orange-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Reload prediction"
-            >
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              <span>{loading ? 'Loading...' : 'Reload'}</span>
-            </button>
-            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-              Error - Retry Available
-            </span>
-          </div>
-        </div>
-        
-        {/* Error Message */}
-        <div className="mt-2 flex items-center space-x-2 text-orange-700">
-          <AlertTriangle className="h-4 w-4" />
-          <span className="text-sm">{error}</span>
-        </div>
-        
-        {/* Debug Information */}
-        <div className="mt-3 text-xs bg-white bg-opacity-60 rounded-md p-2 border border-orange-200">
-          <div className="font-semibold text-orange-700 mb-1">Debug Info:</div>
-          <div className="space-y-1 text-orange-600">
-            <div>Weight: {gemData.weight || 'Not provided'}</div>
-            <div>Species: {gemData.species || 'Not provided'}</div>
-            <div>Color: {gemData.color || 'Not provided'}</div>
-            <div>Certified: {gemData.isCertified ? 'Yes' : 'No'}</div>
-            <div>Retry count: {retryCount}</div>
-          </div>
-        </div>
+      <div className={`flex items-center space-x-2 text-orange-600 bg-orange-50 rounded-lg p-3 border border-orange-200 ${className}`}>
+        <AlertTriangle className="h-4 w-4" />
+        <span className="text-sm">{error}</span>
       </div>
     );
   }
@@ -514,20 +457,9 @@ const AIPricePrediction: React.FC<AIPricePredictionProps> = ({
         <Brain className="h-4 w-4 text-indigo-600" />
         <h3 className="text-sm font-semibold text-indigo-800">AI Price Prediction</h3>
         <CheckCircle className="h-3 w-3 text-green-600" title="Certified Gemstone" />
-        <div className="ml-auto flex items-center space-x-2">
-          <button
-            onClick={handleRetry}
-            disabled={loading}
-            className="flex items-center space-x-1 px-2 py-1 text-xs bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-md border border-indigo-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Reload prediction"
-          >
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            <span>{loading ? 'Loading...' : 'Reload'}</span>
-          </button>
+        <div className="ml-auto">
           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-            {error ? 'Enhanced Estimation' : 'AI/ML Model'}
+            AI/ML Model
           </span>
         </div>
       </div>
@@ -568,39 +500,6 @@ const AIPricePrediction: React.FC<AIPricePredictionProps> = ({
                 </div>
                 <div className="text-xs text-green-600 mt-1">
                   Customized prediction based on {gemData.species || 'gemstone'} characteristics and market data
-                </div>
-              </div>
-            )}
-
-            {error && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-orange-600 bg-orange-50 rounded-md p-3 border border-orange-200">
-                  <div className="flex items-center space-x-2">
-                    <AlertTriangle className="h-4 w-4" />
-                    <span className="text-sm">{error}</span>
-                  </div>
-                  <button
-                    onClick={handleRetry}
-                    disabled={loading}
-                    className="flex items-center space-x-1 px-3 py-1 text-xs bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-md border border-orange-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    <span>{loading ? 'Loading...' : 'Retry'}</span>
-                  </button>
-                </div>
-                
-                {/* Debug Information */}
-                <div className="text-xs bg-gray-50 rounded-md p-2 border border-gray-200">
-                  <div className="font-semibold text-gray-700 mb-1">Debug Info:</div>
-                  <div className="space-y-1 text-gray-600">
-                    <div>Weight: {gemData.weight || 'Not provided'}</div>
-                    <div>Species: {gemData.species || 'Not provided'}</div>
-                    <div>Color: {gemData.color || 'Not provided'}</div>
-                    <div>Certified: {gemData.isCertified ? 'Yes' : 'No'}</div>
-                    <div>Retry count: {retryCount}</div>
-                  </div>
                 </div>
               </div>
             )}
