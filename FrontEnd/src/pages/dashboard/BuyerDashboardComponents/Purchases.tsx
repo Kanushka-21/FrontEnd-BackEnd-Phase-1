@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingBag, Package, Star, Trophy, Clock, Calendar, RefreshCw } from 'lucide-react';
+import { ShoppingBag, Package, Star, Trophy, Clock, Calendar, RefreshCw, Users, MessageSquare } from 'lucide-react';
+import MeetingScheduler from '../../../components/scheduling/MeetingScheduler';
 
 interface PurchasesProps {
   user: any;
@@ -39,6 +40,34 @@ const Purchases: React.FC<PurchasesProps> = ({ user }) => {
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState<{[key: string]: number}>({});
+  const [showScheduler, setShowScheduler] = useState(false);
+  const [selectedPurchase, setSelectedPurchase] = useState<PurchaseItem | null>(null);
+  const [meetingScheduled, setMeetingScheduled] = useState<{[key: string]: boolean}>({});
+
+  // Check if meetings exist for purchases
+  useEffect(() => {
+    const checkExistingMeetings = async () => {
+      if (purchases.length === 0) return;
+      
+      try {
+        const userId = user?.userId || user?.id;
+        const response = await fetch(`http://localhost:9092/api/meetings/user/${userId}`);
+        const data = await response.json();
+        
+        if (data.success && data.meetings) {
+          const scheduled = {};
+          data.meetings.forEach((meeting: any) => {
+            scheduled[meeting.purchaseId] = true;
+          });
+          setMeetingScheduled(scheduled);
+        }
+      } catch (error) {
+        console.error('Error checking existing meetings:', error);
+      }
+    };
+
+    checkExistingMeetings();
+  }, [purchases, user]);
 
   // Fetch purchase history
   useEffect(() => {
@@ -295,6 +324,42 @@ const Purchases: React.FC<PurchasesProps> = ({ user }) => {
     return getCurrentImageUrl(item);
   };
 
+  // Handle scheduling meeting
+  const handleScheduleMeeting = (purchase: PurchaseItem) => {
+    setSelectedPurchase(purchase);
+    setShowScheduler(true);
+  };
+
+  // Handle successful scheduling
+  const handleMeetingScheduled = () => {
+    if (selectedPurchase) {
+      setMeetingScheduled(prev => ({
+        ...prev,
+        [selectedPurchase.id]: true
+      }));
+    }
+    setShowScheduler(false);
+    setSelectedPurchase(null);
+  };
+
+  // Handle back from scheduler
+  const handleBackFromScheduler = () => {
+    setShowScheduler(false);
+    setSelectedPurchase(null);
+  };
+
+  // If showing scheduler, render it
+  if (showScheduler && selectedPurchase) {
+    return (
+      <MeetingScheduler
+        purchase={selectedPurchase}
+        user={user}
+        onBack={handleBackFromScheduler}
+        onScheduled={handleMeetingScheduled}
+      />
+    );
+  }
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -523,7 +588,7 @@ const Purchases: React.FC<PurchasesProps> = ({ user }) => {
                   </div>
 
                   {/* Date and Actions */}
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center text-xs text-gray-500">
                       <Calendar className="w-3 h-3 mr-1" />
                       <span>{formatDate(purchase.purchaseDate)}</span>
@@ -548,6 +613,24 @@ const Purchases: React.FC<PurchasesProps> = ({ user }) => {
                         <Star size={16} />
                       </button>
                     </div>
+                  </div>
+
+                  {/* Meeting Scheduling Section */}
+                  <div className="border-t border-gray-100 pt-3">
+                    {meetingScheduled[purchase.id] ? (
+                      <div className="flex items-center justify-center p-2 bg-green-50 border border-green-200 rounded-lg">
+                        <MessageSquare className="w-4 h-4 text-green-600 mr-2" />
+                        <span className="text-sm text-green-700 font-medium">Meeting Requested</span>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => handleScheduleMeeting(purchase)}
+                        className="w-full flex items-center justify-center space-x-2 p-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg transition-colors border border-blue-200"
+                      >
+                        <Users className="w-4 h-4" />
+                        <span className="text-sm font-medium">Schedule Meeting with Seller</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

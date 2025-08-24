@@ -3,7 +3,9 @@ package com.gemnet.controller;
 import com.gemnet.dto.ApiResponse;
 import com.gemnet.dto.UserProfileUpdateRequest;
 import com.gemnet.model.User;
+import com.gemnet.model.Meeting;
 import com.gemnet.service.UserService;
+import org.springframework.data.mongodb.core.MongoTemplate;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -23,6 +25,9 @@ public class UserController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private MongoTemplate mongoTemplate;
 
     @GetMapping("/profile/{userId}")
     @Operation(summary = "Get user profile", description = "Fetch user profile information by user ID")
@@ -160,5 +165,88 @@ public class UserController {
         // TODO: Implement JWT token extraction logic
         // This is a placeholder implementation
         return null;
+    }
+
+    // Meeting endpoints - temporary addition for testing
+    @PostMapping("/meetings")
+    @Operation(summary = "Create meeting", description = "Create a new meeting request")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> createMeeting(@RequestBody Map<String, Object> meetingData) {
+        try {
+            System.out.println("📅 Creating meeting: " + meetingData);
+            
+            // Create meeting document
+            Map<String, Object> meeting = new HashMap<>();
+            meeting.put("buyerId", meetingData.get("buyerId"));
+            meeting.put("sellerId", meetingData.get("sellerId"));
+            meeting.put("purchaseId", meetingData.get("purchaseId"));
+            meeting.put("gemId", meetingData.get("gemId"));
+            meeting.put("proposedDateTime", meetingData.get("proposedDateTime"));
+            meeting.put("location", meetingData.get("location"));
+            meeting.put("meetingType", meetingData.get("meetingType"));
+            meeting.put("status", "PENDING");
+            meeting.put("notes", meetingData.get("notes"));
+            meeting.put("createdAt", System.currentTimeMillis());
+            meeting.put("updatedAt", System.currentTimeMillis());
+            
+            // Save to MongoDB
+            mongoTemplate.save(meeting, "meetings");
+            
+            return ResponseEntity.ok(ApiResponse.success("Meeting created successfully", meeting));
+        } catch (Exception e) {
+            System.err.println("❌ Error creating meeting: " + e.getMessage());
+            return ResponseEntity.ok(ApiResponse.error("Error creating meeting: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/meetings/user/{userId}")
+    @Operation(summary = "Get user meetings", description = "Get all meetings for a user")
+    public ResponseEntity<ApiResponse<java.util.List<Map>>> getUserMeetings(@PathVariable String userId) {
+        try {
+            System.out.println("📅 Fetching meetings for user: " + userId);
+            
+            // Query meetings for the user
+            org.springframework.data.mongodb.core.query.Query query = 
+                org.springframework.data.mongodb.core.query.Query.query(
+                    org.springframework.data.mongodb.core.query.Criteria.where("buyerId").is(userId)
+                        .orOperator(org.springframework.data.mongodb.core.query.Criteria.where("sellerId").is(userId))
+                );
+            
+            java.util.List<Map> meetings = mongoTemplate.find(query, Map.class, "meetings");
+            
+            return ResponseEntity.ok(ApiResponse.success("Meetings retrieved successfully", meetings));
+        } catch (Exception e) {
+            System.err.println("❌ Error fetching meetings: " + e.getMessage());
+            return ResponseEntity.ok(ApiResponse.error("Error fetching meetings: " + e.getMessage()));
+        }
+    }
+
+    @PutMapping("/meetings/{meetingId}/confirm")
+    @Operation(summary = "Confirm meeting", description = "Confirm a meeting request")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> confirmMeeting(@PathVariable String meetingId) {
+        try {
+            System.out.println("✅ Confirming meeting: " + meetingId);
+            
+            // Update meeting status
+            org.springframework.data.mongodb.core.query.Query query = 
+                org.springframework.data.mongodb.core.query.Query.query(
+                    org.springframework.data.mongodb.core.query.Criteria.where("id").is(meetingId)
+                );
+            
+            org.springframework.data.mongodb.core.query.Update update = 
+                new org.springframework.data.mongodb.core.query.Update()
+                    .set("status", "CONFIRMED")
+                    .set("updatedAt", System.currentTimeMillis());
+            
+            mongoTemplate.updateFirst(query, update, "meetings");
+            
+            Map<String, Object> result = new HashMap<>();
+            result.put("meetingId", meetingId);
+            result.put("status", "CONFIRMED");
+            
+            return ResponseEntity.ok(ApiResponse.success("Meeting confirmed successfully", result));
+        } catch (Exception e) {
+            System.err.println("❌ Error confirming meeting: " + e.getMessage());
+            return ResponseEntity.ok(ApiResponse.error("Error confirming meeting: " + e.getMessage()));
+        }
     }
 }
