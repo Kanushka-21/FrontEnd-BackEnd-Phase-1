@@ -9,7 +9,7 @@ import {
   DeleteOutlined, ArrowLeftOutlined, ArrowRightOutlined,
   FileImageOutlined, SafetyCertificateOutlined,
   UploadOutlined, CheckCircleOutlined, ReloadOutlined,
-  PictureOutlined
+  PictureOutlined, DollarOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { 
@@ -17,6 +17,7 @@ import {
   LISTING_STATUS_COLORS,
   GemListing 
 } from './shared';
+import AIPricePrediction from '@/components/common/AIPricePrediction';
 
 const { Title, Text } = Typography;
 const { Dragger } = Upload;
@@ -33,6 +34,7 @@ interface WizardData {
   basicInfo: any;
   certificationDetails: any;
   images: any[];
+  certificateImages: any[];
 }
 
 const Listings: React.FC<ListingsProps> = ({ user }) => {
@@ -43,7 +45,8 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
     certificationType: null,
     basicInfo: {},
     certificationDetails: {},
-    images: []
+    images: [],
+    certificateImages: []
   });
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isEditListingModalVisible, setIsEditListingModalVisible] = useState(false);
@@ -52,6 +55,10 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
   const [selectedListing, setSelectedListing] = useState<GemListing | null>(null);
   const [editForm] = Form.useForm();
   const [basicInfoForm] = Form.useForm();
+  
+  // Price prediction state
+  const [showPricePrediction, setShowPricePrediction] = useState(false);
+  const [isPredicting, setIsPredicting] = useState(false);
   const [loading, setLoading] = useState(false);
   
   // New state for data loading
@@ -310,7 +317,8 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
       certificationType: null,
       basicInfo: {},
       certificationDetails: {},
-      images: []
+      images: [],
+      certificateImages: []
     });
   };
 
@@ -323,7 +331,8 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
       certificationType: null,
       basicInfo: {},
       certificationDetails: {},
-      images: []
+      images: [],
+      certificateImages: []
     });
   };
 
@@ -331,7 +340,7 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
   const handleCertificationTypeSelect = (type: CertificationStatus) => {
     setWizardData(prev => ({ ...prev, certificationType: type }));
     if (type === 'certified') {
-      setCurrentStep(1); // Go to certificate upload for certified gems
+      setCurrentStep(1); // Go directly to basic info for certified gems
     } else {
       setCurrentStep(1); // Go to basic info for non-certified gems
     }
@@ -356,7 +365,7 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
     console.log('📋 Updated wizardData basicInfo:', values);
     
     if (wizardData.certificationType === 'certified') {
-      setCurrentStep(3); // Go to images step for certified gems
+      setCurrentStep(2); // Go to images step for certified gems
     } else {
       setCurrentStep(2); // Go to images step for non-certified gems
     }
@@ -365,7 +374,7 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
   // Handle certification details submission
   const handleCertificationSubmit = (values: any) => {
     setWizardData(prev => ({ ...prev, certificationDetails: values }));
-    setCurrentStep(2); // Go to basic info step for certified gems
+    setCurrentStep(1); // Go to basic info step for certified gems
   };
 
   // Handle certificate upload (just store the file, no extraction)
@@ -382,7 +391,7 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
 
       message.success('Certificate image uploaded successfully!');
       // Auto-proceed to basic information step
-      setCurrentStep(2);
+      setCurrentStep(1);
       
     } catch (error) {
       console.error('Certificate upload error:', error);
@@ -416,6 +425,12 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
         
         return false;
       }
+      
+      // Check for certificate images
+      if (!wizardData.certificateImages || wizardData.certificateImages.length === 0) {
+        message.error('Certificate images are required for certified gemstones. Please upload clear images of your certificate.');
+        return false;
+      }
     }
     
     // If images are missing
@@ -425,6 +440,27 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
     }
     
     return true;
+  };
+
+  // Handle price prediction
+  const handlePricePrediction = () => {
+    // Only allow prediction for certified gemstones
+    if (wizardData.certificationType !== 'certified') {
+      message.warning('AI Price Prediction is only available for certified gemstones.');
+      return;
+    }
+
+    // Validate that we have enough basic info for prediction
+    if (!wizardData.basicInfo.weight || !wizardData.basicInfo.species || !wizardData.basicInfo.color) {
+      message.warning('Please fill in weight, species, and color information for accurate price prediction.');
+      return;
+    }
+
+    setIsPredicting(true);
+    setTimeout(() => {
+      setIsPredicting(false);
+      setShowPricePrediction(true);
+    }, 1000); // Simulate prediction processing
   };
 
   // Handle final submission
@@ -531,14 +567,18 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
         });
       }
       
-      // Add certificate image for certified gemstones
-      if (wizardData.certificationType === 'certified' && wizardData.certificationDetails?.certificateFile) {
-        formData.append('certificateImages', wizardData.certificationDetails.certificateFile);
+      // Add certificate images for certified gemstones
+      if (wizardData.certificationType === 'certified' && wizardData.certificateImages && wizardData.certificateImages.length > 0) {
+        wizardData.certificateImages.forEach((certImage) => {
+          if (certImage.originFileObj) {
+            formData.append('certificateImages', certImage.originFileObj);
+          }
+        });
       }
 
       console.log('📤 Sending data to backend:', gemListingData);
       console.log('🖼️ Number of gemstone images:', wizardData.images?.length || 0);
-      console.log('📄 Certificate image:', wizardData.certificationType === 'certified' && wizardData.certificationDetails?.certificateFile ? 'Yes' : 'No');
+      console.log('📄 Number of certificate images:', wizardData.certificationType === 'certified' ? wizardData.certificateImages?.length || 0 : 0);
       console.log('🔗 API Endpoint: /api/gemsData/list-gem-data');
       console.log('🌐 Backend should be running on port 9092');
 
@@ -609,10 +649,6 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
         {
           title: 'Certification',
           description: 'Select certification status'
-        },
-        {
-          title: 'Certificate Upload',
-          description: 'Upload certification documents'
         },
         {
           title: 'Basic Information',
@@ -1428,14 +1464,25 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
 
   // Render images and review step
   const renderImagesStep = () => {
-    // Handle image upload change
+    // Handle gemstone image upload change
     const handleImageChange = (info: any) => {
-      console.log('📁 Image upload change:', info);
+      console.log('📁 Gemstone image upload change:', info);
       
       // Update wizard data with uploaded images
       setWizardData(prev => ({
         ...prev,
         images: info.fileList
+      }));
+    };
+
+    // Handle certificate image upload change
+    const handleCertificateImageChange = (info: any) => {
+      console.log('📁 Certificate image upload change:', info);
+      
+      // Update wizard data with uploaded certificate images
+      setWizardData(prev => ({
+        ...prev,
+        certificateImages: info.fileList
       }));
     };
 
@@ -1447,6 +1494,16 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
       onChange: handleImageChange,
       beforeUpload: () => false, // Prevent automatic upload
       maxCount: 10,
+    };
+
+    const certificateUploadProps = {
+      name: 'certificateImages',
+      multiple: true,
+      accept: '.jpg,.jpeg,.png,.webp,.pdf',
+      listType: 'picture-card' as const,
+      onChange: handleCertificateImageChange,
+      beforeUpload: () => false, // Prevent automatic upload
+      maxCount: 5,
     };
 
     // Check if button should be disabled
@@ -1480,14 +1537,30 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
               <Upload {...uploadProps}>
                 <div>
                   <PlusOutlined />
-                  <div style={{ marginTop: 8 }}>Upload</div>
+                  <div style={{ marginTop: 8 }}>Upload Gemstone Images</div>
                 </div>
               </Upload>
               <Text type="secondary" className="text-sm block mt-2">
-                Upload up to 10 high-quality images. First image will be used as the primary image.
+                Upload up to 10 high-quality images of your gemstone. First image will be used as the primary image.
                 Supported formats: JPG, PNG, WebP (Max 5MB per image)
               </Text>
             </Form.Item>
+
+            {/* Certificate Images Upload - Only for certified gemstones */}
+            {wizardData.certificationType === 'certified' && (
+              <Form.Item label="Certificate Images" required>
+                <Upload {...certificateUploadProps}>
+                  <div>
+                    <SafetyCertificateOutlined />
+                    <div style={{ marginTop: 8 }}>Upload Certificate Images</div>
+                  </div>
+                </Upload>
+                <Text type="secondary" className="text-sm block mt-2">
+                  Upload clear images of your gemstone certificate. Include all pages if multi-page certificate.
+                  Supported formats: JPG, PNG, WebP, PDF (Max 5MB per file)
+                </Text>
+              </Form.Item>
+            )}
 
             <Divider />
 
@@ -1534,20 +1607,71 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
                   <Text>{wizardData.basicInfo.origin || 'Not specified'}</Text>
                 </Col>
                 <Col xs={24} md={12}>
-                  <Text strong>Images: </Text>
+                  <Text strong>Gemstone Images: </Text>
                   <Text>{wizardData.images?.length || 0} uploaded</Text>
                 </Col>
+                {wizardData.certificationType === 'certified' && (
+                  <Col xs={24} md={12}>
+                    <Text strong>Certificate Images: </Text>
+                    <Text>{wizardData.certificateImages?.length || 0} uploaded</Text>
+                  </Col>
+                )}
                 {wizardData.certificationType === 'certified' && wizardData.basicInfo.certificateNumber && (
                   <Col xs={24} md={12}>
-                    <Text strong>Certificate: </Text>
+                    <Text strong>Certificate Number: </Text>
                     <Text>{wizardData.basicInfo.certificateNumber}</Text>
                   </Col>
                 )}
               </Row>
             </div>
 
+            {/* Price Prediction Section */}
+            {showPricePrediction && (
+              <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-green-50 border border-blue-200 rounded-xl">
+                <div className="mb-4">
+                  <Title level={4} className="text-blue-800 mb-2">
+                    <DollarOutlined className="mr-2" />
+                    AI Price Prediction Results
+                  </Title>
+                  <Alert
+                    message="Price Prediction Accuracy"
+                    description="Please enter the correct valid information for true accuracy. This prediction is based on the gemstone characteristics you've provided."
+                    type="info"
+                    showIcon
+                    className="mb-4"
+                  />
+                </div>
+                
+                <AIPricePrediction 
+                  gemData={{
+                    weight: wizardData.basicInfo.weight || '1.0',
+                    color: wizardData.basicInfo.color || 'Blue',
+                    cut: wizardData.basicInfo.cut || 'Good',
+                    clarity: wizardData.basicInfo.clarity || 'SI1',
+                    species: wizardData.basicInfo.species || wizardData.basicInfo.variety || 'Sapphire',
+                    isCertified: wizardData.certificationType === 'certified',
+                    shape: wizardData.basicInfo.shape || 'Round',
+                    treatment: wizardData.basicInfo.treatment || 'Heat Treatment',
+                    origin: wizardData.basicInfo.origin
+                  }}
+                  showDetails={true}
+                  className="shadow-lg border-2 border-blue-300"
+                />
+                
+                <div className="mt-4 text-center">
+                  <Button 
+                    type="link" 
+                    onClick={() => setShowPricePrediction(false)}
+                    className="text-blue-600"
+                  >
+                    Hide Prediction
+                  </Button>
+                </div>
+              </div>
+            )}
+
             <div className="sticky bottom-0 bg-white pt-4 border-t border-gray-200 mt-6">
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <Button 
                   icon={<ArrowLeftOutlined />} 
                   onClick={handlePrevious}
@@ -1555,19 +1679,36 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
                 >
                   Previous
                 </Button>
-                <Button 
-                  type="primary" 
-                  onClick={() => {
-                    console.log('🔘 Submit button clicked!');
-                    console.log('📋 wizardData at button click:', wizardData);
-                    handleFinalSubmission();
-                  }}
-                  loading={loading}
-                  size="large"
-                  disabled={isButtonDisabled}
-                >
-                  {loading ? 'Submitting...' : 'Submit Listing'}
-                </Button>
+                
+                <div className="flex space-x-3">
+                  {/* Predict Price Button - Only for Certified Gemstones */}
+                  {wizardData.certificationType === 'certified' && (
+                    <Button 
+                      icon={<DollarOutlined />}
+                      onClick={handlePricePrediction}
+                      loading={isPredicting}
+                      size="large"
+                      className="bg-green-500 hover:bg-green-600 text-white border-green-500 hover:border-green-600"
+                    >
+                      {isPredicting ? 'Predicting...' : 'Predict Price'}
+                    </Button>
+                  )}
+                  
+                  {/* Submit Listing Button */}
+                  <Button 
+                    type="primary" 
+                    onClick={() => {
+                      console.log('🔘 Submit button clicked!');
+                      console.log('📋 wizardData at button click:', wizardData);
+                      handleFinalSubmission();
+                    }}
+                    loading={loading}
+                    size="large"
+                    disabled={isButtonDisabled}
+                  >
+                    {loading ? 'Submitting...' : 'Submit Listing'}
+                  </Button>
+                </div>
               </div>
             </div>
           </Form>
@@ -1579,15 +1720,13 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
   // Render current wizard step
   const renderCurrentStep = () => {
     if (wizardData.certificationType === 'certified') {
-      // Certified gemstone flow: Certification → Certificate Upload → Basic Info → Images
+      // Certified gemstone flow: Certification → Basic Info → Images
       switch (currentStep) {
         case 0:
           return renderCertificationStep();
         case 1:
-          return renderCertificationUploadStep();
-        case 2:
           return renderBasicInfoStep();
-        case 3:
+        case 2:
           return renderImagesStep();
         default:
           return renderCertificationStep();
