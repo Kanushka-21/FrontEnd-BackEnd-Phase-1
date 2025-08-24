@@ -56,21 +56,61 @@ class MeetingService {
   // Create a new meeting request
   async createMeeting(meetingData: CreateMeetingRequest): Promise<Meeting> {
     try {
+      console.log('🔄 Creating meeting with data:', meetingData);
+      
+      // The backend expects the purchase ID to be a gem listing ID
+      // If the purchase object has a gemId or listingId, use that instead
+      const requestPayload = {
+        purchaseId: meetingData.purchaseId, // This should be the gem listing ID
+        buyerId: meetingData.buyerId,
+        proposedDateTime: meetingData.proposedDateTime,
+        location: meetingData.location,
+        meetingType: meetingData.meetingType || 'IN_PERSON',
+        buyerNotes: meetingData.buyerNotes || ''
+      };
+
+      console.log('📤 Sending to backend:', requestPayload);
+
       const response = await fetch(`${API_BASE_URL}/api/meetings/create`, {
         method: 'POST',
         headers: this.getHeaders(),
-        body: JSON.stringify(meetingData)
+        body: JSON.stringify(requestPayload)
       });
 
+      const responseText = await response.text();
+      console.log('📥 Backend response:', responseText);
+
       if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(`Failed to create meeting: ${errorData}`);
+        let errorMessage = 'Failed to create meeting';
+        try {
+          const errorData = JSON.parse(responseText);
+          errorMessage = errorData.message || errorMessage;
+        } catch (e) {
+          errorMessage = responseText || errorMessage;
+        }
+        
+        // If it's a "Purchase not found" error, provide more specific guidance
+        if (errorMessage.includes('Purchase not found')) {
+          throw new Error('Purchase not found');
+        }
+        
+        throw new Error(errorMessage);
       }
 
-      const result = await response.json();
+      const result = JSON.parse(responseText);
+      console.log('✅ Meeting created successfully:', result);
+      
       return result.meeting || result;
     } catch (error) {
-      console.error('Error creating meeting:', error);
+      console.error('❌ Error creating meeting:', error);
+      
+      // For demo purposes, if the backend fails due to ID mismatch, 
+      // we can simulate a successful response
+      if (error instanceof Error && error.message.includes('Purchase not found')) {
+        console.log('🔄 Backend failed due to ID mismatch, this is expected in current setup');
+        throw error; // Re-throw to handle in the calling component
+      }
+      
       throw error;
     }
   }

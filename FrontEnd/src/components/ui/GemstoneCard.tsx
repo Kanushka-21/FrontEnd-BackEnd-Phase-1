@@ -162,7 +162,7 @@ const GemstoneCard: React.FC<GemstoneCardProps> = ({ gemstone, onViewDetails }) 
           </div>
           
           {/* AI-Powered Dynamic Price Prediction */}
-          <div className="mt-3">
+          <div className="mt-2">
             <AIPricePrediction 
               gemData={{
                 weight: gemstone.weight || '1.0',
@@ -175,12 +175,12 @@ const GemstoneCard: React.FC<GemstoneCardProps> = ({ gemstone, onViewDetails }) 
                 treatment: gemstone.treatment || 'Heat Treatment'
               }}
               showDetails={false}
-              className="transform transition-all duration-300 hover:scale-102"
+              className="transform transition-all duration-300 hover:scale-102 text-sm p-2"
             />
           </div>
           
-          <p className="text-sm text-secondary-600 mt-2">
-            {gemstone.weight} carats · {gemstone.color}
+          <p className="text-sm text-secondary-600 mt-2 line-clamp-2">
+            {gemstone.weight} carats · {gemstone.color} · {gemstone.shape}
           </p>
           
           {gemstone.seller && gemstone.seller.name && (

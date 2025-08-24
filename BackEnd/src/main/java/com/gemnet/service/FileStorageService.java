@@ -29,6 +29,7 @@ public class FileStorageService {
     private Path extractedPhotosPath;
     private Path advertisementImagesPath;
     private Path gemImagesPath;
+    private Path gemCertificatesPath;
     
     @PostConstruct
     public void init() {
@@ -40,6 +41,7 @@ public class FileStorageService {
             extractedPhotosPath = basePath.resolve("extracted-photos");
             advertisementImagesPath = basePath.resolve("advertisement-images");
             gemImagesPath = basePath.resolve("gems");
+            gemCertificatesPath = basePath.resolve("gemstone-certificates");
             
             // Create directories if they don't exist
             Files.createDirectories(faceImagesPath);
@@ -47,6 +49,7 @@ public class FileStorageService {
             Files.createDirectories(extractedPhotosPath);
             Files.createDirectories(advertisementImagesPath);
             Files.createDirectories(gemImagesPath);
+            Files.createDirectories(gemCertificatesPath);
             
         } catch (IOException e) {
             throw new RuntimeException("Could not initialize file storage directories", e);
@@ -144,6 +147,21 @@ public class FileStorageService {
     }
     
     /**
+     * Store gemstone certificate image
+     */
+    public String storeGemCertificateImage(MultipartFile file, String certificateId) throws IOException {
+        validateImageFile(file);
+        
+        String filename = certificateId + "." + getFileExtension(file.getOriginalFilename());
+        Path targetPath = gemCertificatesPath.resolve(filename);
+        
+        Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
+        
+        // Return relative URL path for database storage
+        return "/uploads/gemstone-certificates/" + filename;
+    }
+    
+    /**
      * Generate unique filename
      */
     private String generateFileName(String userId, String type, String extension) {
@@ -202,10 +220,56 @@ public class FileStorageService {
      */
     public boolean deleteFile(String filePath) {
         try {
-            Path path = Paths.get(filePath);
+            Path path;
+            
+            // Check if the input is a URL (starts with http:// or https://)
+            if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
+                // Extract the filename from the URL
+                String filename = extractFilenameFromUrl(filePath);
+                
+                // Determine which directory to use based on URL path
+                if (filePath.contains("/advertisement-images/")) {
+                    path = advertisementImagesPath.resolve(filename);
+                } else if (filePath.contains("/face-images/")) {
+                    path = faceImagesPath.resolve(filename);
+                } else if (filePath.contains("/nic-images/")) {
+                    path = nicImagesPath.resolve(filename);
+                } else if (filePath.contains("/extracted-photos/")) {
+                    path = extractedPhotosPath.resolve(filename);
+                } else if (filePath.contains("/gems/")) {
+                    path = gemImagesPath.resolve(filename);
+                } else if (filePath.contains("/gemstone-certificates/")) {
+                    path = gemCertificatesPath.resolve(filename);
+                } else {
+                    // Default to advertisement images if can't determine
+                    path = advertisementImagesPath.resolve(filename);
+                }
+            } else {
+                // Treat as a direct file path
+                path = Paths.get(filePath);
+            }
+            
             return Files.deleteIfExists(path);
         } catch (IOException e) {
+            System.err.println("❌ Error deleting file: " + filePath + " - " + e.getMessage());
             return false;
+        }
+    }
+    
+    /**
+     * Extract filename from URL
+     */
+    private String extractFilenameFromUrl(String url) {
+        try {
+            // Get the part after the last '/'
+            int lastSlashIndex = url.lastIndexOf('/');
+            if (lastSlashIndex != -1 && lastSlashIndex < url.length() - 1) {
+                return url.substring(lastSlashIndex + 1);
+            }
+            return url; // Return original if can't extract
+        } catch (Exception e) {
+            System.err.println("❌ Error extracting filename from URL: " + url + " - " + e.getMessage());
+            return url;
         }
     }
     
