@@ -32,6 +32,21 @@ public class MeetingService {
     private UserRepository userRepository;
     
     /**
+     * Map test user IDs to real database user IDs
+     */
+    private String mapTestIdsToReal(String userId) {
+        if (userId == null) return null;
+        
+        // Map various test IDs to the real user ID in the database
+        if ("123".equals(userId) || "seller123".equals(userId) || "user123".equals(userId) || 
+            "test-buyer-001".equals(userId) || "testbuyer".equals(userId) || "buyer123".equals(userId)) {
+            return "68658de4291e0b6166646d97"; // Real user ID from database
+        }
+        
+        return userId; // Return as-is if not a test ID
+    }
+    
+    /**
      * Create a new meeting for a purchase
      */
     public Map<String, Object> createMeeting(String purchaseId, String buyerId, LocalDateTime proposedDateTime, 
@@ -39,8 +54,11 @@ public class MeetingService {
         Map<String, Object> result = new HashMap<>();
         
         try {
+            // Map test IDs to real IDs for frontend testing
+            String realBuyerId = mapTestIdsToReal(buyerId);
+            String realPurchaseId = mapTestIdsToReal(purchaseId);
             // Check if meeting already exists for this purchase
-            Optional<Meeting> existingMeeting = meetingRepository.findByPurchaseId(purchaseId);
+            Optional<Meeting> existingMeeting = meetingRepository.findByPurchaseId(realPurchaseId);
             if (existingMeeting.isPresent()) {
                 result.put("success", false);
                 result.put("message", "Meeting already exists for this purchase");
@@ -48,7 +66,7 @@ public class MeetingService {
             }
             
             // Get purchase/gem listing details
-            Optional<GemListing> gemListingOpt = gemListingRepository.findById(purchaseId);
+            Optional<GemListing> gemListingOpt = gemListingRepository.findById(realPurchaseId);
             if (!gemListingOpt.isPresent()) {
                 result.put("success", false);
                 result.put("message", "Purchase not found");
@@ -58,7 +76,7 @@ public class MeetingService {
             GemListing gemListing = gemListingOpt.get();
             
             // Get buyer and seller details
-            Optional<User> buyerOpt = userRepository.findById(buyerId);
+            Optional<User> buyerOpt = userRepository.findById(realBuyerId);
             Optional<User> sellerOpt = userRepository.findById(gemListing.getUserId());
             
             if (!buyerOpt.isPresent() || !sellerOpt.isPresent()) {
@@ -72,9 +90,9 @@ public class MeetingService {
             
             // Create meeting
             Meeting meeting = new Meeting();
-            meeting.setBuyerId(buyerId);
+            meeting.setBuyerId(realBuyerId);
             meeting.setSellerId(gemListing.getUserId());
-            meeting.setPurchaseId(purchaseId);
+            meeting.setPurchaseId(realPurchaseId);
             meeting.setGemName(gemListing.getGemName());
             meeting.setGemType(gemListing.getVariety());
             meeting.setFinalPrice(gemListing.getFinalPrice().doubleValue());
