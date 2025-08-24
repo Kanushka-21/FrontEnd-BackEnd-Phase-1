@@ -293,9 +293,9 @@ const AIPricePrediction: React.FC<AIPricePredictionProps> = ({
   }
 
   return (
-    <div className={`bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4 border border-indigo-200 ${className}`}>
-      <div className="flex items-center space-x-2 mb-3">
-        <Brain className="h-5 w-5 text-indigo-600" />
+    <div className={`bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-3 border border-indigo-200 ${className}`}>
+      <div className="flex items-center space-x-2">
+        <Brain className="h-4 w-4 text-indigo-600" />
         <h3 className="text-sm font-semibold text-indigo-800">AI Price Prediction</h3>
         <div className="ml-auto">
           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
@@ -304,40 +304,43 @@ const AIPricePrediction: React.FC<AIPricePredictionProps> = ({
         </div>
       </div>
 
-      {error && (
-        <div className="mb-3 flex items-center space-x-2 text-orange-600 bg-orange-50 rounded-md p-2 border border-orange-200">
-          <AlertTriangle className="h-3 w-3" />
-          <span className="text-xs">{error}</span>
-        </div>
-      )}
-
-      <div className="space-y-4">
-        {/* Price Range - Compact */}
-        <div className="bg-white bg-opacity-80 rounded-lg p-2 border border-indigo-300">
-          <div className="text-center">
-            <span className="text-xs font-medium text-indigo-600 block mb-1">Price Range</span>
-            <div className="text-lg font-bold text-indigo-800">
-              {formatPrice(prediction.minPrice)} - {formatPrice(prediction.maxPrice)}
-            </div>
-          </div>
-        </div>
-
-        {/* Accuracy Information */}
-        <div className="bg-white bg-opacity-60 rounded-lg p-2 border border-indigo-200">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-gray-700">Accuracy</span>
-            <div className="flex items-center space-x-1">
-              {getConfidenceIcon(prediction.confidence)}
-              <span className={`text-xs font-bold ${getConfidenceColor(prediction.confidence)}`}>
-                {prediction.confidence && !isNaN(prediction.confidence) 
-                  ? Math.round(prediction.confidence * 100) + '%'
-                  : 'N/A'
-                }
-              </span>
-            </div>
+      {/* Price Range - Always show */}
+      <div className="mt-2">
+        <div className="text-center">
+          <div className="text-lg font-bold text-indigo-800">
+            {formatPrice(prediction.minPrice)} - {formatPrice(prediction.maxPrice)}
           </div>
         </div>
       </div>
+
+      {showDetails && (
+        <>
+          {error && (
+            <div className="mt-3 flex items-center space-x-2 text-orange-600 bg-orange-50 rounded-md p-2 border border-orange-200">
+              <AlertTriangle className="h-3 w-3" />
+              <span className="text-xs">{error}</span>
+            </div>
+          )}
+
+          <div className="space-y-2 mt-3">
+            {/* Accuracy Information */}
+            <div className="bg-white bg-opacity-60 rounded-lg p-2 border border-indigo-200">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-gray-700">Accuracy</span>
+                <div className="flex items-center space-x-1">
+                  {getConfidenceIcon(prediction.confidence)}
+                  <span className={`text-xs font-bold ${getConfidenceColor(prediction.confidence)}`}>
+                    {prediction.confidence && !isNaN(prediction.confidence) 
+                      ? Math.round(prediction.confidence * 100) + '%'
+                      : 'N/A'
+                    }
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };

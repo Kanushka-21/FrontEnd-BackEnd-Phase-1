@@ -469,6 +469,9 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
           : wizardData.basicInfo.variety || '',
         species: wizardData.basicInfo.species || '',
         treatment: wizardData.basicInfo.treatment || '',
+        origin: Array.isArray(wizardData.basicInfo.origin) 
+          ? wizardData.basicInfo.origin[0] || '' 
+          : wizardData.basicInfo.origin || '',
         price: parseFloat(wizardData.basicInfo.price) || 0,
         currency: "LKR",
         gemName: wizardData.certificationType === 'certified' 
@@ -478,14 +481,21 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
         description: wizardData.basicInfo.description || '',
         comments: wizardData.basicInfo.comments || '',
         
-        // For non-certified stones - explicitly set certificate fields to null
+        // For non-certified stones - explicitly set certificate fields to null and provide defaults for missing fields
         ...(wizardData.certificationType === 'non-certified' && {
+          // Set certificate fields to null
           cslMemoNo: null,
           issueDate: null,
           authority: null,
           giaAlumniMember: null,
           certificateNumber: null,
           certifyingAuthority: null,
+          clarity: null,
+          cut: null,
+          // Provide defaults for fields that non-certified form doesn't have
+          measurements: wizardData.basicInfo.measurements || 'Not specified',
+          variety: wizardData.basicInfo.gemName || 'Not specified', // Use gemName as variety for non-certified
+          species: 'Not specified', // Non-certified doesn't require species
         }),
         
         // For certified stones - include all enhanced fields
@@ -735,12 +745,16 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
         {isNonCertified ? (
           <div className="space-y-6">
 
-            {/* Gem Identification Details */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-              <Title level={4} className="text-blue-600 mb-6 mt-0">
+            {/* Essential Gem Information */}
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-6">
+              <Title level={4} className="text-orange-600 mb-6 mt-0">
                 <FileImageOutlined className="mr-2" />
-                Gem Identification Details
+                Essential Gem Information
               </Title>
+              <div className="text-orange-600 text-sm mb-4">
+                Since this gemstone is not certified, please provide basic essential information only
+              </div>
+              
               <Row gutter={[24, 16]}>
                 <Col xs={24} md={12}>
                   <Form.Item
@@ -748,7 +762,7 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
                     name="gemName"
                     rules={[{ required: true, message: 'Please enter gem name' }]}
                   >
-                    <Input placeholder="e.g. Blue Sapphire" size="large" />
+                    <Input placeholder="e.g. Blue Sapphire, Ruby" size="large" />
                   </Form.Item>
                 </Col>
                 
@@ -764,6 +778,7 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
                       <Select.Option value="emerald">Emerald</Select.Option>
                       <Select.Option value="diamond">Diamond</Select.Option>
                       <Select.Option value="other">Other</Select.Option>
+                      <Select.Option value="unknown">Unknown</Select.Option>
                     </Select>
                   </Form.Item>
                 </Col>
@@ -776,15 +791,15 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
                     name="color"
                     rules={[{ required: true, message: 'Please enter color' }]}
                   >
-                    <Input placeholder="e.g. Royal Blue, Padparadscha" size="large" />
+                    <Input placeholder="e.g. Royal Blue, Pinkish Red" size="large" />
                   </Form.Item>
                 </Col>
                 
                 <Col xs={24} md={12}>
                   <Form.Item
-                    label="Shape"
+                    label="Shape/Cut"
                     name="shape"
-                    rules={[{ required: true, message: 'Please enter shape' }]}
+                    rules={[{ required: true, message: 'Please select shape' }]}
                   >
                     <Select placeholder="Select shape" size="large">
                       <Select.Option value="round">Round</Select.Option>
@@ -792,12 +807,10 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
                       <Select.Option value="cushion">Cushion</Select.Option>
                       <Select.Option value="emerald">Emerald Cut</Select.Option>
                       <Select.Option value="pear">Pear</Select.Option>
-                      <Select.Option value="marquise">Marquise</Select.Option>
                       <Select.Option value="heart">Heart</Select.Option>
-                      <Select.Option value="princess">Princess</Select.Option>
-                      <Select.Option value="radiant">Radiant</Select.Option>
-                      <Select.Option value="asscher">Asscher</Select.Option>
+                      <Select.Option value="raw">Raw/Rough</Select.Option>
                       <Select.Option value="other">Other</Select.Option>
+                      <Select.Option value="unknown">Unknown</Select.Option>
                     </Select>
                   </Form.Item>
                 </Col>
@@ -806,65 +819,11 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
               <Row gutter={[24, 16]}>
                 <Col xs={24} md={12}>
                   <Form.Item
-                    label="Weight (Carats)"
+                    label="Approximate Weight"
                     name="weight"
-                    rules={[{ required: true, message: 'Please enter weight' }]}
+                    rules={[{ required: true, message: 'Please enter approximate weight' }]}
                   >
-                    <Input placeholder="e.g. 2.35 ct" size="large" />
-                  </Form.Item>
-                </Col>
-                
-                <Col xs={24} md={12}>
-                  <Form.Item
-                    label="Measurements (mm)"
-                    name="measurements"
-                    rules={[{ required: true, message: 'Please enter measurements' }]}
-                  >
-                    <Input placeholder="e.g. 8.25 x 6.10 x 4.15" size="large" />
-                  </Form.Item>
-                </Col>
-              </Row>
-
-              <Row gutter={[24, 16]}>
-                <Col xs={24} md={12}>
-                  <Form.Item
-                    label="Variety"
-                    name="variety"
-                    rules={[{ required: true, message: 'Please enter variety' }]}
-                    extra="Usually highlighted in red on CSL certificates"
-                  >
-                    <Input placeholder="e.g. Sapphire, Ruby, Emerald" size="large" />
-                  </Form.Item>
-                </Col>
-                
-                <Col xs={24} md={12}>
-                  <Form.Item
-                    label="Species"
-                    name="species"
-                    rules={[{ required: true, message: 'Please enter species' }]}
-                  >
-                    <Input placeholder="e.g. Corundum, Beryl" size="large" />
-                  </Form.Item>
-                </Col>
-              </Row>
-
-              <Row gutter={[24, 16]}>
-                <Col xs={24} md={12}>
-                  <Form.Item
-                    label="Treatment"
-                    name="treatment"
-                    rules={[{ required: true, message: 'Please select treatment' }]}
-                  >
-                    <Select placeholder="Select treatment" size="large">
-                      <Select.Option value="Heated">Heated</Select.Option>
-                      <Select.Option value="Unheated">Unheated</Select.Option>
-                      <Select.Option value="Diffusion">Diffusion</Select.Option>
-                      <Select.Option value="Oiled">Oiled</Select.Option>
-                      <Select.Option value="Fracture Filled">Fracture Filled</Select.Option>
-                      <Select.Option value="Irradiated">Irradiated</Select.Option>
-                      <Select.Option value="No Treatment">No Treatment</Select.Option>
-                      <Select.Option value="Other">Other</Select.Option>
-                    </Select>
+                    <Input placeholder="e.g. 2.35 ct or 5g (approx)" size="large" />
                   </Form.Item>
                 </Col>
                 
@@ -878,18 +837,54 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
                       placeholder="Enter price"
                       style={{ width: '100%' }}
                       size="large"
+                      min={0}
                       formatter={value => `LKR ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                       parser={(value: string | undefined) => value ? value.replace(/LKR\s?|(,*)/g, '') : ''}
                     />
                   </Form.Item>
                 </Col>
               </Row>
+
+              <Row gutter={[24, 16]}>
+                <Col xs={24} md={12}>
+                  <Form.Item
+                    label="Treatment (if known)"
+                    name="treatment"
+                  >
+                    <Select placeholder="Select treatment" size="large" allowClear>
+                      <Select.Option value="No Treatment">No Treatment</Select.Option>
+                      <Select.Option value="Heat treated">Heat Treated</Select.Option>
+                      <Select.Option value="Oiled">Oiled</Select.Option>
+                      <Select.Option value="Unknown">Unknown</Select.Option>
+                      <Select.Option value="Not specified">Not specified</Select.Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+                
+                <Col xs={24} md={12}>
+                  <Form.Item
+                    label="Origin (if known)"
+                    name="origin"
+                  >
+                    <Select placeholder="Select origin" size="large" allowClear>
+                      <Select.Option value="Sri Lanka">Sri Lanka</Select.Option>
+                      <Select.Option value="Myanmar">Myanmar</Select.Option>
+                      <Select.Option value="Madagascar">Madagascar</Select.Option>
+                      <Select.Option value="Tanzania">Tanzania</Select.Option>
+                      <Select.Option value="Thailand">Thailand</Select.Option>
+                      <Select.Option value="Brazil">Brazil</Select.Option>
+                      <Select.Option value="Unknown">Unknown</Select.Option>
+                      <Select.Option value="Not specified">Not specified</Select.Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+              </Row>
             </div>
 
-            {/* Additional Information */}
-            <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-              <Title level={4} className="text-green-600 mb-6 mt-0">
-                Additional Information
+            {/* Description */}
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+              <Title level={4} className="text-gray-600 mb-6 mt-0">
+                Description & Additional Details
               </Title>
               
               <Form.Item
@@ -898,19 +893,19 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
                 rules={[{ required: true, message: 'Please enter description' }]}
               >
                 <Input.TextArea 
-                  rows={3} 
-                  placeholder="Provide detailed description of your gemstone..." 
+                  rows={4} 
+                  placeholder="Describe your gemstone: visual appearance, size, any notable features, condition, etc." 
                   size="large"
                 />
               </Form.Item>
               
               <Form.Item
-                label="Comments"
+                label="Additional Comments (Optional)"
                 name="comments"
               >
                 <Input.TextArea 
                   rows={2} 
-                  placeholder="Any additional comments or observations about the gemstone..." 
+                  placeholder="Any additional information, history, or special notes about the gemstone..." 
                   size="large"
                 />
               </Form.Item>
@@ -1511,8 +1506,16 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
                   <Text>{wizardData.basicInfo.name || wizardData.basicInfo.gemName || 'N/A'}</Text>
                 </Col>
                 <Col xs={24} md={12}>
-                  <Text strong>Variety: </Text>
-                  <Text>{wizardData.basicInfo.variety || 'N/A'}</Text>
+                  <Text strong>Category: </Text>
+                  <Text>{wizardData.basicInfo.category || 'N/A'}</Text>
+                </Col>
+                <Col xs={24} md={12}>
+                  <Text strong>Color: </Text>
+                  <Text>{wizardData.basicInfo.color || 'N/A'}</Text>
+                </Col>
+                <Col xs={24} md={12}>
+                  <Text strong>Shape: </Text>
+                  <Text>{wizardData.basicInfo.shape || 'N/A'}</Text>
                 </Col>
                 <Col xs={24} md={12}>
                   <Text strong>Price: </Text>
@@ -1524,16 +1527,20 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
                 </Col>
                 <Col xs={24} md={12}>
                   <Text strong>Treatment: </Text>
-                  <Text>{wizardData.basicInfo.treatment || 'N/A'}</Text>
+                  <Text>{wizardData.basicInfo.treatment || 'Not specified'}</Text>
+                </Col>
+                <Col xs={24} md={12}>
+                  <Text strong>Origin: </Text>
+                  <Text>{wizardData.basicInfo.origin || 'Not specified'}</Text>
                 </Col>
                 <Col xs={24} md={12}>
                   <Text strong>Images: </Text>
                   <Text>{wizardData.images?.length || 0} uploaded</Text>
                 </Col>
-                {wizardData.certificationType === 'non-certified' && (
+                {wizardData.certificationType === 'certified' && wizardData.basicInfo.certificateNumber && (
                   <Col xs={24} md={12}>
-                    <Text strong>CSL Memo: </Text>
-                    <Text>{wizardData.basicInfo.cslMemoNo || 'N/A'}</Text>
+                    <Text strong>Certificate: </Text>
+                    <Text>{wizardData.basicInfo.certificateNumber}</Text>
                   </Col>
                 )}
               </Row>
