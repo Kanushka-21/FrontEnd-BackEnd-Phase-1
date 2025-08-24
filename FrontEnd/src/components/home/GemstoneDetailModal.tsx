@@ -3,6 +3,7 @@ import { X, Shield, TrendingUp, Clock, Users } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { DetailedGemstone, BidInfo } from '@/types';
 import CountdownTimer from '../CountdownTimer';
+import AIPricePrediction from '@/components/common/AIPricePrediction';
 
 // Helper function to format price in LKR
 const formatLKR = (price: number) => {
@@ -275,18 +276,32 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
               <div className="space-y-6">
                 {/* Price Section */}
                 <div className="bg-gray-50 p-6 rounded-xl">
+                  <div className="mb-2 text-sm text-secondary-600 font-medium">
+                    Started price
+                  </div>
                   <div className="text-3xl font-bold text-primary-800">
                     {formatLKR(gemstone.price)}
                   </div>
-                  {gemstone.predictedPriceRange && (
-                    <div className="mt-2 flex items-center text-sm text-secondary-600">
-                      <TrendingUp className="w-4 h-4 mr-1" />
-                      <span>Estimated Range: </span>
-                      <span className="font-medium ml-1">
-                        {formatLKR(gemstone.predictedPriceRange.min)} - {formatLKR(gemstone.predictedPriceRange.max)}
-                      </span>
-                    </div>
-                  )}
+                </div>
+
+                {/* AI Price Prediction with Item-Specific Accuracy */}
+                <div className="space-y-4">
+                  <h3 className="text-xl font-semibold">AI Price Analysis</h3>
+                  <AIPricePrediction 
+                    gemData={{
+                      weight: gemstone.weight || '1.0',
+                      color: gemstone.color || 'Blue',
+                      cut: gemstone.cut || 'Good',
+                      clarity: gemstone.clarity || 'SI1',
+                      species: gemstone.species || gemstone.variety || 'Sapphire',
+                      isCertified: !!gemstone.certificate,
+                      shape: gemstone.shape || 'Round',
+                      treatment: gemstone.specifications?.treatment || 'Heat Treatment',
+                      origin: gemstone.origin
+                    }}
+                    showDetails={true}
+                    className="shadow-lg border-2 border-indigo-300"
+                  />
                 </div>
 
                 {/* Specifications */}
