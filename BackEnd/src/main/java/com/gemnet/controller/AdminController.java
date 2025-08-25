@@ -2,7 +2,9 @@ package com.gemnet.controller;
 
 import com.gemnet.dto.ApiResponse;
 import com.gemnet.model.GemListing;
+import com.gemnet.model.User;
 import com.gemnet.service.AdminService;
+import com.gemnet.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -27,6 +30,116 @@ public class AdminController {
 
     @Autowired
     private AdminService adminService;
+
+    @Autowired
+    private UserService userService;
+
+    /**
+     * Get all users for admin management
+     */
+    @GetMapping("/users")
+    @Operation(summary = "Get all users", 
+               description = "Retrieve all users for admin management")
+    @CrossOrigin(origins = "*", allowedHeaders = "*", methods = {RequestMethod.GET})
+    public ResponseEntity<ApiResponse<List<User>>> getAllUsers() {
+        
+        System.out.println("👥 Admin - Getting all users request received");
+        
+        try {
+            // Get all users from user service
+            List<User> users = userService.findAll();
+            
+            System.out.println("✅ Successfully retrieved " + users.size() + " users");
+            return ResponseEntity.ok(ApiResponse.success("Users retrieved successfully", users));
+            
+        } catch (Exception e) {
+            System.err.println("❌ Get all users error: " + e.getMessage());
+            e.printStackTrace();
+            
+            return ResponseEntity.status(500)
+                .body(ApiResponse.error("Failed to retrieve users: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Update user verification status
+     */
+    @PostMapping("/verifications/{userId}")
+    @Operation(summary = "Update user verification status", 
+               description = "Approve or reject user verification")
+    @CrossOrigin(origins = "*", allowedHeaders = "*", methods = {RequestMethod.POST})
+    public ResponseEntity<ApiResponse<String>> updateVerificationStatus(
+            @PathVariable String userId,
+            @RequestParam boolean approved) {
+        
+        System.out.println("✅ Admin - Update verification status request received");
+        System.out.println("🆔 User ID: " + userId);
+        System.out.println("📊 Approved: " + approved);
+        
+        try {
+            // Update user verification status via service
+            ApiResponse<String> serviceResponse = userService.updateVerificationStatus(userId, approved);
+            
+            if (serviceResponse.isSuccess()) {
+                System.out.println("✅ User verification status updated successfully");
+                return ResponseEntity.ok(serviceResponse);
+            } else {
+                System.err.println("❌ Service error: " + serviceResponse.getMessage());
+                return ResponseEntity.status(500).body(serviceResponse);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("❌ Update verification status error: " + e.getMessage());
+            e.printStackTrace();
+            
+            return ResponseEntity.status(500)
+                .body(ApiResponse.error("Failed to update verification status: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Update user status (activate/deactivate)
+     */
+    @PostMapping("/users/{userId}/status")
+    @Operation(summary = "Update user status", 
+               description = "Activate or deactivate a user account")
+    @CrossOrigin(origins = "*", allowedHeaders = "*", methods = {RequestMethod.POST})
+    public ResponseEntity<ApiResponse<String>> updateUserStatus(
+            @PathVariable String userId,
+            @RequestParam String action) {
+        
+        System.out.println("🔄 Admin - Update user status request received");
+        System.out.println("🆔 User ID: " + userId);
+        System.out.println("⚡ Action: " + action);
+        
+        try {
+            // Validate action
+            if (!"activate".equals(action) && !"deactivate".equals(action)) {
+                return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Invalid action. Use 'activate' or 'deactivate'"));
+            }
+            
+            boolean isActive = "activate".equals(action);
+            
+            // Update user status via service
+            ApiResponse<String> serviceResponse = userService.updateUserStatus(userId, isActive);
+            
+            if (serviceResponse.isSuccess()) {
+                System.out.println("✅ User status updated successfully");
+                return ResponseEntity.ok(serviceResponse);
+            } else {
+                System.err.println("❌ Service error: " + serviceResponse.getMessage());
+                return ResponseEntity.status(500).body(serviceResponse);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("❌ Update user status error: " + e.getMessage());
+            e.printStackTrace();
+            
+            return ResponseEntity.status(500)
+                .body(ApiResponse.error("Failed to update user status: " + e.getMessage()));
+        }
+    }
 
     /**
      * Get pending gemstone listings for admin approval

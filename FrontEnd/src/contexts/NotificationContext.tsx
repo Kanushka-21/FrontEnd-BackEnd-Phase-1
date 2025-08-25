@@ -84,10 +84,14 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
 
       // Process pending user verifications
       if (pendingUsers.status === 'fulfilled' && pendingUsers.value.success) {
-        // Filter users needing verification
+        // Filter users needing verification (exclude admins)
         const users = Array.isArray(pendingUsers.value.data) ? pendingUsers.value.data : [];
         newNotifications.userManagement = users.filter((user: any) => 
-          user.verificationStatus === 'pending' || !user.isVerified
+          user.role?.toLowerCase() !== 'admin' && (
+            user.verificationStatus === 'pending' || 
+            user.verificationStatus === 'PENDING' ||
+            !user.isVerified
+          )
         ).length;
       }
 
