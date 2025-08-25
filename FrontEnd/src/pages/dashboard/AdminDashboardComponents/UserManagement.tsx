@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Tag, Space, Input, Tabs, Switch, message, Spin, Alert } from 'antd';
+import { Table, Button, Tag, Space, Input, Tabs, Switch, message, Spin, Alert, Modal, Descriptions, Image, Card } from 'antd';
 import { 
   EyeOutlined, CheckOutlined, CloseOutlined, 
-  LockOutlined, UnlockOutlined, UserOutlined, ReloadOutlined 
+  LockOutlined, UnlockOutlined, UserOutlined, ReloadOutlined,
+  PhoneOutlined, MailOutlined, CalendarOutlined, IdcardOutlined,
+  HomeOutlined, CloseCircleOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { api } from '@/services/api';
@@ -47,6 +49,9 @@ const UserManagement: React.FC<UserManagementProps> = ({ actionHandlers }) => {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [selectedUser, setSelectedUser] = useState<RealUser | null>(null);
+  const [userDetailsVisible, setUserDetailsVisible] = useState(false);
+  const [userDetailsLoading, setUserDetailsLoading] = useState(false);
   const { handleViewUser } = actionHandlers;
 
   // Fetch users from database
@@ -102,6 +107,77 @@ const UserManagement: React.FC<UserManagementProps> = ({ actionHandlers }) => {
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  // Fetch detailed user information
+  const fetchUserDetails = async (userId: string) => {
+    setUserDetailsLoading(true);
+    try {
+      console.log('Fetching user details for:', userId);
+      
+      // For now, let's create a mock response with the user data we already have
+      // This will be replaced with the actual API call once backend is running
+      const existingUser = allUsers.find(u => 
+        u.userId === userId || 
+        u._id?.$oid === userId || 
+        u.id === userId
+      );
+      
+      if (!existingUser) {
+        message.error('User not found');
+        return;
+      }
+      
+      // Create enhanced user details by combining existing data with mock additional details
+      const enhancedUserDetails = {
+        ...existingUser,
+        // Ensure all required fields are present
+        userId: userId,
+        id: userId,
+        name: existingUser.name || `${existingUser.firstName || ''} ${existingUser.lastName || ''}`.trim(),
+        role: existingUser.role || existingUser.userRole || 'BUYER',
+        userRole: existingUser.userRole || existingUser.role || 'BUYER',
+        joinDate: existingUser.joinDate || existingUser.createdAt || new Date().toISOString(),
+        lastActive: existingUser.lastActive || existingUser.updatedAt || new Date().toISOString(),
+        // Mock face and NIC image paths (these would come from the backend)
+        faceImagePath: existingUser.faceImagePath || `face_${userId}.jpg`,
+        nicImagePath: existingUser.nicImagePath || `nic_${userId}.jpg`,
+        // Ensure boolean fields are proper booleans
+        isVerified: existingUser.isVerified === true,
+        isFaceVerified: existingUser.isFaceVerified === true,
+        isNicVerified: existingUser.isNicVerified === true,
+        isActive: existingUser.isActive !== false,
+        isLocked: existingUser.isLocked === true,
+      };
+      
+      setSelectedUser(enhancedUserDetails);
+      setUserDetailsVisible(true);
+      
+      // TODO: Replace this with actual API call when backend is running:
+      // const response = await api.getUserProfile(userId);
+      // if (response.success && response.data) {
+      //   setSelectedUser(response.data as any);
+      //   setUserDetailsVisible(true);
+      // } else {
+      //   message.error(response.message || 'Failed to fetch user details');
+      // }
+      
+    } catch (error: any) {
+      console.error('Error fetching user details:', error);
+      message.error('Failed to load user details. Please try again.');
+    } finally {
+      setUserDetailsLoading(false);
+    }
+  };
+
+  // Handle view user details
+  const handleViewUserDetails = async (user: RealUser) => {
+    const userId = user.userId || user._id?.$oid || user.id;
+    if (userId) {
+      await fetchUserDetails(userId);
+    } else {
+      message.error('User ID not found');
+    }
+  };
 
   // Handle user approval
   const handleApproveUserAction = async (user: RealUser) => {
@@ -252,17 +328,8 @@ const UserManagement: React.FC<UserManagementProps> = ({ actionHandlers }) => {
           <Button 
             size="small" 
             icon={<EyeOutlined />} 
-            onClick={() => handleViewUser({
-              id: record.userId || record._id?.$oid || record.id || '',
-              name: record.name || '',
-              email: record.email,
-              role: (record.role || record.userRole || 'buyer').toLowerCase() as 'admin' | 'seller' | 'buyer',
-              status: (record.status || 'active') as 'active' | 'pending' | 'blocked',
-              joinDate: record.joinDate || record.createdAt || '',
-              lastActive: record.lastActive || record.lastLoginAt || '',
-              listings: record.listings || 0,
-              transactions: record.transactions || 0
-            })}
+            onClick={() => handleViewUserDetails(record)}
+            loading={userDetailsLoading}
           >
             View
           </Button>
@@ -373,17 +440,8 @@ const UserManagement: React.FC<UserManagementProps> = ({ actionHandlers }) => {
           <Button 
             size="small" 
             icon={<EyeOutlined />} 
-            onClick={() => handleViewUser({
-              id: record.userId || record._id?.$oid || record.id || '',
-              name: record.name || '',
-              email: record.email,
-              role: (record.role || record.userRole || 'buyer').toLowerCase() as 'admin' | 'seller' | 'buyer',
-              status: (record.status || 'active') as 'active' | 'pending' | 'blocked',
-              joinDate: record.joinDate || record.createdAt || '',
-              lastActive: record.lastActive || record.lastLoginAt || '',
-              listings: record.listings || 0,
-              transactions: record.transactions || 0
-            })}
+            onClick={() => handleViewUserDetails(record)}
+            loading={userDetailsLoading}
           >
             View
           </Button>
@@ -517,6 +575,227 @@ const UserManagement: React.FC<UserManagementProps> = ({ actionHandlers }) => {
           </Tabs.TabPane>
         </Tabs>
       </Spin>
+
+      {/* User Details Modal */}
+      <Modal
+        title={
+          <div className="flex items-center space-x-2">
+            <UserOutlined className="text-blue-600" />
+            <span>User Details</span>
+          </div>
+        }
+        open={userDetailsVisible}
+        onCancel={() => {
+          setUserDetailsVisible(false);
+          setSelectedUser(null);
+        }}
+        footer={[
+          <Button key="close" onClick={() => setUserDetailsVisible(false)}>
+            Close
+          </Button>,
+          selectedUser && !selectedUser.isVerified && (
+            <Button
+              key="verify"
+              type="primary"
+              icon={<CheckOutlined />}
+              onClick={() => {
+                if (selectedUser) {
+                  handleApproveUserAction(selectedUser);
+                  setUserDetailsVisible(false);
+                }
+              }}
+              loading={loading}
+            >
+              Verify User
+            </Button>
+          ),
+          selectedUser && !selectedUser.isVerified && (
+            <Button
+              key="reject"
+              danger
+              icon={<CloseOutlined />}
+              onClick={() => {
+                if (selectedUser) {
+                  handleRejectUserAction(selectedUser);
+                  setUserDetailsVisible(false);
+                }
+              }}
+              loading={loading}
+            >
+              Reject User
+            </Button>
+          ),
+        ].filter(Boolean)}
+        width={800}
+        style={{ top: 20 }}
+      >
+        <Spin spinning={userDetailsLoading} tip="Loading user details...">
+          {selectedUser && (
+            <div className="space-y-6">
+            {/* Profile Header */}
+            <Card>
+              <div className="flex items-center space-x-4">
+                <div className="flex-shrink-0">
+                  {selectedUser.profilePicture ? (
+                    <Image
+                      src={selectedUser.profilePicture}
+                      alt={selectedUser.name}
+                      width={80}
+                      height={80}
+                      className="rounded-full object-cover"
+                      fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMIAAADDCAYAAADQvc6UAAABRWlDQ1BJQ0MgUHJvZmlsZQAAKJFjYGASSSwoyGFhYGDIzSspCnJ3UoiIjFJgf8LAwSDCIMogwMCcmFxc4BgQ4ANUwgCjUcG3awyMIPqyLsis7PPOq3QdDFcvjV3jOD1boQVTPQrgSkktTgbSf4A4LbmgqISBgTEFyFYuLykAsTuAbJEioKOA7DkgdjqEvQHEToKwj4DVhAQ5A9k3gGyB5IxEoBmML4BsnSQk8XQkNtReEOBxcfXxUQg1Mjc0dyHgXNJBSWpFCYh2zi+oLMpMzyhRcASGUqqCZ16yno6CkYGRAQMDKMwhqj/fAIcloxgHQqxAjIHBEugw5sUIsSQpBobtQPdLciLEVJYzMPBHMDBsayhILEqEO4DxG0txmrERhM29nYGBddr//5/DGRjYNRkY/l7////39v///y4Dmn+LgeHANwDrkl1AuO+pmgAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAwqADAAQAAAABAAAAwwAAAAD9b/HnAAAHlklEQVR4Ae3dP3Ik1RnG4W+FgYxN..."
+                    />
+                  ) : (
+                    <div className="w-20 h-20 rounded-full bg-gray-300 flex items-center justify-center">
+                      <UserOutlined className="text-3xl text-gray-600" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-2xl font-bold text-gray-900">{selectedUser.name}</h2>
+                  <div className="flex items-center space-x-4 mt-2">
+                    <Tag color={selectedUser.role?.toLowerCase() === 'seller' ? 'purple' : 'blue'} className="text-sm">
+                      {selectedUser.role?.toUpperCase() || 'BUYER'}
+                    </Tag>
+                    <Tag color={selectedUser.isActive ? 'green' : 'red'}>
+                      {selectedUser.isActive ? 'ACTIVE' : 'INACTIVE'}
+                    </Tag>
+                    <Tag color={selectedUser.isVerified ? 'green' : 'orange'}>
+                      {selectedUser.isVerified ? 'VERIFIED' : 'UNVERIFIED'}
+                    </Tag>
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* Personal Information */}
+            <Card title="Personal Information">
+              <Descriptions column={2} bordered>
+                <Descriptions.Item label={<><MailOutlined className="mr-1" />Email</>}>
+                  {selectedUser.email}
+                </Descriptions.Item>
+                <Descriptions.Item label={<><PhoneOutlined className="mr-1" />Phone</>}>
+                  {selectedUser.phoneNumber || '-'}
+                </Descriptions.Item>
+                <Descriptions.Item label={<><CalendarOutlined className="mr-1" />Date of Birth</>}>
+                  {selectedUser.dateOfBirth ? dayjs(selectedUser.dateOfBirth).format('MMM DD, YYYY') : '-'}
+                </Descriptions.Item>
+                <Descriptions.Item label={<><IdcardOutlined className="mr-1" />NIC Number</>}>
+                  {selectedUser.nicNumber || '-'}
+                </Descriptions.Item>
+                <Descriptions.Item label={<><HomeOutlined className="mr-1" />Address</>} span={2}>
+                  {selectedUser.address || '-'}
+                </Descriptions.Item>
+              </Descriptions>
+            </Card>
+
+            {/* Verification Information */}
+            <Card title="Verification Status">
+              <Descriptions column={2} bordered>
+                <Descriptions.Item label="Face Verification">
+                  <Tag color={selectedUser.isFaceVerified ? 'green' : 'red'}>
+                    {selectedUser.isFaceVerified ? 'VERIFIED' : 'NOT VERIFIED'}
+                  </Tag>
+                </Descriptions.Item>
+                <Descriptions.Item label="NIC Verification">
+                  <Tag color={selectedUser.isNicVerified ? 'green' : 'red'}>
+                    {selectedUser.isNicVerified ? 'VERIFIED' : 'NOT VERIFIED'}
+                  </Tag>
+                </Descriptions.Item>
+                <Descriptions.Item label="Overall Status">
+                  <Tag color={selectedUser.verificationStatus === 'VERIFIED' ? 'green' : 'orange'}>
+                    {selectedUser.verificationStatus || 'PENDING'}
+                  </Tag>
+                </Descriptions.Item>
+                <Descriptions.Item label="Account Status">
+                  <Tag color={selectedUser.isLocked ? 'red' : 'green'}>
+                    {selectedUser.isLocked ? 'LOCKED' : 'UNLOCKED'}
+                  </Tag>
+                </Descriptions.Item>
+              </Descriptions>
+            </Card>
+
+            {/* Face Image */}
+            {selectedUser.faceImagePath && (
+              <Card title="Face Image">
+                <div className="text-center">
+                  <Image
+                    src={selectedUser.faceImagePath.startsWith('http') 
+                      ? selectedUser.faceImagePath 
+                      : `http://localhost:9092/uploads/face-images/${selectedUser.faceImagePath.split('/').pop()}`
+                    }
+                    alt="Face verification photo"
+                    width={200}
+                    height={200}
+                    className="rounded-lg object-cover"
+                    fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMIAAADDCAYAAADQvc6UAAABRWlDQ1BJQ0MgUHJvZmlsZQAAKJFjYGASSSwoyGFhYGDIzSspCnJ3UoiIjFJgf8LAwSDCIMogwMCcmFxc4BgQ4ANUwgCjUcG3awyMIPqyLsis7PPOq3QdDFcvjV3jOD1boQVTPQrgSkktTgbSf4A4LbmgqISBgTEFyFYuLykAsTuAbJEioKOA7DkgdjqEvQHEToKwj4DVhAQ5A9k3gGyB5IxEoBmML4BsnSQk8XQkNtReEOBxcfXxUQg1Mjc0dyHgXNJBSWpFCYh2zi+oLMpMzyhRcASGUqqCZ16yno6CkYGRAQMDKMwhqj/fAIcloxgHQqxAjIHBEugw5sUIsSQpBobtQPdLciLEVJYzMPBHMDBsayhILEqEO4DxG0txmrERhM29nYGBddr//5/DGRjYNRkY/l7////39v///y4Dmn+LgeHANwDrkl1AuO+pmgAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAwqADAAQAAAABAAAAwwAAAAD9b/HnAAAHlklEQVR4Ae3dP3Ik1RnG4W+FgYxN..."
+                    preview={{
+                      mask: (
+                        <div className="flex flex-col items-center">
+                          <EyeOutlined style={{ fontSize: '20px' }} />
+                          <span>Preview</span>
+                        </div>
+                      ),
+                    }}
+                  />
+                  <p className="text-sm text-gray-500 mt-2">
+                    Face verification image
+                  </p>
+                </div>
+              </Card>
+            )}
+
+            {/* NIC Image */}
+            {selectedUser.nicImagePath && (
+              <Card title="NIC Image">
+                <div className="text-center">
+                  <Image
+                    src={selectedUser.nicImagePath.startsWith('http') 
+                      ? selectedUser.nicImagePath 
+                      : `http://localhost:9092/uploads/nic-images/${selectedUser.nicImagePath.split('/').pop()}`
+                    }
+                    alt="NIC verification photo"
+                    width={300}
+                    height={200}
+                    className="rounded-lg object-cover"
+                    fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMIAAADDCAYAAADQvc6UAAABRWlDQ1BJQ0MgUHJvZmlsZQAAKJFjYGASSSwoyGFhYGDIzSspCnJ3UoiIjFJgf8LAwSDCIMogwMCcmFxc4BgQ4ANUwgCjUcG3awyMIPqyLsis7PPOq3QdDFcvjV3jOD1boQVTPQrgSkktTgbSf4A4LbmgqISBgTEFyFYuLykAsTuAbJEioKOA7DkgdjqEvQHEToKwj4DVhAQ5A9k3gGyB5IxEoBmML4BsnSQk8XQkNtReEOBxcfXxUQg1Mjc0dyHgXNJBSWpFCYh2zi+oLMpMzyhRcASGUqqCZ16yno6CkYGRAQMDKMwhqj/fAIcloxgHQqxAjIHBEugw5sUIsSQpBobtQPdLciLEVJYzMPBHMDBsayhILEqEO4DxG0txmrERhM29nYGBddr//5/DGRjYNRkY/l7////39v///y4Dmn+LgeHANwDrkl1AuO+pmgAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAwqADAAQAAAABAAAAwwAAAAD9b/HnAAAHlklEQVR4Ae3dP3Ik1RnG4W+FgYxN..."
+                    preview={{
+                      mask: (
+                        <div className="flex flex-col items-center">
+                          <EyeOutlined style={{ fontSize: '20px' }} />
+                          <span>Preview</span>
+                        </div>
+                      ),
+                    }}
+                  />
+                  <p className="text-sm text-gray-500 mt-2">
+                    National Identity Card
+                  </p>
+                </div>
+              </Card>
+            )}
+
+            {/* Account Information */}
+            <Card title="Account Information">
+              <Descriptions column={2} bordered>
+                <Descriptions.Item label="User ID">
+                  {selectedUser.userId}
+                </Descriptions.Item>
+                <Descriptions.Item label="Join Date">
+                  {selectedUser.joinDate ? dayjs(selectedUser.joinDate).format('MMM DD, YYYY HH:mm') : '-'}
+                </Descriptions.Item>
+                <Descriptions.Item label="Last Active">
+                  {selectedUser.lastActive ? dayjs(selectedUser.lastActive).format('MMM DD, YYYY HH:mm') : 'Never'}
+                </Descriptions.Item>
+                <Descriptions.Item label="Account Age">
+                  {selectedUser.joinDate ? dayjs().diff(dayjs(selectedUser.joinDate), 'day') + ' days' : '-'}
+                </Descriptions.Item>
+              </Descriptions>
+            </Card>
+          </div>
+          )}
+        </Spin>
+      </Modal>
     </div>
   );
 };

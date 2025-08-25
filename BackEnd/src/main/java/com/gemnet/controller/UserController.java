@@ -57,13 +57,33 @@ public class UserController {
             
             // Account information
             profileData.put("userRole", user.getUserRole());
+            profileData.put("role", user.getUserRole()); // Add alias for consistency
             profileData.put("isVerified", user.getIsVerified());
             profileData.put("verificationStatus", user.getVerificationStatus());
             profileData.put("isFaceVerified", user.getIsFaceVerified());
             profileData.put("isNicVerified", user.getIsNicVerified());
             profileData.put("isActive", user.getIsActive());
+            profileData.put("isLocked", user.getIsLocked() != null ? user.getIsLocked() : false);
             profileData.put("createdAt", user.getCreatedAt());
             profileData.put("updatedAt", user.getUpdatedAt());
+            profileData.put("joinDate", user.getCreatedAt());
+            profileData.put("lastActive", user.getUpdatedAt());
+            
+            // Image paths
+            profileData.put("faceImagePath", user.getFaceImagePath());
+            profileData.put("nicImagePath", user.getNicImagePath());
+            // Note: profilePicture field doesn't exist in User model, so we'll skip it for now
+            
+            // Display name
+            String displayName = "";
+            if (user.getFirstName() != null && user.getLastName() != null) {
+                displayName = user.getFirstName() + " " + user.getLastName();
+            } else if (user.getFirstName() != null) {
+                displayName = user.getFirstName();
+            } else if (user.getLastName() != null) {
+                displayName = user.getLastName();
+            }
+            profileData.put("name", displayName);
 
             System.out.println("✅ Profile fetched successfully for user: " + userId);
             return ResponseEntity.ok(ApiResponse.success("Profile fetched successfully", profileData));
