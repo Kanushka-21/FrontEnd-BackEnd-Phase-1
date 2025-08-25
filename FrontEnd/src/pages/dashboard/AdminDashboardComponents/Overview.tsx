@@ -6,6 +6,7 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { AdminComponentProps, StatsCard, generateStats, pendingUsers, recentTransactions, formatLKR } from './shared';
+import NotificationSummary from '@/components/admin/NotificationSummary';
 
 const Overview: React.FC<AdminComponentProps> = ({ user, onTabChange }) => {
   const stats = generateStats();
@@ -87,6 +88,11 @@ const Overview: React.FC<AdminComponentProps> = ({ user, onTabChange }) => {
           />
         </Col>
       </Row>
+
+      {/* Notification Summary */}
+      <div className="mb-6">
+        <NotificationSummary onTabChange={onTabChange || (() => {})} />
+      </div>
 
       {/* Quick Actions */}
       <Card title="Quick Actions" className="mb-6">

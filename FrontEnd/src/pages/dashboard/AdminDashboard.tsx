@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNotifications, NotificationBadge } from '@/contexts/NotificationContext';
 import { Modal, Divider, Alert } from 'antd';
 import dayjs from 'dayjs';
 import RoleAwareDashboardLayout from '@/components/layout/RoleAwareDashboardLayout';
@@ -19,6 +20,7 @@ import {
 
 const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
+  const { notifications, totalNotifications, refreshNotifications } = useNotifications();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [modalState, setModalState] = useState<ModalState>({
@@ -32,14 +34,44 @@ const AdminDashboard: React.FC = () => {
     selectedListing: null,
   });
 
-  // Sidebar items for admin
+  // Sidebar items for admin with notification badges
   const sidebarItems = [
-    { id: 'overview', label: 'Dashboard Overview', icon: <BarChart3 size={24} /> },
-    { id: 'users', label: 'User Management', icon: <Users size={24} /> },
-    { id: 'listings', label: 'Listing Management', icon: <Package size={24} /> },
-    { id: 'advertisements', label: 'Manage Advertisement', icon: <Package size={24} /> },
-    { id: 'meetings', label: 'Meeting Requests', icon: <Clock size={24} /> },
-    { id: 'settings', label: 'System Settings', icon: <Settings size={24} /> }
+    { 
+      id: 'overview', 
+      label: 'Dashboard Overview', 
+      icon: <BarChart3 size={24} />,
+      notificationCount: 0
+    },
+    { 
+      id: 'users', 
+      label: 'User Management', 
+      icon: <Users size={24} />,
+      notificationCount: notifications.userManagement
+    },
+    { 
+      id: 'listings', 
+      label: 'Listing Management', 
+      icon: <Package size={24} />,
+      notificationCount: notifications.listingManagement
+    },
+    { 
+      id: 'advertisements', 
+      label: 'Manage Advertisement', 
+      icon: <Package size={24} />,
+      notificationCount: notifications.advertisements
+    },
+    { 
+      id: 'meetings', 
+      label: 'Meeting Requests', 
+      icon: <Clock size={24} />,
+      notificationCount: notifications.meetingRequests
+    },
+    { 
+      id: 'settings', 
+      label: 'System Settings', 
+      icon: <Settings size={24} />,
+      notificationCount: notifications.systemAlerts
+    }
   ];
 
   // Define all required action handlers
@@ -117,14 +149,34 @@ const AdminDashboard: React.FC = () => {
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`w-full flex items-center px-3 py-2 rounded-lg text-left transition-colors ${
+                className={`w-full flex items-center px-3 py-2 rounded-lg text-left transition-colors relative ${
                   activeTab === item.id
                     ? 'bg-blue-100 text-blue-700'
                     : 'text-gray-600 hover:bg-gray-100'
                 }`}
               >
-                <span className="mr-3">{item.icon}</span>
-                {!sidebarCollapsed && <span className="text-sm font-medium">{item.label}</span>}
+                <span className="mr-3 relative">
+                  {item.icon}
+                  {item.notificationCount > 0 && (
+                    <NotificationBadge 
+                      count={item.notificationCount} 
+                      size="small"
+                      color="red"
+                    />
+                  )}
+                </span>
+                {!sidebarCollapsed && (
+                  <span className="text-sm font-medium flex-1">{item.label}</span>
+                )}
+                {!sidebarCollapsed && item.notificationCount > 0 && (
+                  <span className="ml-auto">
+                    <NotificationBadge 
+                      count={item.notificationCount} 
+                      size="small"
+                      color="red"
+                    />
+                  </span>
+                )}
               </button>
             ))}
           </nav>
@@ -141,9 +193,20 @@ const AdminDashboard: React.FC = () => {
                 </p>
               </div>
               <div className="flex items-center space-x-4">
-                {/* Notification Bell */}
-                <button className="p-2 rounded-lg hover:bg-gray-100 text-gray-600">
+                {/* Notification Bell with total count */}
+                <button 
+                  className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 relative"
+                  onClick={refreshNotifications}
+                  title="Refresh notifications"
+                >
                   <Bell size={20} />
+                  {totalNotifications > 0 && (
+                    <NotificationBadge 
+                      count={totalNotifications} 
+                      size="small"
+                      color="red"
+                    />
+                  )}
                 </button>
                 {/* Search */}
                 <div className="relative">

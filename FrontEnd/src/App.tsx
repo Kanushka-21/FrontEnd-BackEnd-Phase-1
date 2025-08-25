@@ -11,6 +11,7 @@ import MarketplacePage from '@/pages/MarketplacePage';
 // Demo Pages
 import PricePredictionDemo from '@/components/demo/PricePredictionDemo';
 import AccuracyAnalysis from '@/components/common/AccuracyAnalysis';
+import NotificationBadgeDemo from '@/components/demo/NotificationBadgeDemo';
 
 // Dashboard Pages
 import AdminDashboard from '@/pages/dashboard/AdminDashboard';
@@ -22,6 +23,7 @@ import DashboardLayout from '@/components/layout/DashboardLayout.new';
 
 // Auth Context
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { NotificationProvider } from '@/contexts/NotificationContext';
 
 // Auth Components
 import RoleProtectedRoute from '@/components/auth/RoleProtectedRoute';
@@ -94,7 +96,9 @@ const AppRoutes: React.FC = () => {
               <Route index element={<Navigate to="/admin/dashboard" replace />} />
               <Route path="dashboard" element={
                 <RoleProtectedRoute allowedRoles={['admin']}>
-                  <AdminDashboard />
+                  <NotificationProvider>
+                    <AdminDashboard />
+                  </NotificationProvider>
                 </RoleProtectedRoute>
               } />
               <Route path="users" element={
@@ -224,6 +228,10 @@ const AppRoutes: React.FC = () => {
           <Route 
             path="/demo/accuracy-analysis" 
             element={<AccuracyAnalysis />} 
+          />
+          <Route 
+            path="/demo/notification-badges" 
+            element={<NotificationBadgeDemo />} 
           />
           
           {/* Default Route - Changed to Home */}
