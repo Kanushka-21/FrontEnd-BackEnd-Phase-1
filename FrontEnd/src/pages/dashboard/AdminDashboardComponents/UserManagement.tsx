@@ -28,12 +28,20 @@ interface RealUser {
   verificationStatus: string;
   isActive: boolean;
   createdAt?: string;
+  updatedAt?: string;
   lastLoginAt?: string;
   phoneNumber?: string;
   profilePicture?: string;
   address?: string;
   dateOfBirth?: string;
   nicNumber?: string;
+  bio?: string;
+  faceImagePath?: string;
+  nicImagePath?: string;
+  extractedNicImagePath?: string;
+  isFaceVerified?: boolean;
+  isNicVerified?: boolean;
+  isLocked?: boolean;
   // Additional computed fields
   name?: string;
   status?: string;
@@ -114,8 +122,26 @@ const UserManagement: React.FC<UserManagementProps> = ({ actionHandlers }) => {
     try {
       console.log('Fetching user details for:', userId);
       
-      // For now, let's create a mock response with the user data we already have
-      // This will be replaced with the actual API call once backend is running
+      // Try to fetch from API first
+      try {
+        const response = await api.getUserProfile(userId);
+        if (response.success && response.data) {
+          console.log('✅ Successfully fetched user details from API:', response.data);
+          
+          // Log image paths for debugging
+          console.log('🖼️ Face Image Path:', response.data.faceImagePath);
+          console.log('🖼️ NIC Image Path:', response.data.nicImagePath);
+          console.log('🖼️ Extracted NIC Image Path:', response.data.extractedNicImagePath);
+          
+          setSelectedUser(response.data as any);
+          setUserDetailsVisible(true);
+          return;
+        }
+      } catch (apiError) {
+        console.warn('⚠️ API call failed, using existing user data:', apiError);
+      }
+      
+      // Fallback to existing user data if API fails
       const existingUser = allUsers.find(u => 
         u.userId === userId || 
         u._id?.$oid === userId || 
@@ -127,7 +153,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ actionHandlers }) => {
         return;
       }
       
-      // Create enhanced user details by combining existing data with mock additional details
+      // Create enhanced user details by combining existing data with additional fields
       const enhancedUserDetails = {
         ...existingUser,
         // Ensure all required fields are present
@@ -138,9 +164,9 @@ const UserManagement: React.FC<UserManagementProps> = ({ actionHandlers }) => {
         userRole: existingUser.userRole || existingUser.role || 'BUYER',
         joinDate: existingUser.joinDate || existingUser.createdAt || new Date().toISOString(),
         lastActive: existingUser.lastActive || existingUser.updatedAt || new Date().toISOString(),
-        // Mock face and NIC image paths (these would come from the backend)
-        faceImagePath: existingUser.faceImagePath || `face_${userId}.jpg`,
-        nicImagePath: existingUser.nicImagePath || `nic_${userId}.jpg`,
+        // Set image paths (will be served through API endpoint)
+        faceImagePath: existingUser.faceImagePath || 'default_face.jpg',
+        nicImagePath: existingUser.nicImagePath || 'default_nic.jpg',
         // Ensure boolean fields are proper booleans
         isVerified: existingUser.isVerified === true,
         isFaceVerified: existingUser.isFaceVerified === true,
@@ -151,15 +177,6 @@ const UserManagement: React.FC<UserManagementProps> = ({ actionHandlers }) => {
       
       setSelectedUser(enhancedUserDetails);
       setUserDetailsVisible(true);
-      
-      // TODO: Replace this with actual API call when backend is running:
-      // const response = await api.getUserProfile(userId);
-      // if (response.success && response.data) {
-      //   setSelectedUser(response.data as any);
-      //   setUserDetailsVisible(true);
-      // } else {
-      //   message.error(response.message || 'Failed to fetch user details');
-      // }
       
     } catch (error: any) {
       console.error('Error fetching user details:', error);
@@ -715,20 +732,21 @@ const UserManagement: React.FC<UserManagementProps> = ({ actionHandlers }) => {
               </Descriptions>
             </Card>
 
-            {/* Face Image */}
-            {selectedUser.faceImagePath && (
-              <Card title="Face Image">
+            {/* Images Section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Captured Face Image */}
+              <Card title="Captured Face Image" size="small">
                 <div className="text-center">
                   <Image
-                    src={selectedUser.faceImagePath.startsWith('http') 
-                      ? selectedUser.faceImagePath 
-                      : `http://localhost:9092/uploads/face-images/${selectedUser.faceImagePath.split('/').pop()}`
+                    src={selectedUser.faceImagePath ? 
+                      `http://localhost:8080/api/users/image/face/${selectedUser.userId || selectedUser.id}` :
+                      'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjVGNUY1Ii8+Cjx0ZXh0IHg9IjEwMCIgeT0iMTAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM5OTk5OTkiPk5vIEZhY2UgSW1hZ2U8L3RleHQ+Cjwvc3ZnPgo='
                     }
-                    alt="Face verification photo"
-                    width={200}
-                    height={200}
+                    alt="Captured face verification photo"
+                    width={180}
+                    height={180}
                     className="rounded-lg object-cover"
-                    fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMIAAADDCAYAAADQvc6UAAABRWlDQ1BJQ0MgUHJvZmlsZQAAKJFjYGASSSwoyGFhYGDIzSspCnJ3UoiIjFJgf8LAwSDCIMogwMCcmFxc4BgQ4ANUwgCjUcG3awyMIPqyLsis7PPOq3QdDFcvjV3jOD1boQVTPQrgSkktTgbSf4A4LbmgqISBgTEFyFYuLykAsTuAbJEioKOA7DkgdjqEvQHEToKwj4DVhAQ5A9k3gGyB5IxEoBmML4BsnSQk8XQkNtReEOBxcfXxUQg1Mjc0dyHgXNJBSWpFCYh2zi+oLMpMzyhRcASGUqqCZ16yno6CkYGRAQMDKMwhqj/fAIcloxgHQqxAjIHBEugw5sUIsSQpBobtQPdLciLEVJYzMPBHMDBsayhILEqEO4DxG0txmrERhM29nYGBddr//5/DGRjYNRkY/l7////39v///y4Dmn+LgeHANwDrkl1AuO+pmgAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAwqADAAQAAAABAAAAwwAAAAD9b/HnAAAHlklEQVR4Ae3dP3Ik1RnG4W+FgYxN..."
+                    fallback="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjVGNUY1Ii8+Cjx0ZXh0IHg9IjEwMCIgeT0iMTAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM5OTk5OTkiPkltYWdlIE5vdCBGb3VuZDwvdGV4dD4KPC9zdmc+Cg=="
                     preview={{
                       mask: (
                         <div className="flex flex-col items-center">
@@ -739,26 +757,24 @@ const UserManagement: React.FC<UserManagementProps> = ({ actionHandlers }) => {
                     }}
                   />
                   <p className="text-sm text-gray-500 mt-2">
-                    Face verification image
+                    Direct selfie capture
                   </p>
                 </div>
               </Card>
-            )}
 
-            {/* NIC Image */}
-            {selectedUser.nicImagePath && (
-              <Card title="NIC Image">
+              {/* Extracted Face from NIC */}
+              <Card title="Extracted Face from NIC" size="small">
                 <div className="text-center">
                   <Image
-                    src={selectedUser.nicImagePath.startsWith('http') 
-                      ? selectedUser.nicImagePath 
-                      : `http://localhost:9092/uploads/nic-images/${selectedUser.nicImagePath.split('/').pop()}`
+                    src={selectedUser.extractedNicImagePath ? 
+                      `http://localhost:8080/api/users/image/extracted/${selectedUser.userId || selectedUser.id}` :
+                      'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjVGNUY1Ii8+Cjx0ZXh0IHg9IjEwMCIgeT0iMTAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM5OTk5OTkiPk5vIEV4dHJhY3RlZCBGYWNlPC90ZXh0Pgo8L3N2Zz4K'
                     }
-                    alt="NIC verification photo"
-                    width={300}
-                    height={200}
+                    alt="Face extracted from NIC"
+                    width={180}
+                    height={180}
                     className="rounded-lg object-cover"
-                    fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMIAAADDCAYAAADQvc6UAAABRWlDQ1BJQ0MgUHJvZmlsZQAAKJFjYGASSSwoyGFhYGDIzSspCnJ3UoiIjFJgf8LAwSDCIMogwMCcmFxc4BgQ4ANUwgCjUcG3awyMIPqyLsis7PPOq3QdDFcvjV3jOD1boQVTPQrgSkktTgbSf4A4LbmgqISBgTEFyFYuLykAsTuAbJEioKOA7DkgdjqEvQHEToKwj4DVhAQ5A9k3gGyB5IxEoBmML4BsnSQk8XQkNtReEOBxcfXxUQg1Mjc0dyHgXNJBSWpFCYh2zi+oLMpMzyhRcASGUqqCZ16yno6CkYGRAQMDKMwhqj/fAIcloxgHQqxAjIHBEugw5sUIsSQpBobtQPdLciLEVJYzMPBHMDBsayhILEqEO4DxG0txmrERhM29nYGBddr//5/DGRjYNRkY/l7////39v///y4Dmn+LgeHANwDrkl1AuO+pmgAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAwqADAAQAAAABAAAAwwAAAAD9b/HnAAAHlklEQVR4Ae3dP3Ik1RnG4W+FgYxN..."
+                    fallback="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjVGNUY1Ii8+Cjx0ZXh0IHg9IjEwMCIgeT0iMTAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM5OTk5OTkiPkltYWdlIE5vdCBGb3VuZDwvdGV4dD4KPC9zdmc+Cg=="
                     preview={{
                       mask: (
                         <div className="flex flex-col items-center">
@@ -769,11 +785,39 @@ const UserManagement: React.FC<UserManagementProps> = ({ actionHandlers }) => {
                     }}
                   />
                   <p className="text-sm text-gray-500 mt-2">
-                    National Identity Card
+                    Face extracted from NIC card
                   </p>
                 </div>
               </Card>
-            )}
+            </div>
+
+            {/* NIC Card Image */}
+            <Card title="National Identity Card" size="small">
+              <div className="text-center">
+                <Image
+                  src={selectedUser.nicImagePath ? 
+                    `http://localhost:8080/api/users/image/nic/${selectedUser.userId || selectedUser.id}` :
+                    'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDMwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjVGNUY1Ii8+Cjx0ZXh0IHg9IjE1MCIgeT0iMTAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM5OTk5OTkiPk5vIE5JQyBJbWFnZTwvdGV4dD4KPC9zdmc+Cg=='
+                  }
+                  alt="National Identity Card"
+                  width={300}
+                  height={200}
+                  className="rounded-lg object-cover"
+                  fallback="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDMwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjVGNUY1Ii8+Cjx0ZXh0IHg9IjE1MCIgeT0iMTAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM5OTk5OTkiPkltYWdlIE5vdCBGb3VuZDwvdGV4dD4KPC9zdmc+Cg=="
+                  preview={{
+                    mask: (
+                      <div className="flex flex-col items-center">
+                        <EyeOutlined style={{ fontSize: '20px' }} />
+                        <span>Preview</span>
+                      </div>
+                    ),
+                  }}
+                />
+                <p className="text-sm text-gray-500 mt-2">
+                  Complete NIC document
+                </p>
+              </div>
+            </Card>
 
             {/* Account Information */}
             <Card title="Account Information">

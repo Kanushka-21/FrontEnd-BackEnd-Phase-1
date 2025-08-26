@@ -12,10 +12,17 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.MediaType;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.FileSystemResource;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 @RestController
 @RequestMapping("/api/users")
@@ -267,6 +274,85 @@ public class UserController {
         } catch (Exception e) {
             System.err.println("❌ Error confirming meeting: " + e.getMessage());
             return ResponseEntity.ok(ApiResponse.error("Error confirming meeting: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/image/{imageType}/{userId}")
+    @Operation(summary = "Get user image", description = "Serve user face or NIC image")
+    public ResponseEntity<Resource> getUserImage(
+            @PathVariable String imageType, 
+            @PathVariable String userId) {
+        try {
+            System.out.println("🖼️ Fetching " + imageType + " image for user: " + userId);
+            
+            Optional<User> userOpt = userService.findById(userId);
+            if (!userOpt.isPresent()) {
+                System.err.println("❌ User not found: " + userId);
+                return ResponseEntity.notFound().build();
+            }
+
+            User user = userOpt.get();
+            String imagePath = null;
+            
+            // Get the appropriate image path based on type
+            switch (imageType.toLowerCase()) {
+                case "face":
+                    imagePath = user.getFaceImagePath();
+                    break;
+                case "nic":
+                    imagePath = user.getNicImagePath();
+                    break;
+                case "extracted":
+                    imagePath = user.getExtractedNicImagePath();
+                    break;
+                default:
+                    System.err.println("❌ Invalid image type: " + imageType);
+                    return ResponseEntity.badRequest().build();
+            }
+            
+            if (imagePath == null || imagePath.isEmpty()) {
+                System.err.println("❌ No " + imageType + " image path found for user: " + userId);
+                return ResponseEntity.notFound().build();
+            }
+            
+            // Convert absolute path to relative path from project root
+            Path fullPath = Paths.get(imagePath);
+            File imageFile = fullPath.toFile();
+            
+            if (!imageFile.exists()) {
+                System.err.println("❌ Image file not found: " + imagePath);
+                return ResponseEntity.notFound().build();
+            }
+            
+            Resource resource = new FileSystemResource(imageFile);
+            
+            // Determine content type based on file extension
+            String contentType = "application/octet-stream";
+            try {
+                contentType = Files.probeContentType(fullPath);
+                if (contentType == null) {
+                    String fileName = imageFile.getName().toLowerCase();
+                    if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg")) {
+                        contentType = "image/jpeg";
+                    } else if (fileName.endsWith(".png")) {
+                        contentType = "image/png";
+                    } else if (fileName.endsWith(".webp")) {
+                        contentType = "image/webp";
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("⚠️ Could not determine content type: " + e.getMessage());
+            }
+            
+            System.out.println("✅ Serving " + imageType + " image for user: " + userId);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType(contentType))
+                    .body(resource);
+                    
+        } catch (Exception e) {
+            System.err.println("❌ Error serving image: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
         }
     }
 }
