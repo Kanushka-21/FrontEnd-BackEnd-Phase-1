@@ -25,6 +25,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.List;
+import java.time.LocalDateTime;
 
 @Service
 public class UserService {
@@ -439,7 +440,7 @@ public class UserService {
             User user = userOpt.get();
             user.setIsVerified(approved);
             user.setVerificationStatus(approved ? "VERIFIED" : "REJECTED");
-            user.setUpdatedAt(System.currentTimeMillis());
+            user.setUpdatedAt(LocalDateTime.now());
             
             userRepository.save(user);
             
@@ -467,7 +468,7 @@ public class UserService {
             
             User user = userOpt.get();
             user.setIsActive(isActive);
-            user.setUpdatedAt(System.currentTimeMillis());
+            user.setUpdatedAt(LocalDateTime.now());
             
             userRepository.save(user);
             

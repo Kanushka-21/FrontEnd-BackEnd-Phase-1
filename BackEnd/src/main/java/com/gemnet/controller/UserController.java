@@ -79,6 +79,23 @@ public class UserController {
             // Image paths
             profileData.put("faceImagePath", user.getFaceImagePath());
             profileData.put("nicImagePath", user.getNicImagePath());
+            profileData.put("extractedNicImagePath", user.getExtractedNicImagePath());
+            
+            // Image URLs for direct access (environment-independent)
+            String baseUrl = "http://localhost:9092";
+            if (user.getFaceImagePath() != null && !user.getFaceImagePath().isEmpty()) {
+                profileData.put("faceImageUrl", baseUrl + "/api/users/image/face/" + user.getId());
+                // Also provide static URL as fallback
+                profileData.put("faceImageStaticUrl", convertToStaticUrl(user.getFaceImagePath()));
+            }
+            if (user.getNicImagePath() != null && !user.getNicImagePath().isEmpty()) {
+                profileData.put("nicImageUrl", baseUrl + "/api/users/image/nic/" + user.getId());
+                profileData.put("nicImageStaticUrl", convertToStaticUrl(user.getNicImagePath()));
+            }
+            if (user.getExtractedNicImagePath() != null && !user.getExtractedNicImagePath().isEmpty()) {
+                profileData.put("extractedNicImageUrl", baseUrl + "/api/users/image/extracted/" + user.getId());
+                profileData.put("extractedNicImageStaticUrl", convertToStaticUrl(user.getExtractedNicImagePath()));
+            }
             // Note: profilePicture field doesn't exist in User model, so we'll skip it for now
             
             // Display name
@@ -353,6 +370,39 @@ public class UserController {
             System.err.println("❌ Error serving image: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.internalServerError().build();
+        }
+    }
+    
+    /**
+     * Convert absolute path to static URL path
+     */
+    private String convertToStaticUrl(String absolutePath) {
+        if (absolutePath == null || absolutePath.isEmpty()) {
+            return null;
+        }
+        
+        try {
+            // Extract the relative part from the absolute path
+            // Example: C:/path/to/uploads/face-images/filename.jpg -> /uploads/face-images/filename.jpg
+            String uploadsMarker = "uploads";
+            int uploadsIndex = absolutePath.lastIndexOf(uploadsMarker);
+            
+            if (uploadsIndex != -1) {
+                // Get everything from "uploads" onwards
+                String relativePath = absolutePath.substring(uploadsIndex);
+                // Convert Windows path separators to forward slashes
+                relativePath = relativePath.replace("\\\\", "/");
+                // Ensure it starts with /
+                if (!relativePath.startsWith("/")) {
+                    relativePath = "/" + relativePath;
+                }
+                return "http://localhost:9092" + relativePath;
+            }
+            
+            return null;
+        } catch (Exception e) {
+            System.err.println("⚠️ Error converting path to static URL: " + e.getMessage());
+            return null;
         }
     }
 }

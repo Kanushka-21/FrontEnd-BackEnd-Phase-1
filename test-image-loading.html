@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Loading Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .image-item {
+            text-align: center;
+            border: 1px solid #eee;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .image-item img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ccc;
+        }
+        .success { color: green; }
+        .error { color: red; }
+        .status { margin-top: 10px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>🖼️ Image Loading Test for Admin Dashboard</h1>
+    
+    <div class="test-section">
+        <h2>🔍 Testing Backend Image Endpoints</h2>
+        <p>This page tests whether the image serving endpoints are working correctly.</p>
+        
+        <div class="image-grid">
+            <!-- Test with a real user ID that might exist -->
+            <div class="image-item">
+                <h3>Face Image (API Endpoint)</h3>
+                <img id="face-api" src="http://localhost:9092/api/users/image/face/68ade03256c2ce307892eda2" 
+                     alt="Face image via API" onerror="handleImageError(this, 'face-api-status')" 
+                     onload="handleImageSuccess(this, 'face-api-status')">
+                <div id="face-api-status" class="status">Loading...</div>
+            </div>
+            
+            <div class="image-item">
+                <h3>NIC Image (API Endpoint)</h3>
+                <img id="nic-api" src="http://localhost:9092/api/users/image/nic/68ade03256c2ce307892eda2" 
+                     alt="NIC image via API" onerror="handleImageError(this, 'nic-api-status')" 
+                     onload="handleImageSuccess(this, 'nic-api-status')">
+                <div id="nic-api-status" class="status">Loading...</div>
+            </div>
+            
+            <div class="image-item">
+                <h3>Extracted Face (API Endpoint)</h3>
+                <img id="extracted-api" src="http://localhost:9092/api/users/image/extracted/68ade03256c2ce307892eda2" 
+                     alt="Extracted face via API" onerror="handleImageError(this, 'extracted-api-status')" 
+                     onload="handleImageSuccess(this, 'extracted-api-status')">
+                <div id="extracted-api-status" class="status">Loading...</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>📁 Testing Static File Serving</h2>
+        <p>Testing direct access to files via static file server.</p>
+        
+        <div class="image-grid">
+            <div class="image-item">
+                <h3>Face Image (Static)</h3>
+                <img id="face-static" src="http://localhost:9092/uploads/face-images/68ade03256c2ce307892eda2_face_20250826_215645_d83b5293.jpg" 
+                     alt="Face image via static" onerror="handleImageError(this, 'face-static-status')" 
+                     onload="handleImageSuccess(this, 'face-static-status')">
+                <div id="face-static-status" class="status">Loading...</div>
+            </div>
+            
+            <div class="image-item">
+                <h3>NIC Image (Static)</h3>
+                <img id="nic-static" src="http://localhost:9092/uploads/nic-images/68ade03256c2ce307892eda2_nic_20250826_215829_792286e2.jpg" 
+                     alt="NIC image via static" onerror="handleImageError(this, 'nic-static-status')" 
+                     onload="handleImageSuccess(this, 'nic-static-status')">
+                <div id="nic-static-status" class="status">Loading...</div>
+            </div>
+            
+            <div class="image-item">
+                <h3>Extracted Face (Static)</h3>
+                <img id="extracted-static" src="http://localhost:9092/uploads/extracted-photos/68ade03256c2ce307892eda2_extracted_20250826_215830_735aaecf.jpg" 
+                     alt="Extracted face via static" onerror="handleImageError(this, 'extracted-static-status')" 
+                     onload="handleImageSuccess(this, 'extracted-static-status')">
+                <div id="extracted-static-status" class="status">Loading...</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>🔗 Testing User Profile API</h2>
+        <button onclick="testUserProfile()">Test User Profile API</button>
+        <div id="profile-result" style="margin-top: 10px;"></div>
+        <pre id="profile-data" style="background: #f5f5f5; padding: 10px; border-radius: 5px; margin-top: 10px;"></pre>
+    </div>
+
+    <script>
+        function handleImageError(img, statusId) {
+            document.getElementById(statusId).innerHTML = '<span class="error">❌ Failed to load</span>';
+            img.style.display = 'none';
+        }
+        
+        function handleImageSuccess(img, statusId) {
+            document.getElementById(statusId).innerHTML = '<span class="success">✅ Loaded successfully</span>';
+        }
+        
+        async function testUserProfile() {
+            const resultDiv = document.getElementById('profile-result');
+            const dataDiv = document.getElementById('profile-data');
+            
+            try {
+                resultDiv.innerHTML = '🔄 Testing user profile API...';
+                
+                const response = await fetch('http://localhost:9092/api/users/profile/68ade03256c2ce307892eda2');
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.innerHTML = '<span class="success">✅ Profile API working</span>';
+                    dataDiv.textContent = JSON.stringify(data.data, null, 2);
+                    
+                    // Test image URLs from the response
+                    if (data.data.faceImageUrl) {
+                        console.log('Face Image URL:', data.data.faceImageUrl);
+                    }
+                    if (data.data.nicImageUrl) {
+                        console.log('NIC Image URL:', data.data.nicImageUrl);
+                    }
+                } else {
+                    resultDiv.innerHTML = '<span class="error">❌ ' + data.message + '</span>';
+                    dataDiv.textContent = JSON.stringify(data, null, 2);
+                }
+            } catch (error) {
+                resultDiv.innerHTML = '<span class="error">❌ Error: ' + error.message + '</span>';
+                dataDiv.textContent = 'Error: ' + error.toString();
+            }
+        }
+        
+        // Auto-test profile on page load
+        setTimeout(testUserProfile, 2000);
+    </script>
+</body>
+</html>

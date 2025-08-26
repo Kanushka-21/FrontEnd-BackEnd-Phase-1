@@ -58,6 +58,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/gemsData/**").permitAll()
                 .requestMatchers("/api/advertisements/**").permitAll()
                 .requestMatchers("/uploads/**").permitAll() // Allow access to uploaded files
+                .requestMatchers("/api/users/image/**").permitAll() // Allow access to user images
                 .requestMatchers("/api/gemstones/**").permitAll() // Allow access to gemstones endpoints
                 .requestMatchers("/api/marketplace/**").permitAll() // Allow access to marketplace endpoints
                 .requestMatchers("/api/predictions/**").permitAll() // Allow access to price prediction endpoints

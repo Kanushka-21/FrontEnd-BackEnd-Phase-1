@@ -39,6 +39,13 @@ interface RealUser {
   faceImagePath?: string;
   nicImagePath?: string;
   extractedNicImagePath?: string;
+  // Image URLs (returned by backend)
+  faceImageUrl?: string;
+  nicImageUrl?: string;
+  extractedNicImageUrl?: string;
+  faceImageStaticUrl?: string;
+  nicImageStaticUrl?: string;
+  extractedNicImageStaticUrl?: string;
   isFaceVerified?: boolean;
   isNicVerified?: boolean;
   isLocked?: boolean;
@@ -61,6 +68,31 @@ const UserManagement: React.FC<UserManagementProps> = ({ actionHandlers }) => {
   const [userDetailsVisible, setUserDetailsVisible] = useState(false);
   const [userDetailsLoading, setUserDetailsLoading] = useState(false);
   const { handleViewUser } = actionHandlers;
+
+  // Helper function to convert absolute path to static URL
+  const convertToStaticUrl = (absolutePath: string | undefined): string | null => {
+    if (!absolutePath) return null;
+    
+    try {
+      // Extract filename from path and construct static URL
+      const filename = absolutePath.split(/[\\\/]/).pop();
+      if (!filename) return null;
+      
+      // Determine the folder based on the path content
+      if (absolutePath.includes('face-images')) {
+        return `http://localhost:9092/uploads/face-images/${filename}`;
+      } else if (absolutePath.includes('nic-images')) {
+        return `http://localhost:9092/uploads/nic-images/${filename}`;
+      } else if (absolutePath.includes('extracted-photos')) {
+        return `http://localhost:9092/uploads/extracted-photos/${filename}`;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error converting path to static URL:', error);
+      return null;
+    }
+  };
 
   // Fetch users from database
   const fetchUsers = async () => {
@@ -133,7 +165,20 @@ const UserManagement: React.FC<UserManagementProps> = ({ actionHandlers }) => {
           console.log('🖼️ NIC Image Path:', response.data.nicImagePath);
           console.log('🖼️ Extracted NIC Image Path:', response.data.extractedNicImagePath);
           
-          setSelectedUser(response.data as any);
+          // Enhance API response data with static URLs
+          const enhancedApiData = {
+            ...response.data,
+            faceImageStaticUrl: convertToStaticUrl(response.data.faceImagePath),
+            nicImageStaticUrl: convertToStaticUrl(response.data.nicImagePath),
+            extractedNicImageStaticUrl: convertToStaticUrl(response.data.extractedNicImagePath),
+          };
+          
+          console.log('🖼️ Generated static URLs:');
+          console.log('  Face:', enhancedApiData.faceImageStaticUrl);
+          console.log('  NIC:', enhancedApiData.nicImageStaticUrl);
+          console.log('  Extracted:', enhancedApiData.extractedNicImageStaticUrl);
+          
+          setSelectedUser(enhancedApiData as any);
           setUserDetailsVisible(true);
           return;
         }
@@ -164,9 +209,14 @@ const UserManagement: React.FC<UserManagementProps> = ({ actionHandlers }) => {
         userRole: existingUser.userRole || existingUser.role || 'BUYER',
         joinDate: existingUser.joinDate || existingUser.createdAt || new Date().toISOString(),
         lastActive: existingUser.lastActive || existingUser.updatedAt || new Date().toISOString(),
-        // Set image paths (will be served through API endpoint)
-        faceImagePath: existingUser.faceImagePath || 'default_face.jpg',
-        nicImagePath: existingUser.nicImagePath || 'default_nic.jpg',
+        // Set image paths and static URLs
+        faceImagePath: existingUser.faceImagePath,
+        nicImagePath: existingUser.nicImagePath,
+        extractedNicImagePath: existingUser.extractedNicImagePath,
+        // Generate static URLs from paths
+        faceImageStaticUrl: convertToStaticUrl(existingUser.faceImagePath),
+        nicImageStaticUrl: convertToStaticUrl(existingUser.nicImagePath),
+        extractedNicImageStaticUrl: convertToStaticUrl(existingUser.extractedNicImagePath),
         // Ensure boolean fields are proper booleans
         isVerified: existingUser.isVerified === true,
         isFaceVerified: existingUser.isFaceVerified === true,
@@ -738,8 +788,9 @@ const UserManagement: React.FC<UserManagementProps> = ({ actionHandlers }) => {
               <Card title="Captured Face Image" size="small">
                 <div className="text-center">
                   <Image
-                    src={selectedUser.faceImagePath ? 
-                      `http://localhost:8080/api/users/image/face/${selectedUser.userId || selectedUser.id}` :
+                    src={selectedUser.faceImageStaticUrl || 
+                         selectedUser.faceImageUrl || 
+                         (selectedUser.faceImagePath ? `http://localhost:9092/api/users/image/face/${selectedUser.userId || selectedUser.id}` : null) ||
                       'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjVGNUY1Ii8+Cjx0ZXh0IHg9IjEwMCIgeT0iMTAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM5OTk5OTkiPk5vIEZhY2UgSW1hZ2U8L3RleHQ+Cjwvc3ZnPgo='
                     }
                     alt="Captured face verification photo"
@@ -766,8 +817,9 @@ const UserManagement: React.FC<UserManagementProps> = ({ actionHandlers }) => {
               <Card title="Extracted Face from NIC" size="small">
                 <div className="text-center">
                   <Image
-                    src={selectedUser.extractedNicImagePath ? 
-                      `http://localhost:8080/api/users/image/extracted/${selectedUser.userId || selectedUser.id}` :
+                    src={selectedUser.extractedNicImageStaticUrl || 
+                         selectedUser.extractedNicImageUrl || 
+                         (selectedUser.extractedNicImagePath ? `http://localhost:9092/api/users/image/extracted/${selectedUser.userId || selectedUser.id}` : null) ||
                       'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIyMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjVGNUY1Ii8+Cjx0ZXh0IHg9IjEwMCIgeT0iMTAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM5OTk5OTkiPk5vIEV4dHJhY3RlZCBGYWNlPC90ZXh0Pgo8L3N2Zz4K'
                     }
                     alt="Face extracted from NIC"
@@ -795,8 +847,9 @@ const UserManagement: React.FC<UserManagementProps> = ({ actionHandlers }) => {
             <Card title="National Identity Card" size="small">
               <div className="text-center">
                 <Image
-                  src={selectedUser.nicImagePath ? 
-                    `http://localhost:8080/api/users/image/nic/${selectedUser.userId || selectedUser.id}` :
+                  src={selectedUser.nicImageStaticUrl || 
+                       selectedUser.nicImageUrl || 
+                       (selectedUser.nicImagePath ? `http://localhost:9092/api/users/image/nic/${selectedUser.userId || selectedUser.id}` : null) ||
                     'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDMwMCAyMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjRjVGNUY1Ii8+Cjx0ZXh0IHg9IjE1MCIgeT0iMTAwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM5OTk5OTkiPk5vIE5JQyBJbWFnZTwvdGV4dD4KPC9zdmc+Cg=='
                   }
                   alt="National Identity Card"
