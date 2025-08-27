@@ -17,7 +17,7 @@ public class GemListingDataDto {
     // User Information
     @JsonProperty("userId")
     @NotNull(message = "User ID is required")
-    private Long userId;
+    private String userId;
     
     @JsonProperty("userName")
     @NotBlank(message = "User name is required")
@@ -130,7 +130,7 @@ public class GemListingDataDto {
         this.updatedAt = LocalDateTime.now();
     }
     
-    public GemListingDataDto(Long userId, String userName, Boolean isCertified) {
+    public GemListingDataDto(String userId, String userName, Boolean isCertified) {
         this();
         this.userId = userId;
         this.userName = userName;
@@ -138,11 +138,11 @@ public class GemListingDataDto {
     }
     
     // Getters and Setters
-    public Long getUserId() {
+    public String getUserId() {
         return userId;
     }
     
-    public void setUserId(Long userId) {
+    public void setUserId(String userId) {
         this.userId = userId;
     }
     

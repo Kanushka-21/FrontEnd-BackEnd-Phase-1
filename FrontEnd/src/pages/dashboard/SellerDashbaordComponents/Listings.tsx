@@ -84,25 +84,32 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
     setDataError(null);
 
     try {
+      // Check if user ID is available, with fallback for testing
+      const userId = user?.userId || '123'; // Fallback for testing
+      if (!userId) {
+        console.error('❌ User ID not available:', user);
+        setDataError('User ID not available. Please log in again.');
+        return;
+      }
+
+      console.log('🔐 Using user ID:', userId);
+
       // Build query parameters
       const params = new URLSearchParams({
         page: page.toString(),
         size: size.toString(),
       });
 
-      // Add user ID if available
-      if (user?.userId) {
-        params.append('userId', user.userId.toString());
-      }
-
       // Add status filter if specified
       if (status) {
         params.append('status', status);
       }
 
-      console.log('🔗 API call:', `/api/gemsData/get-all-listings?${params.toString()}`);
+      // Use user-specific endpoint for seller dashboard
+      const apiUrl = `/api/gemsData/get-user-listings/${userId}?${params.toString()}`;
+      console.log('🔗 API call:', apiUrl);
       
-      const response = await fetch(`/api/gemsData/get-all-listings?${params.toString()}`, {
+      const response = await fetch(apiUrl, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -118,10 +125,17 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
       const result = await response.json();
       console.log('📋 Backend response:', result);
 
-      if (result.success && result.data) {
-        const { listings: backendListings, totalElements } = result.data;
+      if (result && result.success && result.data) {
+        const { content: backendListings, totalElements } = result.data;
         
         console.log('📋 Raw backend listings:', backendListings);
+        
+        // Ensure backendListings is an array before mapping
+        if (!Array.isArray(backendListings)) {
+          console.error('❌ Backend listings is not an array:', backendListings);
+          setDataError('Invalid data format received from backend');
+          return;
+        }
         
         // Convert backend format to frontend format
         const convertedListings: GemListing[] = backendListings.map((item: any) => {
@@ -165,9 +179,10 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
         message.success(`Loaded ${convertedListings.length} listings successfully`);
         
       } else {
-        console.error('❌ Backend error:', result.message);
-        setDataError(result.message || 'Failed to load listings');
-        message.error(result.message || 'Failed to load listings');
+        console.error('❌ Backend error:', result.message || 'Unknown error');
+        const errorMessage = result.message || 'Failed to load listings';
+        setDataError(errorMessage);
+        message.error(errorMessage);
       }
 
     } catch (error) {

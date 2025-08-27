@@ -1003,6 +1003,64 @@ public class GemCertificateService {
     }
     
     /**
+     * Get user-specific gem listings by string userId
+     */
+    public ApiResponse<Map<String, Object>> getUserSpecificListings(String userId, int page, int size, String status) {
+        System.out.println("🔍 Getting gem listings for user ID: " + userId + " (page " + page + ", size " + size + ", status: " + status + ")");
+        
+        try {
+            List<GemListing> listings;
+            if (userId != null && !userId.trim().isEmpty()) {
+                listings = gemListingRepository.findByUserId(userId);
+                System.out.println("📊 Found " + listings.size() + " listings for user " + userId);
+            } else {
+                listings = gemListingRepository.findAll();
+                System.out.println("📊 Retrieved all " + listings.size() + " gem listings");
+            }
+            
+            // Filter by status if provided
+            if (status != null && !status.isEmpty() && !status.equals("ALL")) {
+                listings = listings.stream()
+                    .filter(listing -> status.equals(listing.getListingStatus()))
+                    .collect(java.util.stream.Collectors.toList());
+            }
+            
+            // Apply pagination
+            int totalElements = listings.size();
+            int startIndex = page * size;
+            int endIndex = Math.min(startIndex + size, totalElements);
+            
+            List<GemListing> paginatedListings = new ArrayList<>();
+            if (startIndex < totalElements) {
+                paginatedListings = listings.subList(startIndex, endIndex);
+            }
+            
+            List<Map<String, Object>> gemListingsData = new ArrayList<>();
+            for (GemListing listing : paginatedListings) {
+                gemListingsData.add(convertEntityToResponseFormat(listing));
+            }
+            
+            // Create response in same format as getAllGemListings
+            Map<String, Object> responseData = new HashMap<>();
+            responseData.put("content", gemListingsData);
+            responseData.put("totalElements", totalElements);
+            responseData.put("totalPages", (int) Math.ceil((double) totalElements / size));
+            responseData.put("number", page);
+            responseData.put("size", size);
+            responseData.put("numberOfElements", paginatedListings.size());
+            responseData.put("first", page == 0);
+            responseData.put("last", (page + 1) * size >= totalElements);
+            
+            return ApiResponse.success("User gem listings retrieved successfully", responseData);
+            
+        } catch (Exception e) {
+            System.err.println("❌ Error retrieving user gem listings: " + e.getMessage());
+            e.printStackTrace();
+            return ApiResponse.error("Failed to retrieve user gem listings: " + e.getMessage());
+        }
+    }
+    
+    /**
      * Convert GemListing entity to response format
      */
     private Map<String, Object> convertEntityToResponseFormat(GemListing listing) {
