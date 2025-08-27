@@ -5,6 +5,7 @@ import { Modal, Divider, Alert } from 'antd';
 import dayjs from 'dayjs';
 import RoleAwareDashboardLayout from '@/components/layout/RoleAwareDashboardLayout';
 import { BarChart3, Users, Package, Clock, Settings, Menu as MenuIcon, Shield, Bell, Search } from 'lucide-react';
+import AdminNotificationComponent from '@/components/ui/AdminNotificationComponent';
 
 // Import modular components
 import {
@@ -193,21 +194,14 @@ const AdminDashboard: React.FC = () => {
                 </p>
               </div>
               <div className="flex items-center space-x-4">
-                {/* Notification Bell with total count */}
-                <button 
-                  className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 relative"
-                  onClick={refreshNotifications}
-                  title="Refresh notifications"
-                >
-                  <Bell size={20} />
-                  {totalNotifications > 0 && (
-                    <NotificationBadge 
-                      count={totalNotifications} 
-                      size="small"
-                      color="red"
-                    />
-                  )}
-                </button>
+                {/* Admin Notification Component */}
+                {user?.userId && (
+                  <AdminNotificationComponent 
+                    userId={user.userId}
+                    maxNotifications={10}
+                    onSectionChange={(section) => setActiveTab(section)}
+                  />
+                )}
                 {/* Search */}
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />

@@ -6,6 +6,7 @@ import {
   TrendingUp, Menu, Home, Calendar
 } from 'lucide-react';
 import RoleAwareDashboardLayout from '@/components/layout/RoleAwareDashboardLayout';
+import NotificationComponent from '@/components/ui/NotificationComponent';
 
 // Import modular components
 import {
@@ -161,15 +162,38 @@ const BuyerDashboard = () => {
       <div className={`flex-1 flex flex-col overflow-hidden ${
         !sidebarCollapsed ? 'sm:ml-0' : ''
       }`}>
-        {/* Mobile menu button */}
-        <div className="sm:hidden bg-white border-b border-gray-200 p-4">
-          <button
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="p-2 rounded-lg hover:bg-gray-100 text-gray-600"
-          >
-            <Menu size={20} />
-          </button>
-        </div>
+        {/* Header */}
+        <header className="bg-white shadow-sm border-b border-gray-200 px-4 sm:px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              {/* Mobile menu button */}
+              <button
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="sm:hidden p-2 rounded-lg hover:bg-gray-100 text-gray-600"
+              >
+                <Menu size={20} />
+              </button>
+              <div>
+                <h1 className="text-2xl font-semibold text-gray-900">Buyer Dashboard</h1>
+                <p className="text-sm text-gray-600 mt-1">
+                  Welcome back, {user?.firstName || 'Buyer'}
+                </p>
+              </div>
+            </div>
+            
+            {/* Right side - Notifications */}
+            <div className="flex items-center space-x-4">
+              {user?.userId && (
+                <NotificationComponent 
+                  userId={user.userId} 
+                  context="buyer"
+                  maxNotifications={5}
+                  user={user}
+                />
+              )}
+            </div>
+          </div>
+        </header>
         
         {/* Content */}
         <div className="flex-1 overflow-auto p-6">
