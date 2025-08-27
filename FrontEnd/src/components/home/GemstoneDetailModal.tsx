@@ -355,25 +355,26 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
                   </div>
                 </div>
 
-                {/* AI Price Prediction with Item-Specific Accuracy */}
-                <div className="space-y-4">
-                  <h3 className="text-xl font-semibold">AI Price Analysis</h3>
-                  <AIPricePrediction 
-                    gemData={{
-                      weight: gemstone.weight || '1.0',
-                      color: gemstone.color || 'Blue',
-                      cut: gemstone.cut || 'Good',
-                      clarity: gemstone.clarity || 'SI1',
-                      species: gemstone.species || gemstone.variety || 'Sapphire',
-                      isCertified: !!gemstone.certificate || true, // Allow prediction for all gemstones in modal for testing
-                      shape: gemstone.shape || 'Round',
-                      treatment: gemstone.specifications?.treatment || 'Heat Treatment',
-                      origin: gemstone.origin
-                    }}
-                    showDetails={true}
-                    className="shadow-lg border-2 border-indigo-300"
-                  />
-                </div>
+                {/* AI Price Prediction with Item-Specific Accuracy - Only for Certified Gemstones */}
+                {gemstone.certificate && (
+                  <div className="space-y-4">
+                    <h3 className="text-xl font-semibold">AI Price Analysis</h3>
+                    <AIPricePrediction 
+                      gemData={{
+                        weight: gemstone.weight || '1.0',
+                        color: gemstone.color || 'Blue',
+                        cut: gemstone.cut || 'Good',
+                        clarity: gemstone.clarity || 'SI1',
+                        species: gemstone.species || gemstone.variety || 'Sapphire',
+                        isCertified: true, // Only shown for certified gemstones
+                        shape: gemstone.shape || 'Round',
+                        treatment: gemstone.specifications?.treatment || 'Heat Treatment'
+                      }}
+                      showDetails={true}
+                      className="shadow-lg border-2 border-indigo-300"
+                    />
+                  </div>
+                )}
 
                 {/* Specifications */}
                 <div className="space-y-4">
