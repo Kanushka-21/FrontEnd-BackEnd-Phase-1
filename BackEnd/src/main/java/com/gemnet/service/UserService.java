@@ -455,6 +455,35 @@ public class UserService {
     }
 
     /**
+     * Verify user - set verification status to VERIFIED
+     */
+    public ApiResponse<String> verifyUser(String userId) {
+        try {
+            System.out.println("🔄 Verifying user: " + userId);
+            
+            Optional<User> userOpt = userRepository.findById(userId);
+            if (!userOpt.isPresent()) {
+                return ApiResponse.error("User not found");
+            }
+            
+            User user = userOpt.get();
+            user.setIsVerified(true);
+            user.setVerificationStatus("VERIFIED");
+            user.setIsActive(true); // Also ensure user is active
+            user.setUpdatedAt(LocalDateTime.now());
+            
+            userRepository.save(user);
+            
+            System.out.println("✅ User verified successfully - can now bid");
+            return ApiResponse.success("User verified successfully. User can now place bids.", null);
+            
+        } catch (Exception e) {
+            System.err.println("❌ Error verifying user: " + e.getMessage());
+            return ApiResponse.error("Failed to verify user: " + e.getMessage());
+        }
+    }
+
+    /**
      * Update user active status
      */
     public ApiResponse<String> updateUserStatus(String userId, boolean isActive) {

@@ -613,6 +613,16 @@ const extendedAPI = {
     }
   },
 
+  verifyUser: async (userId: string): Promise<ApiResponse> => {
+    try {
+      const response = await api.post(`/api/admin/verify-user/${userId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error verifying user:', error);
+      return { success: false, message: apiUtils.formatErrorMessage(error) };
+    }
+  },
+
   updateUserStatus: async (userId: string, action: string): Promise<ApiResponse> => {
     try {
       const response = await api.post(`/api/admin/users/${userId}/status?action=${action}`);

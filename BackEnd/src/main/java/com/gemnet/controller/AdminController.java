@@ -98,6 +98,39 @@ public class AdminController {
     }
 
     /**
+     * Verify user - sets verification status to VERIFIED
+     */
+    @PostMapping("/verify-user/{userId}")
+    @Operation(summary = "Verify user", 
+               description = "Set user verification status to VERIFIED to allow bidding")
+    @CrossOrigin(origins = "*", allowedHeaders = "*", methods = {RequestMethod.POST})
+    public ResponseEntity<ApiResponse<String>> verifyUser(@PathVariable String userId) {
+        
+        System.out.println("✅ Admin - Verify user request received");
+        System.out.println("🆔 User ID: " + userId);
+        
+        try {
+            // Verify user via service - set status to VERIFIED
+            ApiResponse<String> serviceResponse = userService.verifyUser(userId);
+            
+            if (serviceResponse.isSuccess()) {
+                System.out.println("✅ User verified successfully");
+                return ResponseEntity.ok(serviceResponse);
+            } else {
+                System.err.println("❌ Service error: " + serviceResponse.getMessage());
+                return ResponseEntity.status(500).body(serviceResponse);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("❌ Verify user error: " + e.getMessage());
+            e.printStackTrace();
+            
+            return ResponseEntity.status(500)
+                .body(ApiResponse.error("Failed to verify user: " + e.getMessage()));
+        }
+    }
+
+    /**
      * Update user status (activate/deactivate)
      */
     @PostMapping("/users/{userId}/status")

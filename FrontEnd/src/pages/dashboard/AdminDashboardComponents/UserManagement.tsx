@@ -266,6 +266,26 @@ const UserManagement: React.FC<UserManagementProps> = ({ actionHandlers }) => {
     }
   };
 
+  // Handle user verification - sets status to VERIFIED
+  const handleVerifyUserAction = async (user: RealUser) => {
+    try {
+      const userId = user.userId || user._id?.$oid || user.id;
+      if (!userId) {
+        throw new Error('User ID not found');
+      }
+      const response = await api.verifyUser(userId);
+      if (response.success) {
+        message.success(`User ${user.name} verified successfully - can now bid`);
+        fetchUsers(); // Refresh data
+      } else {
+        throw new Error(response.message || 'Failed to verify user');
+      }
+    } catch (error: any) {
+      console.error('Error verifying user:', error);
+      message.error('Failed to verify user. Please try again.');
+    }
+  };
+
   // Handle user rejection
   const handleRejectUserAction = async (user: RealUser) => {
     try {
@@ -404,7 +424,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ actionHandlers }) => {
             size="small" 
             icon={<CheckOutlined />} 
             type="primary" 
-            onClick={() => handleApproveUserAction(record)}
+            onClick={() => handleVerifyUserAction(record)}
             loading={loading}
           >
             Verify
@@ -667,7 +687,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ actionHandlers }) => {
               icon={<CheckOutlined />}
               onClick={() => {
                 if (selectedUser) {
-                  handleApproveUserAction(selectedUser);
+                  handleVerifyUserAction(selectedUser);
                   setUserDetailsVisible(false);
                 }
               }}

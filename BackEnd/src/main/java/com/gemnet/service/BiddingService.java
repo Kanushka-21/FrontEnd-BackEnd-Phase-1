@@ -5,9 +5,11 @@ import com.gemnet.dto.BidRequestDto;
 import com.gemnet.model.Bid;
 import com.gemnet.model.GemListing;
 import com.gemnet.model.Notification;
+import com.gemnet.model.User;
 import com.gemnet.repository.BidRepository;
 import com.gemnet.repository.GemListingRepository;
 import com.gemnet.repository.NotificationRepository;
+import com.gemnet.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -32,11 +34,28 @@ public class BiddingService {
     @Autowired
     private NotificationRepository notificationRepository;
     
+    @Autowired
+    private UserRepository userRepository;
+    
     /**
      * Place a bid on a gem listing
      */
     public ApiResponse<Map<String, Object>> placeBid(BidRequestDto bidRequest) {
         try {
+            // Check user verification status first
+            Optional<User> userOpt = userRepository.findById(bidRequest.getBidderId());
+            if (userOpt.isEmpty()) {
+                return new ApiResponse<>(false, "User not found", null);
+            }
+            
+            User user = userOpt.get();
+            
+            // Check if user is verified
+            if (!"VERIFIED".equals(user.getVerificationStatus())) {
+                String message = "Because you are unverified, you cannot bid. Please contact administration for verification.";
+                return new ApiResponse<>(false, message, null);
+            }
+            
             // Validate listing exists and is available for bidding
             Optional<GemListing> listingOpt = gemListingRepository.findById(bidRequest.getListingId());
             if (listingOpt.isEmpty()) {
