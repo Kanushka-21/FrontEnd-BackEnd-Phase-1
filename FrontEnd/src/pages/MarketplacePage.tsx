@@ -240,7 +240,8 @@ const MarketplacePage: React.FC = () => {
       } : undefined,
       seller: {
         name: listing.userName || 'Unknown Seller',
-        rating: 5 // Default rating - can be enhanced later with real rating data
+        rating: 5, // Default rating - can be enhanced later with real rating data
+        userId: listing.userId // Add seller userId for bidding restriction
       }
     };
   };
@@ -937,6 +938,7 @@ const MarketplacePage: React.FC = () => {
         <GemstoneDetailModal
           isOpen={isModalOpen}
           gemstone={selectedGemstone}
+          currentUser={user} // Pass current user to check if they're the seller
           onClose={() => {
             console.log('Closing detail modal');
             setIsModalOpen(false);

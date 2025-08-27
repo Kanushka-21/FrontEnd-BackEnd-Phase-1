@@ -18,6 +18,7 @@ const formatLKR = (price: number) => {
 interface GemstoneModalProps {
   isOpen: boolean;
   gemstone: DetailedGemstone | null;
+  currentUser?: any; // Add current user to check seller status
   onClose: () => void;
   onPlaceBid: (amount: number) => void;
   onCountdownUpdated?: () => void; // New callback for countdown updates
@@ -26,6 +27,7 @@ interface GemstoneModalProps {
 const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
   isOpen,
   gemstone,
+  currentUser,
   onClose,
   onPlaceBid,
   onCountdownUpdated
@@ -50,6 +52,17 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
   // Get current highest bid from props or fetched data
   const currentHighestBid = gemstone?.currentBid || bidStats.highestBid || (gemstone ? gemstone.price : 0);
   const minimumBid = currentHighestBid * 1.02; // 2% higher than current price
+  
+  // Check if current user is the seller of this gemstone
+  const isCurrentUserSeller = currentUser && gemstone?.seller?.userId && 
+    currentUser.userId === gemstone.seller.userId;
+  
+  console.log('🔐 Seller check:', {
+    currentUserId: currentUser?.userId,
+    sellerUserId: gemstone?.seller?.userId,
+    sellerName: gemstone?.seller?.name,
+    isCurrentUserSeller
+  });
   
   // Use actual uploaded images from the gemstone data, including certificate images
   const gemstoneImages = gemstone?.images && gemstone.images.length > 0 
@@ -576,53 +589,99 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
                 )}
 
                 {/* Bid Section */}
-                <form onSubmit={handleSubmit} className="space-y-4 bg-gradient-to-br from-primary-50 to-blue-50 p-6 rounded-xl border border-primary-200">
-                  <div className="flex items-center space-x-2 mb-4">
-                    <Users className="w-5 h-5 text-primary-600" />
-                    <h3 className="text-xl font-semibold text-primary-800">Place Your Bid</h3>
-                  </div>
-                  
-                  <div>
-                    <label htmlFor="bidAmount" className="block text-base font-medium text-secondary-700 mb-2">
-                      Your Bid Amount
-                    </label>
-                    <div className="text-sm text-gray-600 mb-3">
-                      Minimum bid: <span className="font-semibold text-primary-600">{formatLKR(minimumBid)}</span>
-                      {currentHighestBid > gemstone.price && (
-                        <span className="ml-2">
-                          (2% above current highest: <span className="font-semibold">{formatLKR(currentHighestBid)}</span>)
-                        </span>
-                      )}
+                {isCurrentUserSeller ? (
+                  /* Show message for sellers - they cannot bid on their own items */
+                  <div className="space-y-4 bg-gradient-to-br from-orange-50 to-yellow-50 p-6 rounded-xl border border-orange-200">
+                    <div className="flex items-center space-x-2 mb-4">
+                      <Shield className="w-5 h-5 text-orange-600" />
+                      <h3 className="text-xl font-semibold text-orange-800">Your Listing</h3>
                     </div>
                     
-                    <div className="mt-2">
-                      <input
-                        type="number"
-                        id="bidAmount"
-                        value={bidAmount}
-                        onChange={(e) => {
-                          setBidAmount(e.target.value);
-                          if (e.target.value) validateBid(parseFloat(e.target.value));
-                        }}
-                        className="block w-full px-4 py-3 text-lg border border-secondary-300 rounded-xl shadow-sm focus:ring-primary-500 focus:border-primary-500"
-                        min={minimumBid}
-                        step="any"
-                        required
-                      />
+                    <div className="text-center space-y-3">
+                      <div className="text-lg font-medium text-orange-700">
+                        This is your gemstone listing
+                      </div>
+                      <p className="text-orange-600">
+                        As the seller, you cannot place bids on your own items. Other buyers can bid on this gemstone.
+                      </p>
+                      
+                      <div className="mt-4 p-4 bg-orange-100 rounded-lg">
+                        <div className="text-sm text-orange-700">
+                          <strong>📊 Current Status:</strong>
+                          <div className="mt-2 grid grid-cols-2 gap-4 text-center">
+                            <div>
+                              <div className="font-bold text-lg text-orange-800">
+                                {bidStats.totalBids || gemstone.totalBids || 0}
+                              </div>
+                              <div className="text-xs text-orange-600">Total Bids</div>
+                            </div>
+                            <div>
+                              <div className="font-bold text-lg text-orange-800">
+                                {formatLKR(currentHighestBid)}
+                              </div>
+                              <div className="text-xs text-orange-600">Highest Bid</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {bidStats.highestBidder && (
+                        <div className="text-sm text-orange-600">
+                          <strong>Leading Bidder:</strong> {bidStats.highestBidder}
+                        </div>
+                      )}
                     </div>
-                    {bidError && (
-                      <p className="mt-2 text-sm text-red-600">{bidError}</p>
-                    )}
                   </div>
-                  <Button
-                    type="submit"
-                    variant="primary"
-                    className="w-full py-3 text-lg rounded-xl"
-                    disabled={!!bidError || !bidAmount}
-                  >
-                    Place Bid
-                  </Button>
-                </form>
+                ) : (
+                  /* Normal bid form for non-sellers */
+                  <form onSubmit={handleSubmit} className="space-y-4 bg-gradient-to-br from-primary-50 to-blue-50 p-6 rounded-xl border border-primary-200">
+                    <div className="flex items-center space-x-2 mb-4">
+                      <Users className="w-5 h-5 text-primary-600" />
+                      <h3 className="text-xl font-semibold text-primary-800">Place Your Bid</h3>
+                    </div>
+                    
+                    <div>
+                      <label htmlFor="bidAmount" className="block text-base font-medium text-secondary-700 mb-2">
+                        Your Bid Amount
+                      </label>
+                      <div className="text-sm text-gray-600 mb-3">
+                        Minimum bid: <span className="font-semibold text-primary-600">{formatLKR(minimumBid)}</span>
+                        {currentHighestBid > gemstone.price && (
+                          <span className="ml-2">
+                            (2% above current highest: <span className="font-semibold">{formatLKR(currentHighestBid)}</span>)
+                          </span>
+                        )}
+                      </div>
+                      
+                      <div className="mt-2">
+                        <input
+                          type="number"
+                          id="bidAmount"
+                          value={bidAmount}
+                          onChange={(e) => {
+                            setBidAmount(e.target.value);
+                            if (e.target.value) validateBid(parseFloat(e.target.value));
+                          }}
+                          className="block w-full px-4 py-3 text-lg border border-secondary-300 rounded-xl shadow-sm focus:ring-primary-500 focus:border-primary-500"
+                          min={minimumBid}
+                          step="any"
+                          required
+                        />
+                      </div>
+                      {bidError && (
+                        <p className="mt-2 text-sm text-red-600">{bidError}</p>
+                      )}
+                    </div>
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      className="w-full py-3 text-lg rounded-xl"
+                      disabled={!!bidError || !bidAmount}
+                    >
+                      Place Bid
+                    </Button>
+                  </form>
+                )}
               </div>
             </div>
           </div>

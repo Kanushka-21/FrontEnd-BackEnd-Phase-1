@@ -240,6 +240,7 @@ export interface Gemstone {
   seller?: {
     name: string;
     rating: number;
+    userId?: string; // Add userId to check if current user is the seller
   };
   // Listing status
   listingStatus?: 'APPROVED' | 'ACTIVE' | 'sold' | 'expired_no_bids';
