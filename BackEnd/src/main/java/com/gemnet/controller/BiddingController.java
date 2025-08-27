@@ -132,19 +132,20 @@ public class BiddingController {
     }
     
     /**
-     * Get user notifications
+     * Get user notifications with optional context filtering
      */
     @GetMapping("/notifications/{userId}")
-    @Operation(summary = "Get user notifications", description = "Get notifications for a specific user")
+    @Operation(summary = "Get user notifications", description = "Get notifications for a specific user with optional role context filtering")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getUserNotifications(
             @PathVariable String userId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String context) {
         
-        System.out.println("🔔 Get notifications request for user: " + userId);
+        System.out.println("🔔 Get notifications request for user: " + userId + " (context: " + context + ")");
         
         try {
-            ApiResponse<Map<String, Object>> response = biddingService.getUserNotifications(userId, page, size);
+            ApiResponse<Map<String, Object>> response = biddingService.getUserNotifications(userId, page, size, context);
             
             if (response.isSuccess()) {
                 System.out.println("✅ Notifications retrieved successfully");

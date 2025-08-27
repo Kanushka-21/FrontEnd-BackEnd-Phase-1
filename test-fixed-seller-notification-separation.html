@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>✅ Test: Fixed Seller Notification Role Separation</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #16a34a;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .success-banner {
+            background: #d1fae5;
+            border: 2px solid #16a34a;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e1e1e1;
+            border-radius: 8px;
+            background-color: #fafafa;
+        }
+        button {
+            background-color: #16a34a;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background-color: #15803d;
+        }
+        button.test {
+            background-color: #3b82f6;
+        }
+        button.test:hover {
+            background-color: #2563eb;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+        .success {
+            background-color: #d1fae5;
+            border: 1px solid #10b981;
+            color: #065f46;
+        }
+        .error {
+            background-color: #fee2e2;
+            border: 1px solid #ef4444;
+            color: #991b1b;
+        }
+        .info {
+            background-color: #e0f2fe;
+            border: 1px solid #0ea5e9;
+            color: #0c4a6e;
+        }
+        .notification-demo {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .notification-seller {
+            border-left: 4px solid #16a34a;
+        }
+        .notification-buyer {
+            border-left: 4px solid #3b82f6;
+        }
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        .comparison-table th,
+        .comparison-table td {
+            border: 1px solid #e2e8f0;
+            padding: 12px;
+            text-align: left;
+        }
+        .comparison-table th {
+            background-color: #f8fafc;
+            font-weight: bold;
+        }
+        .before {
+            background-color: #fef2f2;
+        }
+        .after {
+            background-color: #f0fdf4;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>✅ Fixed: Seller Notification Role Separation</h1>
+        
+        <div class="success-banner">
+            <h2>🎉 Issue Successfully Resolved!</h2>
+            <p>Sellers will now only see seller-specific notifications in their dashboard.</p>
+            <p><strong>No more buyer notifications like "Congratulations! You won the bid!" in seller dashboard!</strong></p>
+        </div>
+
+        <!-- Test Section 1: Compare Before vs After -->
+        <div class="test-section">
+            <h3>1. 📊 Before vs After Comparison</h3>
+            <table class="comparison-table">
+                <tr>
+                    <th>Aspect</th>
+                    <th class="before">❌ Before (Issue)</th>
+                    <th class="after">✅ After (Fixed)</th>
+                </tr>
+                <tr>
+                    <td><strong>Seller Dashboard Notifications</strong></td>
+                    <td class="before">Shows ALL notifications (including buyer ones like "You won the bid!")</td>
+                    <td class="after">Shows ONLY seller notifications (NEW_BID, ITEM_SOLD)</td>
+                </tr>
+                <tr>
+                    <td><strong>API Endpoint</strong></td>
+                    <td class="before">/api/bidding/notifications/{userId}</td>
+                    <td class="after">/api/bidding/notifications/{userId}?context=seller</td>
+                </tr>
+                <tr>
+                    <td><strong>Notification Types</strong></td>
+                    <td class="before">Mixed: NEW_BID, BID_WON, ITEM_SOLD, BID_OUTBID</td>
+                    <td class="after">Filtered: NEW_BID, ITEM_SOLD only</td>
+                </tr>
+                <tr>
+                    <td><strong>User Experience</strong></td>
+                    <td class="before">Confusing - sellers see buyer messages</td>
+                    <td class="after">Clear - role-appropriate notifications</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Test Section 2: Test the Fix -->
+        <div class="test-section">
+            <h3>2. 🧪 Test the Fix</h3>
+            <p>Test the context-based notification filtering:</p>
+            <div>
+                <label>User ID: <input type="text" id="testUserId" value="675c45b7036fefc08e8c4b7a" style="width: 300px; padding: 5px;"></label>
+            </div>
+            <button onclick="testSellerNotifications()" class="test">Test Seller Context</button>
+            <button onclick="testBuyerNotifications()" class="test">Test Buyer Context</button>
+            <button onclick="testAllNotifications()" class="test">Test All Notifications</button>
+            <div id="testResult" class="result"></div>
+        </div>
+
+        <!-- Test Section 3: Notification Type Demo -->
+        <div class="test-section">
+            <h3>3. 📋 Notification Type Examples</h3>
+            
+            <h4>✅ Seller Notifications (Will Show in Seller Dashboard):</h4>
+            <div class="notification-demo notification-seller">
+                <strong>NEW_BID:</strong> "John Doe placed a new highest bid of LKR 150,000 on your Blue Sapphire"
+            </div>
+            <div class="notification-demo notification-seller">
+                <strong>ITEM_SOLD:</strong> "Your Ruby has been sold for LKR 200,000. Buyer: Jane Smith"
+            </div>
+            
+            <h4>🚫 Buyer Notifications (Will NOT Show in Seller Dashboard):</h4>
+            <div class="notification-demo notification-buyer">
+                <strong>BID_WON:</strong> "🎉 Congratulations! You won the bid for Emerald with LKR 180,000"
+            </div>
+            <div class="notification-demo notification-buyer">
+                <strong>BID_OUTBID:</strong> "Your bid has been outbid. New highest bid: LKR 175,000"
+            </div>
+        </div>
+
+        <!-- Test Section 4: Implementation Details -->
+        <div class="test-section">
+            <h3>4. 🔧 Implementation Details</h3>
+            <h4>Backend Changes:</h4>
+            <ul>
+                <li>✅ Added <code>context</code> parameter to notification API</li>
+                <li>✅ Added <code>getNotificationTypesForContext()</code> helper method</li>
+                <li>✅ Implemented filtering logic for "seller" and "buyer" contexts</li>
+                <li>✅ Maintained backward compatibility with existing API calls</li>
+            </ul>
+            
+            <h4>Frontend Changes:</h4>
+            <ul>
+                <li>✅ Added <code>context</code> prop to NotificationComponent</li>
+                <li>✅ Updated API call to include context parameter</li>
+                <li>✅ Modified SellerDashboard to use <code>context="seller"</code></li>
+                <li>✅ Added <code>maxNotifications</code> prop for better control</li>
+            </ul>
+            
+            <h4>Context Filtering Rules:</h4>
+            <ul>
+                <li><strong>Seller Context:</strong> NEW_BID, ITEM_SOLD, BIDDING_CANCELLED</li>
+                <li><strong>Buyer Context:</strong> BID_WON, BID_OUTBID, BID_PLACED, BIDDING_ENDED</li>
+                <li><strong>No Context:</strong> All notifications (default behavior)</li>
+            </ul>
+        </div>
+
+        <!-- Test Section 5: Verify Backend Response -->
+        <div class="test-section">
+            <h3>5. ✅ Verify Fix</h3>
+            <button onclick="verifyFix()">Verify Complete Fix</button>
+            <div id="verifyResult" class="result"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:9092/api';
+
+        function showResult(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.className = `result ${type}`;
+            element.innerHTML = message;
+            element.style.display = 'block';
+        }
+
+        async function testSellerNotifications() {
+            const userId = document.getElementById('testUserId').value.trim();
+            
+            if (!userId) {
+                showResult('testResult', '❌ Please enter a user ID', 'error');
+                return;
+            }
+
+            let message = '<h4>🔧 Testing Seller Context Filtering:</h4>';
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/bidding/notifications/${userId}?context=seller&page=0&size=10`);
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    const notifications = result.data.notifications || [];
+                    const sellerTypes = ['NEW_BID', 'ITEM_SOLD', 'BIDDING_CANCELLED'];
+                    
+                    message += `<div style="background: #f0fdf4; padding: 15px; border-radius: 8px; border: 1px solid #16a34a;">`;
+                    message += `<strong>✅ Seller Context Test Results:</strong><br>`;
+                    message += `• Total notifications: ${notifications.length}<br>`;
+                    message += `• Context filtering: ${result.data.context || 'Applied'}<br><br>`;
+                    
+                    let validCount = 0;
+                    let invalidCount = 0;
+                    
+                    notifications.forEach((notif, index) => {
+                        const isValid = sellerTypes.includes(notif.type);
+                        if (isValid) validCount++;
+                        else invalidCount++;
+                        
+                        message += `${index + 1}. ${notif.type}: "${notif.title}" ${isValid ? '✅' : '❌'}<br>`;
+                    });
+                    
+                    message += `<br><strong>Validation:</strong><br>`;
+                    message += `• Valid seller notifications: ${validCount}<br>`;
+                    message += `• Invalid notifications: ${invalidCount}<br>`;
+                    message += `</div>`;
+                    
+                    if (invalidCount === 0) {
+                        message += `<div style="background: #d1fae5; padding: 15px; border-radius: 8px; margin-top: 15px;">`;
+                        message += `🎉 Perfect! All notifications are seller-appropriate!`;
+                        message += `</div>`;
+                        showResult('testResult', message, 'success');
+                    } else {
+                        message += `<div style="background: #fef2f2; padding: 15px; border-radius: 8px; margin-top: 15px;">`;
+                        message += `⚠️ Found ${invalidCount} non-seller notifications. Check filtering logic.`;
+                        message += `</div>`;
+                        showResult('testResult', message, 'error');
+                    }
+                } else {
+                    showResult('testResult', `❌ Failed to test seller context: ${result.message}`, 'error');
+                }
+            } catch (error) {
+                showResult('testResult', `❌ Error testing seller context: ${error.message}`, 'error');
+            }
+        }
+
+        async function testBuyerNotifications() {
+            const userId = document.getElementById('testUserId').value.trim();
+            
+            if (!userId) {
+                showResult('testResult', '❌ Please enter a user ID', 'error');
+                return;
+            }
+
+            let message = '<h4>🛒 Testing Buyer Context Filtering:</h4>';
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/bidding/notifications/${userId}?context=buyer&page=0&size=10`);
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    const notifications = result.data.notifications || [];
+                    const buyerTypes = ['BID_WON', 'BID_OUTBID', 'BID_PLACED', 'BIDDING_ENDED'];
+                    
+                    message += `<div style="background: #e0f2fe; padding: 15px; border-radius: 8px; border: 1px solid #0ea5e9;">`;
+                    message += `<strong>🛒 Buyer Context Test Results:</strong><br>`;
+                    message += `• Total notifications: ${notifications.length}<br>`;
+                    message += `• Context filtering: ${result.data.context || 'Applied'}<br><br>`;
+                    
+                    let validCount = 0;
+                    let invalidCount = 0;
+                    
+                    notifications.forEach((notif, index) => {
+                        const isValid = buyerTypes.includes(notif.type);
+                        if (isValid) validCount++;
+                        else invalidCount++;
+                        
+                        message += `${index + 1}. ${notif.type}: "${notif.title}" ${isValid ? '✅' : '❌'}<br>`;
+                    });
+                    
+                    message += `<br><strong>Validation:</strong><br>`;
+                    message += `• Valid buyer notifications: ${validCount}<br>`;
+                    message += `• Invalid notifications: ${invalidCount}<br>`;
+                    message += `</div>`;
+                    
+                    showResult('testResult', message, 'info');
+                } else {
+                    showResult('testResult', `❌ Failed to test buyer context: ${result.message}`, 'error');
+                }
+            } catch (error) {
+                showResult('testResult', `❌ Error testing buyer context: ${error.message}`, 'error');
+            }
+        }
+
+        async function testAllNotifications() {
+            const userId = document.getElementById('testUserId').value.trim();
+            
+            if (!userId) {
+                showResult('testResult', '❌ Please enter a user ID', 'error');
+                return;
+            }
+
+            let message = '<h4>📋 Testing All Notifications (No Context):</h4>';
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/bidding/notifications/${userId}?page=0&size=10`);
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    const notifications = result.data.notifications || [];
+                    
+                    message += `<div style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">`;
+                    message += `<strong>📋 All Notifications Test Results:</strong><br>`;
+                    message += `• Total notifications: ${notifications.length}<br>`;
+                    message += `• Context filtering: None (all types shown)<br><br>`;
+                    
+                    let sellerCount = 0;
+                    let buyerCount = 0;
+                    let otherCount = 0;
+                    
+                    notifications.forEach((notif, index) => {
+                        if (['NEW_BID', 'ITEM_SOLD', 'BIDDING_CANCELLED'].includes(notif.type)) {
+                            sellerCount++;
+                        } else if (['BID_WON', 'BID_OUTBID', 'BID_PLACED', 'BIDDING_ENDED'].includes(notif.type)) {
+                            buyerCount++;
+                        } else {
+                            otherCount++;
+                        }
+                        
+                        message += `${index + 1}. ${notif.type}: "${notif.title}"<br>`;
+                    });
+                    
+                    message += `<br><strong>Categorization:</strong><br>`;
+                    message += `• Seller-type notifications: ${sellerCount}<br>`;
+                    message += `• Buyer-type notifications: ${buyerCount}<br>`;
+                    message += `• Other notifications: ${otherCount}<br>`;
+                    message += `</div>`;
+                    
+                    showResult('testResult', message, 'info');
+                } else {
+                    showResult('testResult', `❌ Failed to test all notifications: ${result.message}`, 'error');
+                }
+            } catch (error) {
+                showResult('testResult', `❌ Error testing all notifications: ${error.message}`, 'error');
+            }
+        }
+
+        async function verifyFix() {
+            const userId = document.getElementById('testUserId').value.trim();
+            
+            if (!userId) {
+                showResult('verifyResult', '❌ Please enter a user ID', 'error');
+                return;
+            }
+
+            let message = '<h4>🔍 Complete Fix Verification:</h4>';
+            
+            try {
+                // Test all three scenarios
+                const [allResponse, sellerResponse, buyerResponse] = await Promise.all([
+                    fetch(`${API_BASE_URL}/bidding/notifications/${userId}?page=0&size=20`),
+                    fetch(`${API_BASE_URL}/bidding/notifications/${userId}?context=seller&page=0&size=20`),
+                    fetch(`${API_BASE_URL}/bidding/notifications/${userId}?context=buyer&page=0&size=20`)
+                ]);
+                
+                const allResult = await allResponse.json();
+                const sellerResult = await sellerResponse.json();
+                const buyerResult = await buyerResponse.json();
+                
+                if (allResponse.ok && sellerResponse.ok && buyerResponse.ok) {
+                    const allNotifications = allResult.data.notifications || [];
+                    const sellerNotifications = sellerResult.data.notifications || [];
+                    const buyerNotifications = buyerResult.data.notifications || [];
+                    
+                    message += `<div style="background: #f0fdf4; padding: 20px; border-radius: 8px; border: 1px solid #16a34a;">`;
+                    message += `<strong>🎯 Fix Verification Results:</strong><br><br>`;
+                    
+                    message += `<strong>📊 Notification Counts:</strong><br>`;
+                    message += `• All notifications: ${allNotifications.length}<br>`;
+                    message += `• Seller context: ${sellerNotifications.length}<br>`;
+                    message += `• Buyer context: ${buyerNotifications.length}<br><br>`;
+                    
+                    // Verify seller filtering
+                    const sellerTypes = ['NEW_BID', 'ITEM_SOLD', 'BIDDING_CANCELLED'];
+                    const invalidSellerNotifs = sellerNotifications.filter(n => !sellerTypes.includes(n.type));
+                    
+                    message += `<strong>✅ Seller Context Verification:</strong><br>`;
+                    if (invalidSellerNotifs.length === 0) {
+                        message += `• Perfect! All ${sellerNotifications.length} notifications are seller-appropriate<br>`;
+                    } else {
+                        message += `• Issue: Found ${invalidSellerNotifs.length} non-seller notifications<br>`;
+                    }
+                    
+                    // Verify buyer filtering
+                    const buyerTypes = ['BID_WON', 'BID_OUTBID', 'BID_PLACED', 'BIDDING_ENDED'];
+                    const invalidBuyerNotifs = buyerNotifications.filter(n => !buyerTypes.includes(n.type));
+                    
+                    message += `<strong>🛒 Buyer Context Verification:</strong><br>`;
+                    if (invalidBuyerNotifs.length === 0) {
+                        message += `• Perfect! All ${buyerNotifications.length} notifications are buyer-appropriate<br>`;
+                    } else {
+                        message += `• Issue: Found ${invalidBuyerNotifs.length} non-buyer notifications<br>`;
+                    }
+                    
+                    message += `<br><strong>🎉 Overall Status:</strong><br>`;
+                    if (invalidSellerNotifs.length === 0 && invalidBuyerNotifs.length === 0) {
+                        message += `✅ <strong>FIX SUCCESSFUL!</strong> Role-based notification filtering is working perfectly!<br>`;
+                        message += `• Sellers will only see seller notifications<br>`;
+                        message += `• Buyers will only see buyer notifications<br>`;
+                        message += `• No more mixed notifications in dashboards<br>`;
+                    } else {
+                        message += `❌ Fix needs adjustment. Some notifications are not properly filtered.<br>`;
+                    }
+                    
+                    message += `</div>`;
+                    
+                    if (invalidSellerNotifs.length === 0 && invalidBuyerNotifs.length === 0) {
+                        showResult('verifyResult', message, 'success');
+                    } else {
+                        showResult('verifyResult', message, 'error');
+                    }
+                } else {
+                    showResult('verifyResult', '❌ Failed to verify fix: API responses not successful', 'error');
+                }
+            } catch (error) {
+                showResult('verifyResult', `❌ Error verifying fix: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-start verification on page load
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                const userId = document.getElementById('testUserId').value;
+                if (userId) {
+                    verifyFix();
+                }
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

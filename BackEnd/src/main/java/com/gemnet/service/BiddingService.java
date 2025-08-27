@@ -269,22 +269,35 @@ public class BiddingService {
     /**
      * Get user's notifications
      */
-    public ApiResponse<Map<String, Object>> getUserNotifications(String userId, int page, int size) {
+    public ApiResponse<Map<String, Object>> getUserNotifications(String userId, int page, int size, String context) {
         try {
-            System.out.println("🔔 [DEBUG] Getting notifications for userId: " + userId + ", page: " + page + ", size: " + size);
+            System.out.println("🔔 [DEBUG] Getting notifications for userId: " + userId + ", page: " + page + ", size: " + size + ", context: " + context);
             
             Pageable pageable = PageRequest.of(page, size);
             Page<Notification> notificationsPage = notificationRepository
                 .findByUserIdOrderByCreatedAtDesc(userId, pageable);
             
+            List<Notification> notifications = notificationsPage.getContent();
+            
+            // Filter notifications by context if specified
+            if (context != null && !context.isEmpty()) {
+                List<String> allowedTypes = getNotificationTypesForContext(context);
+                if (allowedTypes != null) {
+                    notifications = notifications.stream()
+                        .filter(notification -> allowedTypes.contains(notification.getType()))
+                        .collect(java.util.stream.Collectors.toList());
+                    
+                    System.out.println("🔔 [DEBUG] Filtered notifications for context '" + context + "': " + notifications.size() + " notifications");
+                }
+            }
+            
             System.out.println("🔔 [DEBUG] Found " + notificationsPage.getTotalElements() + " total notifications");
-            System.out.println("🔔 [DEBUG] Current page has " + notificationsPage.getContent().size() + " notifications");
+            System.out.println("🔔 [DEBUG] Current page has " + notifications.size() + " notifications after filtering");
             
             long unreadCount = notificationRepository.countByUserIdAndIsReadFalse(userId);
             System.out.println("🔔 [DEBUG] Unread count: " + unreadCount);
             
             // Log details of notifications being returned
-            List<Notification> notifications = notificationsPage.getContent();
             for (int i = 0; i < notifications.size(); i++) {
                 Notification notif = notifications.get(i);
                 System.out.println("🔔 [DEBUG] Notification " + (i+1) + ": ID=" + notif.getId() + 
@@ -293,12 +306,13 @@ public class BiddingService {
             }
             
             Map<String, Object> response = new HashMap<>();
-            response.put("notifications", notificationsPage.getContent());
-            response.put("totalElements", notificationsPage.getTotalElements());
-            response.put("totalPages", notificationsPage.getTotalPages());
+            response.put("notifications", notifications);
+            response.put("totalElements", notifications.size()); // Use filtered count
+            response.put("totalPages", (int) Math.ceil((double) notifications.size() / size));
             response.put("currentPage", page);
             response.put("pageSize", size);
             response.put("unreadCount", unreadCount);
+            response.put("context", context); // Add context info
             
             return new ApiResponse<>(true, "Notifications retrieved successfully", response);
             
@@ -307,6 +321,29 @@ public class BiddingService {
             e.printStackTrace();
             return new ApiResponse<>(false, "Failed to get notifications: " + e.getMessage(), null);
         }
+    }
+
+    /**
+     * Helper method to get allowed notification types for a given context
+     */
+    private List<String> getNotificationTypesForContext(String context) {
+        switch (context.toLowerCase()) {
+            case "seller":
+                // Seller-related notification types
+                return java.util.Arrays.asList("NEW_BID", "ITEM_SOLD", "BIDDING_CANCELLED");
+            case "buyer":
+                // Buyer-related notification types
+                return java.util.Arrays.asList("BID_WON", "BID_OUTBID", "BID_PLACED", "BIDDING_ENDED");
+            default:
+                return null; // No filtering
+        }
+    }
+
+    /**
+     * Overloaded method for backward compatibility
+     */
+    public ApiResponse<Map<String, Object>> getUserNotifications(String userId, int page, int size) {
+        return getUserNotifications(userId, page, size, null);
     }
     
     /**

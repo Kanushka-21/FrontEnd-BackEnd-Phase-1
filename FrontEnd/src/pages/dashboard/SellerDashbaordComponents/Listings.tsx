@@ -91,8 +91,8 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
       });
 
       // Add user ID if available
-      if (user?.id) {
-        params.append('userId', user.id.toString());
+      if (user?.userId) {
+        params.append('userId', user.userId.toString());
       }
 
       // Add status filter if specified
@@ -478,7 +478,7 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
     setLoading(true);
     try {
       // Get user information (you might need to get this from context/props)
-      const userId = user?.id || 123; // Replace with actual user ID
+      const userId = user?.userId || 123; // Replace with actual user ID
       const userName = user?.firstName && user?.lastName 
         ? `${user.firstName} ${user.lastName}` 
         : "Demo User"; // Replace with actual user name
