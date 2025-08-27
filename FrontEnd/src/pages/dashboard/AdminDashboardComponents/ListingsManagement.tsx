@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Input, Table, Button, Modal, message, Tag, Image } from 'antd';
-import { FileTextOutlined, CheckCircleOutlined, CloseCircleOutlined, EyeOutlined } from '@ant-design/icons';
+import { Card, Input, Table, Button, Modal, message, Tag, Image, Row, Col, Divider, Spin, Typography } from 'antd';
+import { FileTextOutlined, CheckCircleOutlined, CloseCircleOutlined, EyeOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
 import { AdminComponentProps } from './shared';
 import { api } from '@/services/api';
 import dayjs from 'dayjs';
@@ -19,14 +19,125 @@ interface PendingListing {
   certification?: string;
 }
 
+interface GemImage {
+  imageId: string;
+  originalName: string;
+  contentType: string;
+  size: number;
+  imageUrl: string;
+  thumbnailUrl?: string;
+  isPrimary: boolean;
+  displayOrder?: number;
+  description?: string;
+  imageType: 'GEMSTONE' | 'CERTIFICATE';
+  uploadedAt: string;
+}
+
+interface DetailedGemListing {
+  id: string;
+  userId: string;
+  userName: string;
+  userRole: string;
+  
+  // Certification Status
+  isCertified: boolean;
+  
+  // CSL Certificate Information (for certified stones)
+  cslMemoNo?: string;
+  issueDate?: string;
+  authority?: string;
+  giaAlumniMember?: boolean;
+  
+  // Gem Identification Details
+  color: string;
+  shape: string;
+  weight: string;
+  measurements: string;
+  variety: string;
+  species: string;
+  treatment: string;
+  comments?: string;
+  
+  // Listing Specific Information
+  price: number;
+  currency: string;
+  gemName: string;
+  category: string;
+  description?: string;
+  
+  // Additional fields for certified gemstones
+  certificateNumber?: string;
+  certifyingAuthority?: string;
+  clarity?: string;
+  cut?: string;
+  origin?: string;
+  
+  // Images
+  images?: GemImage[];
+  primaryImageUrl?: string;
+  
+  // Metadata
+  listingStatus: string;
+  isActive: boolean;
+  views: number;
+  favorites: number;
+  inquiries: number;
+  createdAt: string;
+  updatedAt: string;
+  
+  // Bidding fields
+  biddingStartTime?: string;
+  biddingEndTime?: string;
+  biddingActive?: boolean;
+  biddingCompletedAt?: string;
+  winningBidderId?: string;
+  finalPrice?: number;
+  sellerId?: string;
+}
+
+const { Title, Text } = Typography;
+
 const ListingsManagement: React.FC<AdminComponentProps> = () => {
   const [pendingListings, setPendingListings] = useState<PendingListing[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
   const [selectedListing, setSelectedListing] = useState<PendingListing | null>(null);
+  const [detailedListing, setDetailedListing] = useState<DetailedGemListing | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+
+  // Helper function to construct image URLs
+  const constructImageUrl = (imagePath: string): string => {
+    if (!imagePath) return '/placeholder-gem.jpg';
+    
+    // If it's already a full URL, return as is
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      return imagePath;
+    }
+    
+    // If it starts with /uploads, construct full URL
+    if (imagePath.startsWith('/uploads')) {
+      return `http://localhost:9092${imagePath}`;
+    }
+    
+    // If it's a Windows path, convert to URL
+    if (imagePath.includes('\\')) {
+      const relativePath = imagePath.split('uploads\\')[1];
+      if (relativePath) {
+        const urlPath = relativePath.replace(/\\/g, '/');
+        return `http://localhost:9092/uploads/${urlPath}`;
+      }
+    }
+    
+    // Fallback
+    return '/placeholder-gem.jpg';
+  };
+
+  // Helper function to format LKR currency
+  const formatLKR = (amount: number): string => {
+    return `LKR ${amount?.toLocaleString() || '0'}`;
+  };
 
   // Fetch pending listings
   const fetchPendingListings = async (page = 0, size = 10) => {
@@ -37,7 +148,6 @@ const ListingsManagement: React.FC<AdminComponentProps> = () => {
       if (response.success && response.data) {
         setPendingListings(response.data.listings || []);
         setCurrentPage(response.data.currentPage || 0);
-        setTotalPages(response.data.totalPages || 0);
         setTotalElements(response.data.totalElements || 0);
       } else {
         message.error('Failed to fetch pending listings');
@@ -103,9 +213,29 @@ const ListingsManagement: React.FC<AdminComponentProps> = () => {
   };
 
   // View listing details
-  const handleViewListing = (listing: PendingListing) => {
+  const handleViewListing = async (listing: PendingListing) => {
     setSelectedListing(listing);
     setIsModalVisible(true);
+    setDetailsLoading(true);
+    setDetailedListing(null);
+
+    try {
+      console.log('🔍 Fetching detailed information for listing:', listing.id);
+      const response = await api.admin.getListingDetails(listing.id);
+      
+      if (response.success && response.data) {
+        console.log('✅ Detailed listing data received:', response.data);
+        setDetailedListing(response.data);
+      } else {
+        console.error('❌ Failed to fetch detailed listing:', response.message);
+        message.error('Failed to load detailed information');
+      }
+    } catch (error) {
+      console.error('❌ Error fetching detailed listing:', error);
+      message.error('An error occurred while loading detailed information');
+    } finally {
+      setDetailsLoading(false);
+    }
   };
 
   const columns = [
@@ -238,9 +368,14 @@ const ListingsManagement: React.FC<AdminComponentProps> = () => {
         )}
       </Card>
 
-      {/* Listing Details Modal */}
+      {/* Enhanced Listing Details Modal */}
       <Modal
-        title="Listing Details"
+        title={
+          <div className="flex items-center">
+            <EyeOutlined className="mr-2" />
+            Listing Details - {selectedListing?.gemName || 'Loading...'}
+          </div>
+        }
         open={isModalVisible}
         onCancel={() => setIsModalVisible(false)}
         footer={[
@@ -257,6 +392,7 @@ const ListingsManagement: React.FC<AdminComponentProps> = () => {
                 handleApproveListing(selectedListing);
               }
             }}
+            disabled={detailsLoading}
           >
             Approve
           </Button>,
@@ -270,14 +406,330 @@ const ListingsManagement: React.FC<AdminComponentProps> = () => {
                 handleRejectListing(selectedListing);
               }
             }}
+            disabled={detailsLoading}
           >
             Reject
           </Button>,
         ]}
-        width={700}
+        width={1000}
+        style={{ top: 20 }}
       >
-        {selectedListing && (
+        {detailsLoading ? (
+          <div className="flex justify-center items-center py-12">
+            <Spin size="large" />
+            <span className="ml-3">Loading detailed information...</span>
+          </div>
+        ) : detailedListing ? (
+          <div className="space-y-6">
+            {/* Images Section */}
+            <div>
+              <Title level={4} className="text-blue-600 mb-4">
+                Gemstone Images
+              </Title>
+              
+              {detailedListing.images && detailedListing.images.length > 0 ? (
+                <div className="space-y-4">
+                  {/* Primary Image Display */}
+                  <div className="flex justify-center">
+                    <Image.PreviewGroup>
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                        {detailedListing.images
+                          .filter(img => img.imageType === 'GEMSTONE')
+                          .map((image, index) => (
+                          <div key={image.imageId} className="relative">
+                            <Image
+                              src={constructImageUrl(image.imageUrl)}
+                              alt={`Gemstone ${index + 1}`}
+                              width={150}
+                              height={150}
+                              style={{ objectFit: 'cover', borderRadius: '8px' }}
+                              fallback="/placeholder-gem.jpg"
+                            />
+                            {image.isPrimary && (
+                              <div className="absolute top-2 right-2">
+                                <Tag color="gold" className="text-xs">Primary</Tag>
+                              </div>
+                            )}
+                            <div className="absolute bottom-2 left-2">
+                              <Tag color="blue" className="text-xs">💎</Tag>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </Image.PreviewGroup>
+                  </div>
+                  
+                  {/* Certificate Images */}
+                  {detailedListing.images.some(img => img.imageType === 'CERTIFICATE') && (
+                    <div>
+                      <Title level={5} className="text-green-600 mb-3">
+                        Certificate Images
+                      </Title>
+                      <Image.PreviewGroup>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                          {detailedListing.images
+                            .filter(img => img.imageType === 'CERTIFICATE')
+                            .map((image, index) => (
+                            <div key={image.imageId} className="relative">
+                              <Image
+                                src={constructImageUrl(image.imageUrl)}
+                                alt={`Certificate ${index + 1}`}
+                                width={150}
+                                height={150}
+                                style={{ objectFit: 'cover', borderRadius: '8px' }}
+                                fallback="/placeholder-gem.jpg"
+                              />
+                              <div className="absolute bottom-2 left-2">
+                                <Tag color="green" className="text-xs">📜</Tag>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </Image.PreviewGroup>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8 bg-gray-50 rounded-lg">
+                  <Text type="secondary">No images available for this listing</Text>
+                </div>
+              )}
+            </div>
+
+            <Divider />
+
+            {/* Basic Information */}
+            <div>
+              <Title level={4} className="text-blue-600 mb-4">
+                Basic Information
+              </Title>
+              <Row gutter={[16, 16]}>
+                <Col span={12}>
+                  <Text strong>Gem Name:</Text>
+                  <br />
+                  <Text>{detailedListing.gemName}</Text>
+                </Col>
+                <Col span={12}>
+                  <Text strong>Category:</Text>
+                  <br />
+                  <Text>{detailedListing.category}</Text>
+                </Col>
+                <Col span={12}>
+                  <Text strong>Price:</Text>
+                  <br />
+                  <Text className="text-lg font-semibold text-green-600">
+                    {formatLKR(detailedListing.price)}
+                  </Text>
+                </Col>
+                <Col span={12}>
+                  <Text strong>Weight:</Text>
+                  <br />
+                  <Text>{detailedListing.weight} carats</Text>
+                </Col>
+                <Col span={12}>
+                  <Text strong>Seller:</Text>
+                  <br />
+                  <Text>{detailedListing.userName}</Text>
+                </Col>
+                <Col span={12}>
+                  <Text strong>Status:</Text>
+                  <br />
+                  <Tag color="orange">{detailedListing.listingStatus}</Tag>
+                </Col>
+              </Row>
+            </div>
+
+            <Divider />
+
+            {/* Gemstone Details */}
+            <div>
+              <Title level={4} className="text-blue-600 mb-4">
+                Gemstone Specifications
+              </Title>
+              <Row gutter={[16, 16]}>
+                <Col span={8}>
+                  <Text strong>Color:</Text>
+                  <br />
+                  <Text>{detailedListing.color}</Text>
+                </Col>
+                <Col span={8}>
+                  <Text strong>Shape:</Text>
+                  <br />
+                  <Text>{detailedListing.shape}</Text>
+                </Col>
+                <Col span={8}>
+                  <Text strong>Measurements:</Text>
+                  <br />
+                  <Text>{detailedListing.measurements}</Text>
+                </Col>
+                <Col span={8}>
+                  <Text strong>Variety:</Text>
+                  <br />
+                  <Text>{detailedListing.variety}</Text>
+                </Col>
+                <Col span={8}>
+                  <Text strong>Species:</Text>
+                  <br />
+                  <Text>{detailedListing.species}</Text>
+                </Col>
+                <Col span={8}>
+                  <Text strong>Treatment:</Text>
+                  <br />
+                  <Text>{detailedListing.treatment}</Text>
+                </Col>
+                {detailedListing.clarity && (
+                  <Col span={8}>
+                    <Text strong>Clarity:</Text>
+                    <br />
+                    <Text>{detailedListing.clarity}</Text>
+                  </Col>
+                )}
+                {detailedListing.cut && (
+                  <Col span={8}>
+                    <Text strong>Cut:</Text>
+                    <br />
+                    <Text>{detailedListing.cut}</Text>
+                  </Col>
+                )}
+                {detailedListing.origin && (
+                  <Col span={8}>
+                    <Text strong>Origin:</Text>
+                    <br />
+                    <Text>{detailedListing.origin}</Text>
+                  </Col>
+                )}
+              </Row>
+            </div>
+
+            {/* Certification Information */}
+            {detailedListing.isCertified && (
+              <>
+                <Divider />
+                <div>
+                  <Title level={4} className="text-green-600 mb-4">
+                    <SafetyCertificateOutlined className="mr-2" />
+                    Certification Details
+                  </Title>
+                  <Row gutter={[16, 16]}>
+                    {detailedListing.cslMemoNo && (
+                      <Col span={12}>
+                        <Text strong>CSL Memo No:</Text>
+                        <br />
+                        <Text>{detailedListing.cslMemoNo}</Text>
+                      </Col>
+                    )}
+                    {detailedListing.issueDate && (
+                      <Col span={12}>
+                        <Text strong>Issue Date:</Text>
+                        <br />
+                        <Text>{detailedListing.issueDate}</Text>
+                      </Col>
+                    )}
+                    {detailedListing.authority && (
+                      <Col span={12}>
+                        <Text strong>Authority:</Text>
+                        <br />
+                        <Text>{detailedListing.authority}</Text>
+                      </Col>
+                    )}
+                    {detailedListing.certificateNumber && (
+                      <Col span={12}>
+                        <Text strong>Certificate Number:</Text>
+                        <br />
+                        <Text>{detailedListing.certificateNumber}</Text>
+                      </Col>
+                    )}
+                    {detailedListing.certifyingAuthority && (
+                      <Col span={12}>
+                        <Text strong>Certifying Authority:</Text>
+                        <br />
+                        <Text>{detailedListing.certifyingAuthority}</Text>
+                      </Col>
+                    )}
+                    {detailedListing.giaAlumniMember !== undefined && (
+                      <Col span={12}>
+                        <Text strong>GIA Alumni Member:</Text>
+                        <br />
+                        <Tag color={detailedListing.giaAlumniMember ? 'green' : 'red'}>
+                          {detailedListing.giaAlumniMember ? 'Yes' : 'No'}
+                        </Tag>
+                      </Col>
+                    )}
+                  </Row>
+                </div>
+              </>
+            )}
+
+            {/* Additional Information */}
+            {detailedListing.description && (
+              <>
+                <Divider />
+                <div>
+                  <Title level={4} className="text-blue-600 mb-4">
+                    Description
+                  </Title>
+                  <Text>{detailedListing.description}</Text>
+                </div>
+              </>
+            )}
+
+            {detailedListing.comments && (
+              <>
+                <Divider />
+                <div>
+                  <Title level={4} className="text-blue-600 mb-4">
+                    Additional Comments
+                  </Title>
+                  <Text>{detailedListing.comments}</Text>
+                </div>
+              </>
+            )}
+
+            <Divider />
+
+            {/* Metadata */}
+            <div>
+              <Title level={4} className="text-gray-600 mb-4">
+                Listing Metadata
+              </Title>
+              <Row gutter={[16, 16]}>
+                <Col span={8}>
+                  <Text strong>Views:</Text>
+                  <br />
+                  <Text>{detailedListing.views || 0}</Text>
+                </Col>
+                <Col span={8}>
+                  <Text strong>Favorites:</Text>
+                  <br />
+                  <Text>{detailedListing.favorites || 0}</Text>
+                </Col>
+                <Col span={8}>
+                  <Text strong>Inquiries:</Text>
+                  <br />
+                  <Text>{detailedListing.inquiries || 0}</Text>
+                </Col>
+                <Col span={12}>
+                  <Text strong>Created:</Text>
+                  <br />
+                  <Text>{dayjs(detailedListing.createdAt).format('MMMM DD, YYYY [at] h:mm A')}</Text>
+                </Col>
+                <Col span={12}>
+                  <Text strong>Last Updated:</Text>
+                  <br />
+                  <Text>{dayjs(detailedListing.updatedAt).format('MMMM DD, YYYY [at] h:mm A')}</Text>
+                </Col>
+              </Row>
+            </div>
+          </div>
+        ) : selectedListing ? (
+          // Fallback to basic information if detailed data failed to load
           <div className="space-y-4">
+            <div className="text-center py-4">
+              <Text type="warning">
+                Failed to load detailed information. Showing basic details:
+              </Text>
+            </div>
+            
             {(selectedListing.primaryImageUrl || (selectedListing.images && selectedListing.images.length > 0)) && (
               <div>
                 <Image
@@ -315,7 +767,7 @@ const ListingsManagement: React.FC<AdminComponentProps> = () => {
               </div>
             </div>
           </div>
-        )}
+        ) : null}
       </Modal>
     </div>
   );
