@@ -371,7 +371,7 @@ public class AdminController {
             
             System.out.println("✅ Successfully retrieved admin notifications");
             
-            return ResponseEntity.ok(ApiResponse.success(response, "Admin notifications retrieved successfully"));
+            return ResponseEntity.ok(ApiResponse.success("Admin notifications retrieved successfully", response));
             
         } catch (Exception e) {
             System.err.println("❌ Get admin notifications error: " + e.getMessage());
@@ -400,7 +400,7 @@ public class AdminController {
             
             System.out.println("✅ Successfully retrieved admin unread count: " + unreadCount);
             
-            return ResponseEntity.ok(ApiResponse.success(unreadCount, "Admin unread count retrieved successfully"));
+            return ResponseEntity.ok(ApiResponse.success("Admin unread count retrieved successfully", unreadCount));
             
         } catch (Exception e) {
             System.err.println("❌ Get admin unread count error: " + e.getMessage());

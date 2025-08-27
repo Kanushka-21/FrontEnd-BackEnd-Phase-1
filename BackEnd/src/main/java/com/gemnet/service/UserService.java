@@ -48,6 +48,9 @@ public class UserService {
     @Autowired
     private FileStorageService fileStorageService;
     
+    @Autowired
+    private NotificationService notificationService;
+    
     /**
      * Register a new user with personal data
      */
@@ -90,6 +93,18 @@ public class UserService {
             
             // Save user
             User savedUser = userRepository.save(user);
+            
+            // Notify admin of new user registration
+            try {
+                notificationService.notifyAdminOfNewUserRegistration(
+                    savedUser.getId(), 
+                    savedUser.getEmail(), 
+                    savedUser.getFirstName() + " " + savedUser.getLastName()
+                );
+            } catch (Exception e) {
+                System.err.println("⚠️ Failed to notify admin of new user registration: " + e.getMessage());
+                // Don't fail the registration if notification fails
+            }
             
             System.out.println("✅ User registered successfully: " + savedUser.getId());
             return ApiResponse.success("User registered successfully. Proceed to face verification.", savedUser.getId());

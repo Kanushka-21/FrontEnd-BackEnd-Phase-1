@@ -2,7 +2,9 @@ package com.gemnet.service;
 
 import com.gemnet.dto.AdvertisementRequestDto;
 import com.gemnet.model.Advertisement;
+import com.gemnet.model.User;
 import com.gemnet.repository.AdvertisementRepository;
+import com.gemnet.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -22,6 +24,12 @@ public class AdvertisementService {
 
     @Autowired
     private FileStorageService fileStorageService;
+    
+    @Autowired
+    private NotificationService notificationService;
+    
+    @Autowired
+    private UserRepository userRepository;
     
     @Value("${server.port:9092}")
     private String serverPort;
@@ -59,6 +67,27 @@ public class AdvertisementService {
         Advertisement webImageURLs = transformImagePathsToUrls(advertisement);
         advertisement.setImages(webImageURLs.getImages());
         Advertisement savedAdvertisement = advertisementRepository.save(advertisement);
+        
+        // Notify admin of new advertisement if status is pending
+        if ("pending".equals(savedAdvertisement.getApproved())) {
+            try {
+                // Get user details for the notification
+                Optional<User> advertiserOpt = userRepository.findById(savedAdvertisement.getUserId());
+                String advertiserName = advertiserOpt.map(user -> user.getFirstName() + " " + user.getLastName())
+                                                  .orElse("Unknown User");
+                
+                notificationService.notifyAdminOfNewAdvertisement(
+                    savedAdvertisement.getId(),
+                    savedAdvertisement.getTitle(),
+                    advertiserName,
+                    savedAdvertisement.getUserId()
+                );
+            } catch (Exception e) {
+                System.err.println("⚠️ Failed to notify admin of new advertisement: " + e.getMessage());
+                // Don't fail the advertisement creation if notification fails
+            }
+        }
+        
         return transformImagePathsToUrls(savedAdvertisement);
     }
 

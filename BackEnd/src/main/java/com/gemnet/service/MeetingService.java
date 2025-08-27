@@ -31,6 +31,9 @@ public class MeetingService {
     @Autowired
     private UserRepository userRepository;
     
+    @Autowired
+    private NotificationService notificationService;
+    
     /**
      * Map test user IDs to real database user IDs
      */
@@ -112,6 +115,21 @@ public class MeetingService {
             meeting.setPaymentStatus("PENDING");
             
             Meeting savedMeeting = meetingRepository.save(meeting);
+            
+            // Notify admin of new meeting request
+            try {
+                notificationService.notifyAdminOfNewMeetingRequest(
+                    savedMeeting.getId(),
+                    buyer.getFirstName() + " " + buyer.getLastName(),
+                    seller.getFirstName() + " " + seller.getLastName(),
+                    buyer.getId(),
+                    seller.getId(),
+                    gemListing.getGemName()
+                );
+            } catch (Exception e) {
+                logger.error("⚠️ Failed to notify admin of new meeting request: " + e.getMessage());
+                // Don't fail the meeting creation if notification fails
+            }
             
             // Send notification to seller
             String notificationMessage = String.format(

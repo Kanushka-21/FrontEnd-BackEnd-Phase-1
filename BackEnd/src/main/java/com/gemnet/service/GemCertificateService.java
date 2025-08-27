@@ -45,6 +45,9 @@ public class GemCertificateService {
     @Autowired
     private GemListingRepository gemListingRepository;
     
+    @Autowired
+    private NotificationService notificationService;
+    
     // Tesseract configuration
     @Value("${tesseract.datapath:/opt/homebrew/share/tessdata}")
     private String tesseractDataPath;
@@ -728,6 +731,21 @@ public class GemCertificateService {
             System.out.println("💾 Saving gem listing to database...");
             GemListing savedListing = gemListingRepository.save(gemListing);
             System.out.println("✅ Gem listing saved to database with ID: " + savedListing.getId());
+            
+            // Notify admin of new listing if status is PENDING
+            if ("PENDING".equals(savedListing.getListingStatus())) {
+                try {
+                    notificationService.notifyAdminOfNewListing(
+                        savedListing.getId(),
+                        savedListing.getGemName(),
+                        savedListing.getUserName(),
+                        savedListing.getUserId()
+                    );
+                } catch (Exception e) {
+                    System.err.println("⚠️ Failed to notify admin of new listing: " + e.getMessage());
+                    // Don't fail the listing creation if notification fails
+                }
+            }
             
             // Prepare success response
             saveResult.put("success", true);
