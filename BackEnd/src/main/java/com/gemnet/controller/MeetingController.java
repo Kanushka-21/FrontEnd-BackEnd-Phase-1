@@ -28,6 +28,9 @@ public class MeetingController {
     @PostMapping("/create")
     public ResponseEntity<?> createMeeting(@RequestBody Map<String, Object> requestData) {
         try {
+            System.out.println("📥 Received meeting creation request:");
+            System.out.println("   - Request data: " + requestData);
+            
             String purchaseId = (String) requestData.get("purchaseId");
             String buyerId = (String) requestData.get("buyerId");
             String proposedDateTimeStr = (String) requestData.get("proposedDateTime");
@@ -35,23 +38,78 @@ public class MeetingController {
             String meetingType = (String) requestData.get("meetingType");
             String buyerNotes = (String) requestData.get("buyerNotes");
             
-            // Parse date time
-            LocalDateTime proposedDateTime = LocalDateTime.parse(proposedDateTimeStr, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+            System.out.println("   - Purchase ID: " + purchaseId);
+            System.out.println("   - Buyer ID: " + buyerId);
+            System.out.println("   - Proposed Date/Time: " + proposedDateTimeStr);
+            System.out.println("   - Location: " + location);
+            System.out.println("   - Meeting Type: " + meetingType);
             
+            // Validate required fields
+            if (purchaseId == null || purchaseId.trim().isEmpty()) {
+                System.out.println("❌ Validation failed: purchaseId is null or empty");
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("success", false);
+                errorResponse.put("message", "Purchase ID is required");
+                errorResponse.put("error", "VALIDATION_ERROR");
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+            
+            if (buyerId == null || buyerId.trim().isEmpty()) {
+                System.out.println("❌ Validation failed: buyerId is null or empty");
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("success", false);
+                errorResponse.put("message", "Buyer ID is required");
+                errorResponse.put("error", "VALIDATION_ERROR");
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+            
+            if (proposedDateTimeStr == null || proposedDateTimeStr.trim().isEmpty()) {
+                System.out.println("❌ Validation failed: proposedDateTime is null or empty");
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("success", false);
+                errorResponse.put("message", "Proposed date/time is required");
+                errorResponse.put("error", "VALIDATION_ERROR");
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+            
+            // Parse date time
+            LocalDateTime proposedDateTime;
+            try {
+                proposedDateTime = LocalDateTime.parse(proposedDateTimeStr, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+                System.out.println("✅ Successfully parsed date/time: " + proposedDateTime);
+            } catch (Exception e) {
+                System.out.println("❌ Failed to parse date/time: " + proposedDateTimeStr + " - " + e.getMessage());
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("success", false);
+                errorResponse.put("message", "Invalid date/time format: " + proposedDateTimeStr);
+                errorResponse.put("error", "DATE_PARSING_ERROR");
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+            
+            System.out.println("🔄 Calling meetingService.createMeeting...");
             Map<String, Object> result = meetingService.createMeeting(
                 purchaseId, buyerId, proposedDateTime, location, meetingType, buyerNotes
             );
             
+            System.out.println("📤 Service result: " + result);
+            
             if ((Boolean) result.get("success")) {
+                System.out.println("✅ Meeting created successfully");
                 return ResponseEntity.ok(result);
             } else {
+                System.out.println("❌ Meeting creation failed: " + result.get("message"));
                 return ResponseEntity.badRequest().body(result);
             }
             
         } catch (Exception e) {
+            System.out.println("❌ Exception in createMeeting: " + e.getMessage());
+            e.printStackTrace();
+            
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("success", false);
             errorResponse.put("message", "Error creating meeting: " + e.getMessage());
+            errorResponse.put("error", "INTERNAL_ERROR");
+            errorResponse.put("details", e.getClass().getSimpleName());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }

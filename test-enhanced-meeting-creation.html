@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Meeting Creation Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+        .btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+            margin-top: 20px;
+        }
+        .btn:hover {
+            background-color: #45a049;
+        }
+        .btn:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 6px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 14px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤝 Enhanced Meeting Creation Test</h1>
+        <p style="text-align: center; color: #666; margin-bottom: 30px;">
+            Test the enhanced meeting creation API with buyer/seller notifications
+        </p>
+        
+        <form id="meetingForm">
+            <div class="form-group">
+                <label for="buyerId">Buyer ID:</label>
+                <input type="text" id="buyerId" value="685e9211c739bc434ce1509d" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="purchaseId">Purchase ID:</label>
+                <input type="text" id="purchaseId" value="test-purchase-123" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="requestedDateTime">Requested Date & Time:</label>
+                <input type="datetime-local" id="requestedDateTime" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="location">Location:</label>
+                <input type="text" id="location" value="Test Location" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="notes">Notes:</label>
+                <textarea id="notes" placeholder="Additional notes for the meeting...">Test meeting request with enhanced buyer/seller notifications</textarea>
+            </div>
+            
+            <button type="submit" class="btn" id="submitBtn">
+                📅 Create Meeting Request
+            </button>
+        </form>
+        
+        <div id="result" class="result" style="display: none;"></div>
+    </div>
+
+    <script>
+        // Set default datetime to tomorrow at 10:00 AM
+        document.addEventListener('DOMContentLoaded', function() {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(10, 0, 0, 0);
+            
+            const year = tomorrow.getFullYear();
+            const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
+            const day = String(tomorrow.getDate()).padStart(2, '0');
+            const hours = String(tomorrow.getHours()).padStart(2, '0');
+            const minutes = String(tomorrow.getMinutes()).padStart(2, '0');
+            
+            document.getElementById('requestedDateTime').value = `${year}-${month}-${day}T${hours}:${minutes}`;
+        });
+
+        document.getElementById('meetingForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const resultDiv = document.getElementById('result');
+            
+            // Disable button and show loading
+            submitBtn.disabled = true;
+            submitBtn.textContent = '⏳ Creating Meeting...';
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result loading';
+            resultDiv.textContent = 'Sending meeting request...';
+            
+            try {
+                // Get form data
+                const buyerId = document.getElementById('buyerId').value;
+                const purchaseId = document.getElementById('purchaseId').value;
+                const requestedDateTime = document.getElementById('requestedDateTime').value;
+                const location = document.getElementById('location').value;
+                const notes = document.getElementById('notes').value;
+                
+                // Convert datetime-local to ISO string
+                const isoDateTime = new Date(requestedDateTime).toISOString();
+                
+                const meetingData = {
+                    buyerId: buyerId,
+                    purchaseId: purchaseId,
+                    requestedDateTime: isoDateTime,
+                    location: location,
+                    notes: notes
+                };
+                
+                console.log('Sending meeting request:', meetingData);
+                
+                // Make API call
+                const response = await fetch('http://localhost:9092/api/meetings/create', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(meetingData)
+                });
+                
+                const responseText = await response.text();
+                let responseData;
+                
+                try {
+                    responseData = JSON.parse(responseText);
+                } catch (e) {
+                    responseData = responseText;
+                }
+                
+                console.log('API Response:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    data: responseData
+                });
+                
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = `✅ Meeting request created successfully!\n\n` +
+                        `Meeting ID: ${responseData.id || 'N/A'}\n` +
+                        `Status: ${responseData.status || 'PENDING'}\n` +
+                        `Buyer ID: ${responseData.buyerId || buyerId}\n` +
+                        `Seller ID: ${responseData.sellerId || 'N/A'}\n` +
+                        `Purchase ID: ${responseData.purchaseId || purchaseId}\n` +
+                        `Requested Time: ${responseData.requestedDateTime || isoDateTime}\n` +
+                        `Location: ${responseData.location || location}\n` +
+                        `Notes: ${responseData.notes || notes}\n\n` +
+                        `Full Response:\n${JSON.stringify(responseData, null, 2)}`;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `❌ Error creating meeting request\n\n` +
+                        `Status: ${response.status} ${response.statusText}\n\n` +
+                        `Response:\n${typeof responseData === 'string' ? responseData : JSON.stringify(responseData, null, 2)}`;
+                }
+                
+            } catch (error) {
+                console.error('Request failed:', error);
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ Request failed\n\n` +
+                    `Error: ${error.message}\n\n` +
+                    `This could indicate:\n` +
+                    `• Backend server is not running\n` +
+                    `• Network connectivity issues\n` +
+                    `• CORS configuration problems\n\n` +
+                    `Make sure the backend is running on http://localhost:9092`;
+            } finally {
+                // Re-enable button
+                submitBtn.disabled = false;
+                submitBtn.textContent = '📅 Create Meeting Request';
+            }
+        });
+    </script>
+</body>
+</html>
