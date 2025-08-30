@@ -3,9 +3,11 @@ package com.gemnet.service;
 import com.gemnet.model.Meeting;
 import com.gemnet.model.GemListing;
 import com.gemnet.model.User;
+import com.gemnet.model.Notification;
 import com.gemnet.repository.MeetingRepository;
 import com.gemnet.repository.GemListingRepository;
 import com.gemnet.repository.UserRepository;
+import com.gemnet.repository.NotificationRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
@@ -31,16 +33,56 @@ public class MeetingService {
     @Autowired
     private UserRepository userRepository;
     
+    @Autowired
+    private NotificationService notificationService;
+    
+    @Autowired
+    private NotificationRepository notificationRepository;
+    
+    /**
+     * Helper method to create meeting-related notifications for buyers and sellers
+     */
+    private void createMeetingNotification(String userId, String meetingId, String gemName, 
+                                         String type, String title, String message, 
+                                         String triggerUserId, String triggerUserName) {
+        try {
+            Notification notification = new Notification(
+                userId,        // userId (recipient)
+                meetingId,     // listingId (using meetingId as reference)
+                null,          // bidId (not applicable for meetings)
+                type,          // notification type
+                title,         // notification title
+                message,       // notification message
+                triggerUserId, // user who triggered the event
+                triggerUserName, // name of trigger user
+                null,          // bidAmount (not applicable for meetings)
+                gemName        // gemName
+            );
+            notificationRepository.save(notification);
+            System.out.println("✅ Meeting notification created: " + type + " for user " + userId);
+        } catch (Exception e) {
+            System.err.println("❌ Error creating meeting notification: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
     /**
      * Map test user IDs to real database user IDs
      */
     private String mapTestIdsToReal(String userId) {
-        if (userId == null) return null;
+        if (userId == null || userId.trim().isEmpty()) {
+            return null;
+        }
         
         // Map various test IDs to the real user ID in the database
         if ("123".equals(userId) || "seller123".equals(userId) || "user123".equals(userId) || 
             "test-buyer-001".equals(userId) || "testbuyer".equals(userId) || "buyer123".equals(userId)) {
             return "68658de4291e0b6166646d97"; // Real user ID from database
+        }
+        
+        // Current user ID from frontend logs
+        if ("68ade03256c2ce307892eda2".equals(userId)) {
+            return "68ade03256c2ce307892eda2"; // This is already a real user ID
         }
         
         return userId; // Return as-is if not a test ID
@@ -54,9 +96,36 @@ public class MeetingService {
         Map<String, Object> result = new HashMap<>();
         
         try {
+            // Validate input parameters
+            if (purchaseId == null || purchaseId.trim().isEmpty()) {
+                result.put("success", false);
+                result.put("message", "Purchase ID is required");
+                return result;
+            }
+            
+            if (buyerId == null || buyerId.trim().isEmpty()) {
+                result.put("success", false);
+                result.put("message", "Buyer ID is required");
+                return result;
+            }
+            
             // Map test IDs to real IDs for frontend testing
             String realBuyerId = mapTestIdsToReal(buyerId);
             String realPurchaseId = mapTestIdsToReal(purchaseId);
+            
+            // Additional validation after mapping
+            if (realBuyerId == null || realBuyerId.trim().isEmpty()) {
+                result.put("success", false);
+                result.put("message", "Invalid buyer ID provided");
+                return result;
+            }
+            
+            if (realPurchaseId == null || realPurchaseId.trim().isEmpty()) {
+                result.put("success", false);
+                result.put("message", "Invalid purchase ID provided");
+                return result;
+            }
+            
             // Check if meeting already exists for this purchase
             Optional<Meeting> existingMeeting = meetingRepository.findByPurchaseId(realPurchaseId);
             if (existingMeeting.isPresent()) {
@@ -95,7 +164,13 @@ public class MeetingService {
             meeting.setPurchaseId(realPurchaseId);
             meeting.setGemName(gemListing.getGemName());
             meeting.setGemType(gemListing.getVariety());
-            meeting.setFinalPrice(gemListing.getFinalPrice().doubleValue());
+            
+            // Use finalPrice if available, otherwise use the base price
+            double meetingPrice = (gemListing.getFinalPrice() != null) 
+                ? gemListing.getFinalPrice().doubleValue() 
+                : gemListing.getPrice().doubleValue();
+            meeting.setFinalPrice(meetingPrice);
+            
             meeting.setProposedDateTime(proposedDateTime);
             meeting.setLocation(location);
             meeting.setMeetingType(meetingType);
@@ -108,23 +183,79 @@ public class MeetingService {
             
             // Calculate commission (5% by default)
             double commissionRate = 0.05; // 5%
-            meeting.setCommissionAmount(gemListing.getFinalPrice().doubleValue() * commissionRate);
+            meeting.setCommissionAmount(meetingPrice * commissionRate);
             meeting.setPaymentStatus("PENDING");
             
             Meeting savedMeeting = meetingRepository.save(meeting);
             
-            // Send notification to seller
-            String notificationMessage = String.format(
-                "New meeting request for your %s (%s) from buyer %s. Proposed time: %s",
-                gemListing.getGemName(),
-                gemListing.getVariety(),
-                buyer.getFirstName() + " " + buyer.getLastName(),
-                proposedDateTime.toString()
-            );
+            // Notify admin of new meeting request
+            try {
+                notificationService.notifyAdminOfNewMeetingRequest(
+                    savedMeeting.getId(),
+                    buyer.getFirstName() + " " + buyer.getLastName(),
+                    seller.getFirstName() + " " + seller.getLastName(),
+                    buyer.getId(),
+                    seller.getId(),
+                    gemListing.getGemName()
+                );
+            } catch (Exception e) {
+                logger.error("⚠️ Failed to notify admin of new meeting request: " + e.getMessage());
+                // Don't fail the meeting creation if notification fails
+            }
             
-            // TODO: Implement notification service integration
-            logger.info("Meeting request notification would be sent to seller: {}", gemListing.getUserId());
-            logger.info("Notification message: {}", notificationMessage);
+            // Send notification to seller about new meeting request
+            try {
+                String sellerNotificationMessage = String.format(
+                    "New meeting request for your %s (%s) from buyer %s. Proposed time: %s at %s",
+                    gemListing.getGemName(),
+                    gemListing.getVariety(),
+                    buyer.getFirstName() + " " + buyer.getLastName(),
+                    proposedDateTime.toString(),
+                    location
+                );
+                
+                createMeetingNotification(
+                    gemListing.getUserId(),  // seller ID
+                    savedMeeting.getId(),    // meeting ID
+                    gemListing.getGemName(), // gem name
+                    "MEETING_REQUEST_RECEIVED", // notification type
+                    "New Meeting Request",   // title
+                    sellerNotificationMessage, // message
+                    realBuyerId,            // trigger user (buyer)
+                    buyer.getFirstName() + " " + buyer.getLastName() // trigger user name
+                );
+                
+                logger.info("✅ Meeting request notification sent to seller: {}", gemListing.getUserId());
+            } catch (Exception e) {
+                logger.error("⚠️ Failed to send meeting request notification to seller: " + e.getMessage());
+            }
+            
+            // Send confirmation notification to buyer
+            try {
+                String buyerNotificationMessage = String.format(
+                    "Your meeting request for %s (%s) has been sent to seller %s. Proposed time: %s at %s. Awaiting seller confirmation.",
+                    gemListing.getGemName(),
+                    gemListing.getVariety(),
+                    seller.getFirstName() + " " + seller.getLastName(),
+                    proposedDateTime.toString(),
+                    location
+                );
+                
+                createMeetingNotification(
+                    realBuyerId,             // buyer ID
+                    savedMeeting.getId(),    // meeting ID
+                    gemListing.getGemName(), // gem name
+                    "MEETING_REQUEST_SENT",  // notification type
+                    "Meeting Request Sent",  // title
+                    buyerNotificationMessage, // message
+                    realBuyerId,            // trigger user (self)
+                    buyer.getFirstName() + " " + buyer.getLastName() // trigger user name
+                );
+                
+                logger.info("✅ Meeting request confirmation sent to buyer: {}", realBuyerId);
+            } catch (Exception e) {
+                logger.error("⚠️ Failed to send meeting request confirmation to buyer: " + e.getMessage());
+            }
             
             result.put("success", true);
             result.put("message", "Meeting request created successfully");
@@ -183,17 +314,39 @@ public class MeetingService {
             
             Meeting savedMeeting = meetingRepository.save(meeting);
             
-            // Send notification to buyer
-            String notificationMessage = String.format(
-                "Your meeting for %s has been confirmed for %s at %s",
-                meeting.getGemName(),
-                meeting.getConfirmedDateTime().toString(),
-                meeting.getLocation()
-            );
-            
-            // TODO: Implement notification service integration
-            logger.info("Meeting confirmation notification would be sent to buyer: {}", meeting.getBuyerId());
-            logger.info("Notification message: {}", notificationMessage);
+            // Send notification to buyer about confirmation
+            try {
+                Optional<User> buyerOpt = userRepository.findById(meeting.getBuyerId());
+                Optional<User> sellerOpt = userRepository.findById(meeting.getSellerId());
+                
+                if (buyerOpt.isPresent() && sellerOpt.isPresent()) {
+                    User buyer = buyerOpt.get();
+                    User seller = sellerOpt.get();
+                    
+                    String buyerNotificationMessage = String.format(
+                        "Your meeting for %s has been confirmed by seller %s for %s at %s",
+                        meeting.getGemName(),
+                        seller.getFirstName() + " " + seller.getLastName(),
+                        meeting.getConfirmedDateTime().toString(),
+                        meeting.getLocation()
+                    );
+                    
+                    createMeetingNotification(
+                        meeting.getBuyerId(),     // buyer ID
+                        meeting.getId(),          // meeting ID
+                        meeting.getGemName(),     // gem name
+                        "MEETING_CONFIRMED",      // notification type
+                        "Meeting Confirmed",      // title
+                        buyerNotificationMessage, // message
+                        sellerId,                 // trigger user (seller)
+                        seller.getFirstName() + " " + seller.getLastName() // trigger user name
+                    );
+                    
+                    logger.info("✅ Meeting confirmation notification sent to buyer: {}", meeting.getBuyerId());
+                }
+            } catch (Exception e) {
+                logger.error("⚠️ Failed to send meeting confirmation notification to buyer: " + e.getMessage());
+            }
             
             result.put("success", true);
             result.put("message", "Meeting confirmed successfully");
@@ -243,20 +396,42 @@ public class MeetingService {
             
             Meeting savedMeeting = meetingRepository.save(meeting);
             
-            // Send notification to other party
-            String otherUserId = meeting.getBuyerId().equals(userId) ? meeting.getSellerId() : meeting.getBuyerId();
-            String userRole = meeting.getBuyerId().equals(userId) ? "buyer" : "seller";
-            
-            String notificationMessage = String.format(
-                "Meeting for %s has been rescheduled by the %s. New proposed time: %s",
-                meeting.getGemName(),
-                userRole,
-                newDateTime.toString()
-            );
-            
-            // TODO: Implement notification service integration
-            logger.info("Meeting reschedule notification would be sent to user: {}", otherUserId);
-            logger.info("Notification message: {}", notificationMessage);
+            // Send notification to the other party about rescheduling
+            try {
+                String otherUserId = meeting.getBuyerId().equals(userId) ? meeting.getSellerId() : meeting.getBuyerId();
+                String userRole = meeting.getBuyerId().equals(userId) ? "buyer" : "seller";
+                
+                Optional<User> triggerUserOpt = userRepository.findById(userId);
+                Optional<User> otherUserOpt = userRepository.findById(otherUserId);
+                
+                if (triggerUserOpt.isPresent() && otherUserOpt.isPresent()) {
+                    User triggerUser = triggerUserOpt.get();
+                    
+                    String notificationMessage = String.format(
+                        "Meeting for %s has been rescheduled by the %s %s. New proposed time: %s at %s. Please confirm or suggest alternative time.",
+                        meeting.getGemName(),
+                        userRole,
+                        triggerUser.getFirstName() + " " + triggerUser.getLastName(),
+                        newDateTime.toString(),
+                        meeting.getLocation()
+                    );
+                    
+                    createMeetingNotification(
+                        otherUserId,              // recipient ID
+                        meeting.getId(),          // meeting ID
+                        meeting.getGemName(),     // gem name
+                        "MEETING_RESCHEDULED",    // notification type
+                        "Meeting Rescheduled",    // title
+                        notificationMessage,      // message
+                        userId,                   // trigger user
+                        triggerUser.getFirstName() + " " + triggerUser.getLastName() // trigger user name
+                    );
+                    
+                    logger.info("✅ Meeting reschedule notification sent to: {}", otherUserId);
+                }
+            } catch (Exception e) {
+                logger.error("⚠️ Failed to send meeting reschedule notification: " + e.getMessage());
+            }
             
             result.put("success", true);
             result.put("message", "Meeting rescheduled successfully");
@@ -299,16 +474,60 @@ public class MeetingService {
             
             Meeting savedMeeting = meetingRepository.save(meeting);
             
-            // Send notification to both parties
-            String completionMessage = String.format(
-                "Meeting for %s has been marked as completed. Transaction finalized.",
-                meeting.getGemName()
-            );
-            
-            // TODO: Implement notification service integration
-            logger.info("Meeting completion notification would be sent to buyer: {}", meeting.getBuyerId());
-            logger.info("Meeting completion notification would be sent to seller: {}", meeting.getSellerId());
-            logger.info("Notification message: {}", completionMessage);
+            // Send completion notifications to both parties
+            try {
+                Optional<User> buyerOpt = userRepository.findById(meeting.getBuyerId());
+                Optional<User> sellerOpt = userRepository.findById(meeting.getSellerId());
+                Optional<User> triggerUserOpt = userRepository.findById(userId);
+                
+                if (buyerOpt.isPresent() && sellerOpt.isPresent() && triggerUserOpt.isPresent()) {
+                    User buyer = buyerOpt.get();
+                    User seller = sellerOpt.get();
+                    User triggerUser = triggerUserOpt.get();
+                    
+                    String userRole = meeting.getBuyerId().equals(userId) ? "buyer" : "seller";
+                    
+                    // Notification to buyer
+                    String buyerMessage = String.format(
+                        "Meeting for %s has been marked as completed by the %s. Transaction finalized. Commission has been deducted.",
+                        meeting.getGemName(),
+                        userRole
+                    );
+                    
+                    createMeetingNotification(
+                        meeting.getBuyerId(),     // buyer ID
+                        meeting.getId(),          // meeting ID
+                        meeting.getGemName(),     // gem name
+                        "MEETING_COMPLETED",      // notification type
+                        "Meeting Completed",      // title
+                        buyerMessage,             // message
+                        userId,                   // trigger user
+                        triggerUser.getFirstName() + " " + triggerUser.getLastName() // trigger user name
+                    );
+                    
+                    // Notification to seller
+                    String sellerMessage = String.format(
+                        "Meeting for %s has been marked as completed by the %s. Transaction finalized. Commission has been deducted from final amount.",
+                        meeting.getGemName(),
+                        userRole
+                    );
+                    
+                    createMeetingNotification(
+                        meeting.getSellerId(),    // seller ID
+                        meeting.getId(),          // meeting ID
+                        meeting.getGemName(),     // gem name
+                        "MEETING_COMPLETED",      // notification type
+                        "Meeting Completed",      // title
+                        sellerMessage,            // message
+                        userId,                   // trigger user
+                        triggerUser.getFirstName() + " " + triggerUser.getLastName() // trigger user name
+                    );
+                    
+                    logger.info("✅ Meeting completion notifications sent to both buyer and seller");
+                }
+            } catch (Exception e) {
+                logger.error("⚠️ Failed to send meeting completion notifications: " + e.getMessage());
+            }
             
             result.put("success", true);
             result.put("message", "Meeting completed successfully");
@@ -356,20 +575,41 @@ public class MeetingService {
             
             Meeting savedMeeting = meetingRepository.save(meeting);
             
-            // Send notification to other party
-            String otherUserId = meeting.getBuyerId().equals(userId) ? meeting.getSellerId() : meeting.getBuyerId();
-            String userRole = meeting.getBuyerId().equals(userId) ? "buyer" : "seller";
-            
-            String notificationMessage = String.format(
-                "Meeting for %s has been cancelled by the %s. Reason: %s",
-                meeting.getGemName(),
-                userRole,
-                reason
-            );
-            
-            // TODO: Implement notification service integration
-            logger.info("Meeting cancellation notification would be sent to user: {}", otherUserId);
-            logger.info("Notification message: {}", notificationMessage);
+            // Send notification to the other party about cancellation
+            try {
+                String otherUserId = meeting.getBuyerId().equals(userId) ? meeting.getSellerId() : meeting.getBuyerId();
+                String userRole = meeting.getBuyerId().equals(userId) ? "buyer" : "seller";
+                
+                Optional<User> triggerUserOpt = userRepository.findById(userId);
+                Optional<User> otherUserOpt = userRepository.findById(otherUserId);
+                
+                if (triggerUserOpt.isPresent() && otherUserOpt.isPresent()) {
+                    User triggerUser = triggerUserOpt.get();
+                    
+                    String notificationMessage = String.format(
+                        "Meeting for %s has been cancelled by the %s %s. Reason: %s",
+                        meeting.getGemName(),
+                        userRole,
+                        triggerUser.getFirstName() + " " + triggerUser.getLastName(),
+                        reason
+                    );
+                    
+                    createMeetingNotification(
+                        otherUserId,              // recipient ID
+                        meeting.getId(),          // meeting ID
+                        meeting.getGemName(),     // gem name
+                        "MEETING_CANCELLED",      // notification type
+                        "Meeting Cancelled",      // title
+                        notificationMessage,      // message
+                        userId,                   // trigger user
+                        triggerUser.getFirstName() + " " + triggerUser.getLastName() // trigger user name
+                    );
+                    
+                    logger.info("✅ Meeting cancellation notification sent to: {}", otherUserId);
+                }
+            } catch (Exception e) {
+                logger.error("⚠️ Failed to send meeting cancellation notification: " + e.getMessage());
+            }
             
             result.put("success", true);
             result.put("message", "Meeting cancelled successfully");

@@ -269,9 +269,6 @@ const RoleAwareHeader: React.FC<RoleAwareHeaderProps> = ({ transparent = false }
           {isAuthenticated ? (
             <div className="relative">
               <div className="flex items-center space-x-2">
-                {/* Notifications */}
-                <NotificationComponent userId={user?.userId || ''} />
-                
                 {/* User menu button */}
                 <div className="relative">
                   <button

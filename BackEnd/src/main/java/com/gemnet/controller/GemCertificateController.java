@@ -235,7 +235,7 @@ public class GemCertificateController {
                description = "Retrieve gem listings for a specific user/seller")
     @CrossOrigin(origins = "*", allowedHeaders = "*", methods = {RequestMethod.GET})
     public ResponseEntity<ApiResponse<Map<String, Object>>> getUserGemListings(
-            @PathVariable Long userId,
+            @PathVariable String userId,
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "10") int size,
             @RequestParam(value = "status", required = false) String status) {
@@ -245,8 +245,10 @@ public class GemCertificateController {
         
         try {
             // Call service to get user-specific listings
+            // For user-specific listings, we need to pass the userId as a parameter
+            // Convert userId string to Long if it's a numeric string, or use a different approach
             ApiResponse<Map<String, Object>> serviceResponse = 
-                gemCertificateService.getAllGemListings(page, size, status, null, userId);
+                gemCertificateService.getUserSpecificListings(userId, page, size, status);
             
             if (serviceResponse.isSuccess()) {
                 System.out.println("✅ Successfully retrieved user gem listings");

@@ -197,6 +197,62 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
     try {
       const proposedDateTime = `${formData.proposedDate}T${formData.proposedTime}:00`;
       
+      // Enhanced buyer ID extraction with multiple fallback strategies
+      let buyerId = null;
+      
+      console.log('🔍 User object analysis:', {
+        user,
+        userKeys: user ? Object.keys(user) : [],
+        localStorage_user: localStorage.getItem('user'),
+        sessionStorage_user: sessionStorage.getItem('user')
+      });
+
+      // Strategy 1: Direct user object properties
+      if (user) {
+        buyerId = user.userId || user.id || user._id || user.user_id;
+      }
+
+      // Strategy 2: Try localStorage if user prop doesn't have ID
+      if (!buyerId) {
+        try {
+          const storedUser = localStorage.getItem('user');
+          if (storedUser) {
+            const parsedUser = JSON.parse(storedUser);
+            buyerId = parsedUser.userId || parsedUser.id || parsedUser._id || parsedUser.user_id;
+            console.log('🔍 Found buyer ID from localStorage:', buyerId);
+          }
+        } catch (e) {
+          console.log('❌ Failed to parse localStorage user');
+        }
+      }
+
+      // Strategy 3: Try sessionStorage as fallback
+      if (!buyerId) {
+        try {
+          const sessionUser = sessionStorage.getItem('user');
+          if (sessionUser) {
+            const parsedUser = JSON.parse(sessionUser);
+            buyerId = parsedUser.userId || parsedUser.id || parsedUser._id || parsedUser.user_id;
+            console.log('🔍 Found buyer ID from sessionStorage:', buyerId);
+          }
+        } catch (e) {
+          console.log('❌ Failed to parse sessionStorage user');
+        }
+      }
+
+      // Strategy 4: Check global window object
+      if (!buyerId && (window as any).currentUser) {
+        const globalUser = (window as any).currentUser;
+        buyerId = globalUser.userId || globalUser.id || globalUser._id || globalUser.user_id;
+        console.log('🔍 Found buyer ID from global user:', buyerId);
+      }
+
+      if (!buyerId) {
+        throw new Error('Buyer ID is required. Please log in again and try.');
+      }
+
+      console.log('✅ Using buyer ID:', buyerId);
+
       // Try different approaches to find the correct ID for the backend
       console.log('🔍 Purchase object analysis:', {
         id: purchase.id,
@@ -223,7 +279,7 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
         try {
           const requestData = {
             purchaseId: idToTry,
-            buyerId: user.id,
+            buyerId: buyerId,
             proposedDateTime,
             location: formData.location,
             meetingType: formData.meetingType,

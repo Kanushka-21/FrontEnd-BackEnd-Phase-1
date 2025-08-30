@@ -12,10 +12,17 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.MediaType;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.FileSystemResource;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 @RestController
 @RequestMapping("/api/users")
@@ -57,13 +64,50 @@ public class UserController {
             
             // Account information
             profileData.put("userRole", user.getUserRole());
+            profileData.put("role", user.getUserRole()); // Add alias for consistency
             profileData.put("isVerified", user.getIsVerified());
             profileData.put("verificationStatus", user.getVerificationStatus());
             profileData.put("isFaceVerified", user.getIsFaceVerified());
             profileData.put("isNicVerified", user.getIsNicVerified());
             profileData.put("isActive", user.getIsActive());
+            profileData.put("isLocked", user.getIsLocked() != null ? user.getIsLocked() : false);
             profileData.put("createdAt", user.getCreatedAt());
             profileData.put("updatedAt", user.getUpdatedAt());
+            profileData.put("joinDate", user.getCreatedAt());
+            profileData.put("lastActive", user.getUpdatedAt());
+            
+            // Image paths
+            profileData.put("faceImagePath", user.getFaceImagePath());
+            profileData.put("nicImagePath", user.getNicImagePath());
+            profileData.put("extractedNicImagePath", user.getExtractedNicImagePath());
+            
+            // Image URLs for direct access (environment-independent)
+            String baseUrl = "http://localhost:9092";
+            if (user.getFaceImagePath() != null && !user.getFaceImagePath().isEmpty()) {
+                profileData.put("faceImageUrl", baseUrl + "/api/users/image/face/" + user.getId());
+                // Also provide static URL as fallback
+                profileData.put("faceImageStaticUrl", convertToStaticUrl(user.getFaceImagePath()));
+            }
+            if (user.getNicImagePath() != null && !user.getNicImagePath().isEmpty()) {
+                profileData.put("nicImageUrl", baseUrl + "/api/users/image/nic/" + user.getId());
+                profileData.put("nicImageStaticUrl", convertToStaticUrl(user.getNicImagePath()));
+            }
+            if (user.getExtractedNicImagePath() != null && !user.getExtractedNicImagePath().isEmpty()) {
+                profileData.put("extractedNicImageUrl", baseUrl + "/api/users/image/extracted/" + user.getId());
+                profileData.put("extractedNicImageStaticUrl", convertToStaticUrl(user.getExtractedNicImagePath()));
+            }
+            // Note: profilePicture field doesn't exist in User model, so we'll skip it for now
+            
+            // Display name
+            String displayName = "";
+            if (user.getFirstName() != null && user.getLastName() != null) {
+                displayName = user.getFirstName() + " " + user.getLastName();
+            } else if (user.getFirstName() != null) {
+                displayName = user.getFirstName();
+            } else if (user.getLastName() != null) {
+                displayName = user.getLastName();
+            }
+            profileData.put("name", displayName);
 
             System.out.println("✅ Profile fetched successfully for user: " + userId);
             return ResponseEntity.ok(ApiResponse.success("Profile fetched successfully", profileData));
@@ -247,6 +291,118 @@ public class UserController {
         } catch (Exception e) {
             System.err.println("❌ Error confirming meeting: " + e.getMessage());
             return ResponseEntity.ok(ApiResponse.error("Error confirming meeting: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/image/{imageType}/{userId}")
+    @Operation(summary = "Get user image", description = "Serve user face or NIC image")
+    public ResponseEntity<Resource> getUserImage(
+            @PathVariable String imageType, 
+            @PathVariable String userId) {
+        try {
+            System.out.println("🖼️ Fetching " + imageType + " image for user: " + userId);
+            
+            Optional<User> userOpt = userService.findById(userId);
+            if (!userOpt.isPresent()) {
+                System.err.println("❌ User not found: " + userId);
+                return ResponseEntity.notFound().build();
+            }
+
+            User user = userOpt.get();
+            String imagePath = null;
+            
+            // Get the appropriate image path based on type
+            switch (imageType.toLowerCase()) {
+                case "face":
+                    imagePath = user.getFaceImagePath();
+                    break;
+                case "nic":
+                    imagePath = user.getNicImagePath();
+                    break;
+                case "extracted":
+                    imagePath = user.getExtractedNicImagePath();
+                    break;
+                default:
+                    System.err.println("❌ Invalid image type: " + imageType);
+                    return ResponseEntity.badRequest().build();
+            }
+            
+            if (imagePath == null || imagePath.isEmpty()) {
+                System.err.println("❌ No " + imageType + " image path found for user: " + userId);
+                return ResponseEntity.notFound().build();
+            }
+            
+            // Convert absolute path to relative path from project root
+            Path fullPath = Paths.get(imagePath);
+            File imageFile = fullPath.toFile();
+            
+            if (!imageFile.exists()) {
+                System.err.println("❌ Image file not found: " + imagePath);
+                return ResponseEntity.notFound().build();
+            }
+            
+            Resource resource = new FileSystemResource(imageFile);
+            
+            // Determine content type based on file extension
+            String contentType = "application/octet-stream";
+            try {
+                contentType = Files.probeContentType(fullPath);
+                if (contentType == null) {
+                    String fileName = imageFile.getName().toLowerCase();
+                    if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg")) {
+                        contentType = "image/jpeg";
+                    } else if (fileName.endsWith(".png")) {
+                        contentType = "image/png";
+                    } else if (fileName.endsWith(".webp")) {
+                        contentType = "image/webp";
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("⚠️ Could not determine content type: " + e.getMessage());
+            }
+            
+            System.out.println("✅ Serving " + imageType + " image for user: " + userId);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType(contentType))
+                    .body(resource);
+                    
+        } catch (Exception e) {
+            System.err.println("❌ Error serving image: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+    
+    /**
+     * Convert absolute path to static URL path
+     */
+    private String convertToStaticUrl(String absolutePath) {
+        if (absolutePath == null || absolutePath.isEmpty()) {
+            return null;
+        }
+        
+        try {
+            // Extract the relative part from the absolute path
+            // Example: C:/path/to/uploads/face-images/filename.jpg -> /uploads/face-images/filename.jpg
+            String uploadsMarker = "uploads";
+            int uploadsIndex = absolutePath.lastIndexOf(uploadsMarker);
+            
+            if (uploadsIndex != -1) {
+                // Get everything from "uploads" onwards
+                String relativePath = absolutePath.substring(uploadsIndex);
+                // Convert Windows path separators to forward slashes
+                relativePath = relativePath.replace("\\\\", "/");
+                // Ensure it starts with /
+                if (!relativePath.startsWith("/")) {
+                    relativePath = "/" + relativePath;
+                }
+                return "http://localhost:9092" + relativePath;
+            }
+            
+            return null;
+        } catch (Exception e) {
+            System.err.println("⚠️ Error converting path to static URL: " + e.getMessage());
+            return null;
         }
     }
 }

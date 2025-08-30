@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import RoleAwareDashboardLayout from '@/components/layout/RoleAwareDashboardLayout';
 import { useAuth } from '@/contexts/AuthContext';
+import NotificationComponent from '@/components/ui/NotificationComponent';
 
 // Import modular components
 import {
@@ -22,6 +23,11 @@ const SellerDashboard = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+
+  // Debug user state for notifications
+  console.log('🔧 SellerDashboard - User state:', user);
+  console.log('🔧 SellerDashboard - User ID:', user?.userId);
+  console.log('🔧 SellerDashboard - User role:', user?.role);
 
   // Sidebar navigation items
   const sidebarItems: SidebarItem[] = [
@@ -136,17 +142,42 @@ const SellerDashboard = () => {
       <div className={`flex-1 flex flex-col overflow-hidden ${
         !sidebarCollapsed ? 'sm:ml-0' : ''
       }`}>
-        {/* Mobile menu button */}
-        <div className="sm:hidden bg-white border-b border-gray-200 p-4">
-          <button
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="p-2 rounded-lg hover:bg-gray-100 text-gray-600"
-          >
-            <Menu size={20} />
-          </button>
-        </div>
+        {/* Header */}
+        <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4 flex-shrink-0">
+          <div className="flex items-center justify-between">
+            {/* Left side - Title and mobile menu */}
+            <div className="flex items-center space-x-4">
+              {/* Mobile menu button */}
+              <button
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="sm:hidden p-2 rounded-lg hover:bg-gray-100 text-gray-600"
+              >
+                <Menu size={20} />
+              </button>
+              <div>
+                <h1 className="text-2xl font-semibold text-gray-900">Seller Dashboard</h1>
+                <p className="text-sm text-gray-600 mt-1">
+                  Welcome back, {user?.firstName || 'Seller'}
+                </p>
+              </div>
+            </div>
+            
+            {/* Right side - Notifications */}
+            <div className="flex items-center space-x-4">
+              {user?.userId && (
+                <NotificationComponent 
+                  userId={user.userId} 
+                  context="seller"
+                  maxNotifications={5}
+                  user={user}
+                />
+              )}
+            </div>
+          </div>
+        </header>
         
-        <div className="flex-1 p-3 overflow-y-auto">
+        {/* Content Area */}
+        <div className="flex-1 p-6 overflow-y-auto">
           {renderContent()}
         </div>
       </div>

@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Seller Notifications - GemNet</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 3px solid #7c3aed;
+            padding-bottom: 10px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e1e1e1;
+            border-radius: 8px;
+            background-color: #fafafa;
+        }
+        .test-section h3 {
+            color: #7c3aed;
+            margin-top: 0;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input, select, button {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        button {
+            background-color: #7c3aed;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #6d28d9;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 5px;
+            display: none;
+        }
+        .success {
+            background-color: #d1fae5;
+            border: 1px solid #10b981;
+            color: #065f46;
+        }
+        .error {
+            background-color: #fee2e2;
+            border: 1px solid #ef4444;
+            color: #991b1b;
+        }
+        .info {
+            background-color: #e0f2fe;
+            border: 1px solid #0ea5e9;
+            color: #0c4a6e;
+        }
+        .status-display {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f9fafb;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+        }
+        .notification-example {
+            background-color: #f0f9ff;
+            border: 1px solid #0ea5e9;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .notification-example h4 {
+            margin: 0 0 10px 0;
+            color: #0369a1;
+        }
+        .notification-example p {
+            margin: 5px 0;
+            color: #075985;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔔 Seller Notification System Test</h1>
+        <p style="text-align: center; color: #666; margin-bottom: 30px;">
+            Test the seller notification system to verify that sellers receive notifications when buyers bid on their items.
+        </p>
+
+        <!-- Test Section 1: Check Notification System -->
+        <div class="test-section">
+            <h3>📋 1. Check Notification System Status</h3>
+            <p>First, let's verify that the notification system is working properly:</p>
+            <button onclick="checkNotificationSystem()">Check Notification System</button>
+            <div id="notificationSystemResult" class="result"></div>
+        </div>
+
+        <!-- Test Section 2: Simulate New Bid -->
+        <div class="test-section">
+            <h3>🔔 2. Simulate New Bid Notification</h3>
+            <p>This will simulate a buyer placing a bid on a seller's gemstone:</p>
+            
+            <div class="form-group">
+                <label for="sellerId">Seller ID:</label>
+                <input type="text" id="sellerId" placeholder="Enter seller user ID" value="675c45b7036fefc08e8c4b7a">
+            </div>
+            
+            <div class="form-group">
+                <label for="buyerId">Buyer ID:</label>
+                <input type="text" id="buyerId" placeholder="Enter buyer user ID" value="675c45c8036fefc08e8c4b7d">
+            </div>
+            
+            <div class="form-group">
+                <label for="listingId">Listing ID:</label>
+                <input type="text" id="listingId" placeholder="Enter gemstone listing ID" value="675c460e036fefc08e8c4b80">
+            </div>
+            
+            <div class="form-group">
+                <label for="bidAmount">Bid Amount (LKR):</label>
+                <input type="number" id="bidAmount" placeholder="Enter bid amount" value="50000">
+            </div>
+            
+            <button onclick="simulateBid()">Place Bid (This will trigger seller notification)</button>
+            <div id="bidResult" class="result"></div>
+        </div>
+
+        <!-- Test Section 3: Check Seller Notifications -->
+        <div class="test-section">
+            <h3>📬 3. Check Seller Notifications</h3>
+            <p>Check what notifications the seller has received:</p>
+            
+            <div class="form-group">
+                <label for="checkSellerId">Seller ID to check:</label>
+                <input type="text" id="checkSellerId" placeholder="Enter seller user ID" value="675c45b7036fefc08e8c4b7a">
+            </div>
+            
+            <button onclick="checkSellerNotifications()">Check Seller Notifications</button>
+            <div id="sellerNotificationsResult" class="result"></div>
+        </div>
+
+        <!-- Test Section 4: Expected Notification Examples -->
+        <div class="test-section">
+            <h3>✅ 4. Expected Notification Examples</h3>
+            <p>Here are examples of the notifications sellers should receive:</p>
+            
+            <div class="notification-example">
+                <h4>🟢 NEW_BID Notification</h4>
+                <p><strong>Title:</strong> New Bid Received</p>
+                <p><strong>Message:</strong> John placed a new highest bid of LKR 50,000 on your Blue Sapphire (Total bids: 3)</p>
+                <p><strong>Type:</strong> NEW_BID</p>
+            </div>
+            
+            <div class="notification-example">
+                <h4>💰 ITEM_SOLD Notification</h4>
+                <p><strong>Title:</strong> Item Sold</p>
+                <p><strong>Message:</strong> Your gemstone has been sold for LKR 50,000. Buyer: John Doe. The bidding has completed successfully.</p>
+                <p><strong>Type:</strong> ITEM_SOLD</p>
+            </div>
+        </div>
+
+        <!-- Status Display -->
+        <div class="status-display">
+            <h3>📊 System Status</h3>
+            <div id="systemStatus">
+                <p>🔄 Ready to test notification system...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:9092/api';
+
+        function showResult(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.className = `result ${type}`;
+            element.innerHTML = message;
+            element.style.display = 'block';
+        }
+
+        function updateStatus(message) {
+            document.getElementById('systemStatus').innerHTML = `<p>${message}</p>`;
+        }
+
+        async function checkNotificationSystem() {
+            updateStatus('🔄 Checking notification system...');
+            
+            try {
+                // Test if backend is running
+                const response = await fetch(`${API_BASE_URL}/bidding/notifications/test`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                if (response.ok) {
+                    showResult('notificationSystemResult', 
+                        '✅ Notification system is running! Backend is accessible on port 9092.', 
+                        'success'
+                    );
+                    updateStatus('✅ Notification system is operational');
+                } else {
+                    showResult('notificationSystemResult', 
+                        '⚠️ Backend is running but notification endpoint returned an error. This is normal if the test endpoint doesn\'t exist.', 
+                        'info'
+                    );
+                    updateStatus('⚠️ Backend accessible, notification endpoint status unclear');
+                }
+            } catch (error) {
+                showResult('notificationSystemResult', 
+                    `❌ Cannot connect to backend server. Please ensure the backend is running on port 9092.<br><br>Error: ${error.message}`, 
+                    'error'
+                );
+                updateStatus('❌ Backend server not accessible');
+            }
+        }
+
+        async function simulateBid() {
+            const sellerId = document.getElementById('sellerId').value.trim();
+            const buyerId = document.getElementById('buyerId').value.trim();
+            const listingId = document.getElementById('listingId').value.trim();
+            const bidAmount = document.getElementById('bidAmount').value.trim();
+
+            if (!sellerId || !buyerId || !listingId || !bidAmount) {
+                showResult('bidResult', '❌ Please fill in all fields before placing a bid.', 'error');
+                return;
+            }
+
+            updateStatus('🔄 Placing bid and triggering seller notification...');
+
+            try {
+                const bidData = {
+                    buyerId: buyerId,
+                    listingId: listingId,
+                    bidAmount: parseInt(bidAmount)
+                };
+
+                console.log('Placing bid with data:', bidData);
+
+                const response = await fetch(`${API_BASE_URL}/bidding/place-bid`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(bidData)
+                });
+
+                const result = await response.json();
+                console.log('Bid response:', result);
+
+                if (response.ok && result.success) {
+                    showResult('bidResult', 
+                        `✅ Bid placed successfully! <br><br>
+                        <strong>Bid Details:</strong><br>
+                        • Buyer ID: ${buyerId}<br>
+                        • Listing ID: ${listingId}<br>
+                        • Bid Amount: LKR ${parseInt(bidAmount).toLocaleString()}<br><br>
+                        <strong>✉️ Seller should now receive a NEW_BID notification!</strong><br>
+                        Check the seller dashboard notification bell for the new notification.`, 
+                        'success'
+                    );
+                    updateStatus(`✅ Bid placed - seller (${sellerId}) should receive notification`);
+                } else {
+                    showResult('bidResult', 
+                        `⚠️ Bid placement response: ${result.message || 'Unknown error'}<br><br>
+                        This might be normal if the listing doesn't exist or if there are validation errors.<br>
+                        The notification system itself should still be working.`, 
+                        'info'
+                    );
+                    updateStatus('⚠️ Bid placement had issues - check backend logs');
+                }
+            } catch (error) {
+                showResult('bidResult', 
+                    `❌ Error placing bid: ${error.message}<br><br>
+                    Please ensure the backend is running and all IDs are valid.`, 
+                    'error'
+                );
+                updateStatus('❌ Error during bid placement');
+            }
+        }
+
+        async function checkSellerNotifications() {
+            const sellerId = document.getElementById('checkSellerId').value.trim();
+
+            if (!sellerId) {
+                showResult('sellerNotificationsResult', '❌ Please enter a seller ID to check notifications.', 'error');
+                return;
+            }
+
+            updateStatus('🔄 Fetching seller notifications...');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/bidding/notifications/${sellerId}?page=0&size=10`);
+                const result = await response.json();
+
+                console.log('Notifications response:', result);
+
+                if (response.ok && result.success) {
+                    const notifications = result.data.notifications || [];
+                    
+                    let notificationHtml = `✅ Successfully retrieved notifications for seller ${sellerId}:<br><br>`;
+                    notificationHtml += `<strong>Total notifications:</strong> ${notifications.length}<br><br>`;
+
+                    if (notifications.length > 0) {
+                        notificationHtml += '<strong>Recent notifications:</strong><br>';
+                        notifications.slice(0, 5).forEach((notification, index) => {
+                            const readStatus = notification.isRead ? '✅ Read' : '📩 Unread';
+                            notificationHtml += `
+                                <div style="margin: 10px 0; padding: 10px; background-color: #f9f9f9; border-radius: 5px;">
+                                    <strong>${index + 1}. ${notification.title}</strong> (${readStatus})<br>
+                                    <em>Type:</em> ${notification.type}<br>
+                                    <em>Message:</em> ${notification.message}<br>
+                                    <em>Created:</em> ${new Date(notification.createdAt).toLocaleString()}<br>
+                                </div>
+                            `;
+                        });
+
+                        const newBidCount = notifications.filter(n => n.type === 'NEW_BID').length;
+                        const itemSoldCount = notifications.filter(n => n.type === 'ITEM_SOLD').length;
+                        
+                        notificationHtml += `<br><strong>Notification breakdown:</strong><br>`;
+                        notificationHtml += `• NEW_BID notifications: ${newBidCount}<br>`;
+                        notificationHtml += `• ITEM_SOLD notifications: ${itemSoldCount}<br>`;
+                        notificationHtml += `• Other notifications: ${notifications.length - newBidCount - itemSoldCount}<br>`;
+                    } else {
+                        notificationHtml += '<em>No notifications found for this seller.</em><br>';
+                        notificationHtml += 'This could mean:<br>';
+                        notificationHtml += '• The seller ID is incorrect<br>';
+                        notificationHtml += '• No one has bid on this seller\'s items yet<br>';
+                        notificationHtml += '• The notification system hasn\'t been triggered yet<br>';
+                    }
+
+                    showResult('sellerNotificationsResult', notificationHtml, 'success');
+                    updateStatus(`✅ Retrieved ${notifications.length} notifications for seller`);
+                } else {
+                    showResult('sellerNotificationsResult', 
+                        `⚠️ Could not retrieve notifications: ${result.message || 'Unknown error'}<br><br>
+                        Please check if the seller ID is valid.`, 
+                        'info'
+                    );
+                    updateStatus('⚠️ Could not retrieve seller notifications');
+                }
+            } catch (error) {
+                showResult('sellerNotificationsResult', 
+                    `❌ Error fetching notifications: ${error.message}<br><br>
+                    Please ensure the backend is running.`, 
+                    'error'
+                );
+                updateStatus('❌ Error fetching seller notifications');
+            }
+        }
+
+        // Auto-check system status when page loads
+        window.addEventListener('load', function() {
+            setTimeout(checkNotificationSystem, 1000);
+        });
+    </script>
+</body>
+</html>

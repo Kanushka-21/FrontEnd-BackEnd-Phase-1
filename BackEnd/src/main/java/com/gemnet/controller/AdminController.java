@@ -2,7 +2,9 @@ package com.gemnet.controller;
 
 import com.gemnet.dto.ApiResponse;
 import com.gemnet.model.GemListing;
+import com.gemnet.model.User;
 import com.gemnet.service.AdminService;
+import com.gemnet.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -27,6 +30,149 @@ public class AdminController {
 
     @Autowired
     private AdminService adminService;
+
+    @Autowired
+    private UserService userService;
+
+    /**
+     * Get all users for admin management
+     */
+    @GetMapping("/users")
+    @Operation(summary = "Get all users", 
+               description = "Retrieve all users for admin management")
+    @CrossOrigin(origins = "*", allowedHeaders = "*", methods = {RequestMethod.GET})
+    public ResponseEntity<ApiResponse<List<User>>> getAllUsers() {
+        
+        System.out.println("👥 Admin - Getting all users request received");
+        
+        try {
+            // Get all users from user service
+            List<User> users = userService.findAll();
+            
+            System.out.println("✅ Successfully retrieved " + users.size() + " users");
+            return ResponseEntity.ok(ApiResponse.success("Users retrieved successfully", users));
+            
+        } catch (Exception e) {
+            System.err.println("❌ Get all users error: " + e.getMessage());
+            e.printStackTrace();
+            
+            return ResponseEntity.status(500)
+                .body(ApiResponse.error("Failed to retrieve users: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Update user verification status
+     */
+    @PostMapping("/verifications/{userId}")
+    @Operation(summary = "Update user verification status", 
+               description = "Approve or reject user verification")
+    @CrossOrigin(origins = "*", allowedHeaders = "*", methods = {RequestMethod.POST})
+    public ResponseEntity<ApiResponse<String>> updateVerificationStatus(
+            @PathVariable String userId,
+            @RequestParam boolean approved) {
+        
+        System.out.println("✅ Admin - Update verification status request received");
+        System.out.println("🆔 User ID: " + userId);
+        System.out.println("📊 Approved: " + approved);
+        
+        try {
+            // Update user verification status via service
+            ApiResponse<String> serviceResponse = userService.updateVerificationStatus(userId, approved);
+            
+            if (serviceResponse.isSuccess()) {
+                System.out.println("✅ User verification status updated successfully");
+                return ResponseEntity.ok(serviceResponse);
+            } else {
+                System.err.println("❌ Service error: " + serviceResponse.getMessage());
+                return ResponseEntity.status(500).body(serviceResponse);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("❌ Update verification status error: " + e.getMessage());
+            e.printStackTrace();
+            
+            return ResponseEntity.status(500)
+                .body(ApiResponse.error("Failed to update verification status: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Verify user - sets verification status to VERIFIED
+     */
+    @PostMapping("/verify-user/{userId}")
+    @Operation(summary = "Verify user", 
+               description = "Set user verification status to VERIFIED to allow bidding")
+    @CrossOrigin(origins = "*", allowedHeaders = "*", methods = {RequestMethod.POST})
+    public ResponseEntity<ApiResponse<String>> verifyUser(@PathVariable String userId) {
+        
+        System.out.println("✅ Admin - Verify user request received");
+        System.out.println("🆔 User ID: " + userId);
+        
+        try {
+            // Verify user via service - set status to VERIFIED
+            ApiResponse<String> serviceResponse = userService.verifyUser(userId);
+            
+            if (serviceResponse.isSuccess()) {
+                System.out.println("✅ User verified successfully");
+                return ResponseEntity.ok(serviceResponse);
+            } else {
+                System.err.println("❌ Service error: " + serviceResponse.getMessage());
+                return ResponseEntity.status(500).body(serviceResponse);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("❌ Verify user error: " + e.getMessage());
+            e.printStackTrace();
+            
+            return ResponseEntity.status(500)
+                .body(ApiResponse.error("Failed to verify user: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Update user status (activate/deactivate)
+     */
+    @PostMapping("/users/{userId}/status")
+    @Operation(summary = "Update user status", 
+               description = "Activate or deactivate a user account")
+    @CrossOrigin(origins = "*", allowedHeaders = "*", methods = {RequestMethod.POST})
+    public ResponseEntity<ApiResponse<String>> updateUserStatus(
+            @PathVariable String userId,
+            @RequestParam String action) {
+        
+        System.out.println("🔄 Admin - Update user status request received");
+        System.out.println("🆔 User ID: " + userId);
+        System.out.println("⚡ Action: " + action);
+        
+        try {
+            // Validate action
+            if (!"activate".equals(action) && !"deactivate".equals(action)) {
+                return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Invalid action. Use 'activate' or 'deactivate'"));
+            }
+            
+            boolean isActive = "activate".equals(action);
+            
+            // Update user status via service
+            ApiResponse<String> serviceResponse = userService.updateUserStatus(userId, isActive);
+            
+            if (serviceResponse.isSuccess()) {
+                System.out.println("✅ User status updated successfully");
+                return ResponseEntity.ok(serviceResponse);
+            } else {
+                System.err.println("❌ Service error: " + serviceResponse.getMessage());
+                return ResponseEntity.status(500).body(serviceResponse);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("❌ Update user status error: " + e.getMessage());
+            e.printStackTrace();
+            
+            return ResponseEntity.status(500)
+                .body(ApiResponse.error("Failed to update user status: " + e.getMessage()));
+        }
+    }
 
     /**
      * Get pending gemstone listings for admin approval
@@ -183,5 +329,136 @@ public class AdminController {
      */
     private boolean isValidStatus(String status) {
         return "APPROVED".equals(status) || "REJECTED".equals(status);
+    }
+
+    /**
+     * Get admin notifications
+     */
+    @GetMapping("/notifications/{userId}")
+    @Operation(summary = "Get admin notifications", 
+               description = "Retrieve notifications for admin user")
+    @CrossOrigin(origins = "*", allowedHeaders = "*", methods = {RequestMethod.GET})
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getAdminNotifications(
+            @PathVariable String userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        
+        System.out.println("🔔 Admin - Get notifications request received");
+        System.out.println("👤 User ID: " + userId);
+        System.out.println("📄 Page: " + page + ", Size: " + size);
+        
+        try {
+            // Create mock admin notifications for now
+            Map<String, Object> response = new HashMap<>();
+            
+            // Mock notifications data
+            List<Map<String, Object>> notifications = List.of(
+                createMockNotification("1", "USER_REGISTRATION", "New User Registration", 
+                    "John Doe has registered as a seller and requires verification", "users", "high", false),
+                createMockNotification("2", "LISTING_PENDING", "Listing Approval Required", 
+                    "Sapphire Ring listing by Jane Smith is pending approval", "listings", "medium", false),
+                createMockNotification("3", "MEETING_REQUEST", "New Meeting Request", 
+                    "Meeting requested for Ruby verification on Friday", "meetings", "medium", false),
+                createMockNotification("4", "ADVERTISEMENT_PENDING", "Advertisement Approval", 
+                    "Premium gemstone advertisement requires review", "advertisements", "low", true),
+                createMockNotification("5", "SYSTEM_ALERT", "System Performance Alert", 
+                    "Database response time increased by 15% in the last hour", "settings", "high", false)
+            );
+            
+            response.put("notifications", notifications);
+            response.put("total", notifications.size());
+            response.put("unreadCount", notifications.stream().mapToInt(n -> (Boolean) n.get("isRead") ? 0 : 1).sum());
+            
+            System.out.println("✅ Successfully retrieved admin notifications");
+            
+            return ResponseEntity.ok(ApiResponse.success("Admin notifications retrieved successfully", response));
+            
+        } catch (Exception e) {
+            System.err.println("❌ Get admin notifications error: " + e.getMessage());
+            e.printStackTrace();
+            
+            return ResponseEntity.status(500)
+                .body(ApiResponse.error("Failed to retrieve admin notifications: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Get admin unread notification count
+     */
+    @GetMapping("/notifications/{userId}/unread-count")
+    @Operation(summary = "Get admin unread notification count", 
+               description = "Get count of unread notifications for admin")
+    @CrossOrigin(origins = "*", allowedHeaders = "*", methods = {RequestMethod.GET})
+    public ResponseEntity<ApiResponse<Integer>> getAdminUnreadCount(@PathVariable String userId) {
+        
+        System.out.println("🔔 Admin - Get unread count request received");
+        System.out.println("👤 User ID: " + userId);
+        
+        try {
+            // Mock unread count - in real implementation, this would query the database
+            int unreadCount = 4; // Mock value
+            
+            System.out.println("✅ Successfully retrieved admin unread count: " + unreadCount);
+            
+            return ResponseEntity.ok(ApiResponse.success("Admin unread count retrieved successfully", unreadCount));
+            
+        } catch (Exception e) {
+            System.err.println("❌ Get admin unread count error: " + e.getMessage());
+            e.printStackTrace();
+            
+            return ResponseEntity.status(500)
+                .body(ApiResponse.error("Failed to retrieve admin unread count: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Mark admin notification as read
+     */
+    @PutMapping("/notifications/{notificationId}/read")
+    @Operation(summary = "Mark admin notification as read", 
+               description = "Mark a specific admin notification as read")
+    @CrossOrigin(origins = "*", allowedHeaders = "*", methods = {RequestMethod.PUT})
+    public ResponseEntity<ApiResponse<String>> markAdminNotificationAsRead(@PathVariable String notificationId) {
+        
+        System.out.println("🔔 Admin - Mark notification as read request received");
+        System.out.println("🆔 Notification ID: " + notificationId);
+        
+        try {
+            // Mock implementation - in real scenario, update notification in database
+            System.out.println("✅ Successfully marked admin notification as read");
+            
+            return ResponseEntity.ok(ApiResponse.success("success", "Admin notification marked as read"));
+            
+        } catch (Exception e) {
+            System.err.println("❌ Mark admin notification as read error: " + e.getMessage());
+            e.printStackTrace();
+            
+            return ResponseEntity.status(500)
+                .body(ApiResponse.error("Failed to mark admin notification as read: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Helper method to create mock notification
+     */
+    private Map<String, Object> createMockNotification(String id, String type, String title, 
+            String message, String section, String priority, boolean isRead) {
+        Map<String, Object> notification = new HashMap<>();
+        notification.put("id", id);
+        notification.put("type", type);
+        notification.put("title", title);
+        notification.put("message", message);
+        notification.put("section", section);
+        notification.put("priority", priority);
+        notification.put("isRead", isRead);
+        notification.put("createdAt", java.time.Instant.now().toString());
+        notification.put("actionRequired", !type.equals("SYSTEM_ALERT"));
+        
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("userId", "user123");
+        metadata.put("userName", "Test User");
+        notification.put("metadata", metadata);
+        
+        return notification;
     }
 }

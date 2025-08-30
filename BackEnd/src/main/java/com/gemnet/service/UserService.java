@@ -24,6 +24,8 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.List;
+import java.time.LocalDateTime;
 
 @Service
 public class UserService {
@@ -45,6 +47,9 @@ public class UserService {
     
     @Autowired
     private FileStorageService fileStorageService;
+    
+    @Autowired
+    private NotificationService notificationService;
     
     /**
      * Register a new user with personal data
@@ -88,6 +93,18 @@ public class UserService {
             
             // Save user
             User savedUser = userRepository.save(user);
+            
+            // Notify admin of new user registration
+            try {
+                notificationService.notifyAdminOfNewUserRegistration(
+                    savedUser.getId(), 
+                    savedUser.getEmail(), 
+                    savedUser.getFirstName() + " " + savedUser.getLastName()
+                );
+            } catch (Exception e) {
+                System.err.println("⚠️ Failed to notify admin of new user registration: " + e.getMessage());
+                // Don't fail the registration if notification fails
+            }
             
             System.out.println("✅ User registered successfully: " + savedUser.getId());
             return ApiResponse.success("User registered successfully. Proceed to face verification.", savedUser.getId());
@@ -414,6 +431,99 @@ public class UserService {
      */
     public User save(User user) {
         return userRepository.save(user);
+    }
+
+    /**
+     * Get all users
+     */
+    public List<User> findAll() {
+        return userRepository.findAll();
+    }
+
+    /**
+     * Update user verification status
+     */
+    public ApiResponse<String> updateVerificationStatus(String userId, boolean approved) {
+        try {
+            System.out.println("🔄 Updating verification status for user: " + userId + " to " + (approved ? "approved" : "rejected"));
+            
+            Optional<User> userOpt = userRepository.findById(userId);
+            if (!userOpt.isPresent()) {
+                return ApiResponse.error("User not found");
+            }
+            
+            User user = userOpt.get();
+            user.setIsVerified(approved);
+            user.setVerificationStatus(approved ? "VERIFIED" : "REJECTED");
+            user.setUpdatedAt(LocalDateTime.now());
+            
+            userRepository.save(user);
+            
+            String message = approved ? "User approved successfully" : "User rejected successfully";
+            System.out.println("✅ " + message);
+            return ApiResponse.success(message, null);
+            
+        } catch (Exception e) {
+            System.err.println("❌ Error updating verification status: " + e.getMessage());
+            return ApiResponse.error("Failed to update verification status: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Verify user - set verification status to VERIFIED
+     */
+    public ApiResponse<String> verifyUser(String userId) {
+        try {
+            System.out.println("🔄 Verifying user: " + userId);
+            
+            Optional<User> userOpt = userRepository.findById(userId);
+            if (!userOpt.isPresent()) {
+                return ApiResponse.error("User not found");
+            }
+            
+            User user = userOpt.get();
+            user.setIsVerified(true);
+            user.setVerificationStatus("VERIFIED");
+            user.setIsActive(true); // Also ensure user is active
+            user.setUpdatedAt(LocalDateTime.now());
+            
+            userRepository.save(user);
+            
+            System.out.println("✅ User verified successfully - can now bid");
+            return ApiResponse.success("User verified successfully. User can now place bids.", null);
+            
+        } catch (Exception e) {
+            System.err.println("❌ Error verifying user: " + e.getMessage());
+            return ApiResponse.error("Failed to verify user: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Update user active status
+     */
+    public ApiResponse<String> updateUserStatus(String userId, boolean isActive) {
+        try {
+            System.out.println("🔄 Updating user status for user: " + userId + " to " + (isActive ? "active" : "inactive"));
+            
+            Optional<User> userOpt = userRepository.findById(userId);
+            if (!userOpt.isPresent()) {
+                return ApiResponse.error("User not found");
+            }
+            
+            User user = userOpt.get();
+            user.setIsActive(isActive);
+            user.setUpdatedAt(LocalDateTime.now());
+            
+            userRepository.save(user);
+            
+            String message = isActive ? "User activated successfully" : "User deactivated successfully";
+            System.out.println("✅ " + message);
+            return ApiResponse.success(message, null);
+            
+        } catch (Exception e) {
+            System.err.println("❌ Error updating user status: " + e.getMessage());
+            return ApiResponse.error("Failed to update user status: " + e.getMessage());
+        }
     }
     
     /**

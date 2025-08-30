@@ -565,7 +565,7 @@ const extendedAPI = {
   // Admin Dashboard APIs
   getUsers: async (): Promise<ApiResponse<any[]>> => {
     try {
-      const response = await api.get('/admin/users');
+      const response = await api.get('/api/admin/users');
       return response.data;
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -605,7 +605,7 @@ const extendedAPI = {
 
   updateVerificationStatus: async (userId: string, approved: boolean): Promise<ApiResponse> => {
     try {
-      const response = await api.post(`/admin/verifications/${userId}`, { approved });
+      const response = await api.post(`/api/admin/verifications/${userId}?approved=${approved}`);
       return response.data;
     } catch (error) {
       console.error('Error updating verification status:', error);
@@ -613,9 +613,19 @@ const extendedAPI = {
     }
   },
 
+  verifyUser: async (userId: string): Promise<ApiResponse> => {
+    try {
+      const response = await api.post(`/api/admin/verify-user/${userId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error verifying user:', error);
+      return { success: false, message: apiUtils.formatErrorMessage(error) };
+    }
+  },
+
   updateUserStatus: async (userId: string, action: string): Promise<ApiResponse> => {
     try {
-      const response = await api.post(`/admin/users/${userId}/${action}`);
+      const response = await api.post(`/api/admin/users/${userId}/status?action=${action}`);
       return response.data;
     } catch (error) {
       console.error('Error updating user status:', error);

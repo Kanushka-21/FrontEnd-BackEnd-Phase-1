@@ -1,20 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import { Bell, X, Clock, TrendingUp, CheckCircle } from 'lucide-react';
 import { NotificationInfo } from '@/types';
+import { UserIdMappingService } from '@/services/UserIdMappingService';
 
 interface NotificationComponentProps {
   userId: string;
   className?: string;
+  context?: string; // Add context prop for role-based filtering
+  maxNotifications?: number; // Add optional max notifications limit
+  user?: any; // Add user object for dynamic ID resolution
 }
 
-const NotificationComponent: React.FC<NotificationComponentProps> = ({ userId, className = '' }) => {
+const NotificationComponent: React.FC<NotificationComponentProps> = ({ 
+  userId, 
+  className = '', 
+  context, 
+  maxNotifications = 20,
+  user 
+}) => {
   const [notifications, setNotifications] = useState<NotificationInfo[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resolvedUserId, setResolvedUserId] = useState<string>(userId);
 
   // Debug logging
   console.log('🔔 NotificationComponent rendered with userId:', userId);
+  console.log('🔔 Context:', context);
+  console.log('🔔 User object:', user);
+  console.log('🔔 Resolved userId:', resolvedUserId);
   console.log('🔔 Current unreadCount:', unreadCount);
   console.log('🔔 Current notifications count:', notifications.length);
 
@@ -23,10 +37,40 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({ userId, c
     console.log('🔔 unreadCount changed to:', unreadCount);
   }, [unreadCount]);
 
+  // Resolve the correct user ID for marketplace notifications
+  useEffect(() => {
+    const resolveUserId = async () => {
+      if (user && context === 'seller') {
+        try {
+          console.log('🔍 Resolving marketplace user ID for seller...');
+          const marketplaceUserId = await UserIdMappingService.resolveMarketplaceUserId(user);
+          
+          if (marketplaceUserId !== userId) {
+            console.log('🎯 User ID resolved:', {
+              original: userId,
+              resolved: marketplaceUserId,
+              context: context
+            });
+            setResolvedUserId(marketplaceUserId);
+          } else {
+            setResolvedUserId(userId);
+          }
+        } catch (error) {
+          console.error('❌ Error resolving user ID:', error);
+          setResolvedUserId(userId); // Fallback to original
+        }
+      } else {
+        setResolvedUserId(userId); // Use original if not seller context
+      }
+    };
+
+    resolveUserId();
+  }, [userId, user, context]);
+
   // Load notifications
   useEffect(() => {
-    if (userId) {
-      console.log('🔔 Loading notifications for userId:', userId);
+    if (resolvedUserId) {
+      console.log('🔔 Loading notifications for resolved userId:', resolvedUserId);
       loadNotifications();
       loadUnreadCount();
       
@@ -40,9 +84,9 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({ userId, c
       
       return () => clearInterval(interval);
     } else {
-      console.log('🔔 No userId provided, skipping notification load');
+      console.log('🔔 No resolved userId, skipping notification load');
     }
-  }, [userId, isOpen]);
+  }, [resolvedUserId, isOpen]);
 
   // Also reload when dropdown opens
   useEffect(() => {
@@ -54,8 +98,15 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({ userId, c
   const loadNotifications = async () => {
     setLoading(true);
     try {
-      console.log('🔔 Fetching notifications for userId:', userId);
-      const response = await fetch(`http://localhost:9092/api/bidding/notifications/${userId}?page=0&size=20`);
+      console.log('🔔 Fetching notifications for resolved userId:', resolvedUserId, 'context:', context);
+      
+      // Build URL with context parameter if provided
+      let url = `http://localhost:9092/api/bidding/notifications/${resolvedUserId}?page=0&size=${maxNotifications}`;
+      if (context) {
+        url += `&context=${context}`;
+      }
+      
+      const response = await fetch(url);
       const result = await response.json();
       
       console.log('🔔 Notification API response:', result);
@@ -63,6 +114,8 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({ userId, c
       if (result.success) {
         setNotifications(result.data.notifications || []);
         console.log('🔔 Loaded notifications:', result.data.notifications?.length || 0);
+        console.log('🔔 Context filtering applied:', context || 'none');
+        console.log('🔔 Using resolved user ID:', resolvedUserId);
       } else {
         console.error('🔔 Failed to load notifications:', result.message);
       }
@@ -75,8 +128,8 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({ userId, c
 
   const loadUnreadCount = async () => {
     try {
-      console.log('🔔 Fetching unread count for userId:', userId);
-      const response = await fetch(`http://localhost:9092/api/bidding/notifications/${userId}/unread-count`);
+      console.log('🔔 Fetching unread count for resolved userId:', resolvedUserId);
+      const response = await fetch(`http://localhost:9092/api/bidding/notifications/${resolvedUserId}/unread-count`);
       const result = await response.json();
       
       console.log('🔔 Unread count API response:', result);
@@ -149,7 +202,7 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({ userId, c
       console.log('🔔 UI updated: All notifications marked as read, unreadCount set to 0');
       
       // Then try to sync with backend
-      const response = await fetch(`http://localhost:9092/api/bidding/notifications/${userId}/read-all`, {
+      const response = await fetch(`http://localhost:9092/api/bidding/notifications/${resolvedUserId}/read-all`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -188,8 +241,8 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({ userId, c
     setIsOpen(false);
     
     // Handle different notification types with different navigation
-    if (notification.type === 'BID_WON' || notification.type === 'ITEM_SOLD') {
-      console.log('🔔 Navigating to Purchase History for BID_WON/ITEM_SOLD notification');
+    if (notification.type === 'BID_ACCEPTED') {
+      console.log('🔔 Navigating to Purchase History for BID_ACCEPTED notification');
       // Navigate to Purchase History dashboard for successful bid wins
       window.location.href = '/buyer/dashboard?section=purchases';
     } else if (notification.listingId) {
@@ -217,12 +270,6 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({ userId, c
         return <CheckCircle className="w-5 h-5 text-green-600" />;
       case 'BID_REJECTED':
         return <X className="w-5 h-5 text-gray-600" />;
-      case 'BID_WON':
-        return <CheckCircle className="w-5 h-5 text-green-600" />;
-      case 'ITEM_SOLD':
-        return <CheckCircle className="w-5 h-5 text-blue-600" />;
-      case 'BIDDING_ENDED':
-        return <Clock className="w-5 h-5 text-gray-600" />;
       default:
         return <Bell className="w-5 h-5 text-gray-600" />;
     }

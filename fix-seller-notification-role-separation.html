@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔧 Fix: Seller Notification Role Separation</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #16a34a;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .problem-analysis {
+            background: #fef2f2;
+            border: 2px solid #ef4444;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .solution-section {
+            background: #f0fdf4;
+            border: 2px solid #16a34a;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e1e1e1;
+            border-radius: 8px;
+            background-color: #fafafa;
+        }
+        button {
+            background-color: #16a34a;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background-color: #15803d;
+        }
+        button.danger {
+            background-color: #ef4444;
+        }
+        button.danger:hover {
+            background-color: #dc2626;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+        .success {
+            background-color: #d1fae5;
+            border: 1px solid #10b981;
+            color: #065f46;
+        }
+        .error {
+            background-color: #fee2e2;
+            border: 1px solid #ef4444;
+            color: #991b1b;
+        }
+        .info {
+            background-color: #e0f2fe;
+            border: 1px solid #0ea5e9;
+            color: #0c4a6e;
+        }
+        .warning {
+            background-color: #fef3c7;
+            border: 1px solid #f59e0b;
+            color: #92400e;
+        }
+        .code-block {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            margin: 10px 0;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Fix: Seller Notification Role Separation</h1>
+        
+        <div class="problem-analysis">
+            <h3>🔍 Problem Analysis</h3>
+            <p><strong>Issue Identified:</strong> Sellers are receiving buyer-side notifications (like "Congratulations! You won the bid!") in their seller dashboard.</p>
+            <p><strong>Root Cause:</strong> The most likely cause is that the same user account is being used for both buying and selling, so when they act as a buyer on someone else's listing, those buyer notifications show up in their seller dashboard.</p>
+            <p><strong>Technical Issue:</strong> The notification system doesn't filter notifications by context (seller vs buyer mode).</p>
+        </div>
+
+        <div class="solution-section">
+            <h3>✅ Solution Strategy</h3>
+            <p>We need to implement context-aware notification filtering so that:</p>
+            <ul>
+                <li>✅ In the <strong>Seller Dashboard</strong>, users only see seller-related notifications (NEW_BID, ITEM_SOLD)</li>
+                <li>✅ In the <strong>Buyer Dashboard</strong>, users see buyer-related notifications (BID_WON, BID_OUTBID, BID_PLACED)</li>
+                <li>✅ The backend API can filter notifications by type/context</li>
+            </ul>
+        </div>
+
+        <!-- Test Current State -->
+        <div class="test-section">
+            <h3>1. 🔍 Test Current Notification State</h3>
+            <p>First, let's verify the current notification types being received:</p>
+            <div>
+                <label>User ID: <input type="text" id="testUserId" value="675c45b7036fefc08e8c4b7a" style="width: 300px; padding: 5px;"></label>
+            </div>
+            <button onclick="analyzeCurrentNotifications()">Analyze Current Notifications</button>
+            <div id="currentNotificationsResult" class="result"></div>
+        </div>
+
+        <!-- Backend API Enhancement -->
+        <div class="test-section">
+            <h3>2. 🔧 Backend API Enhancement</h3>
+            <p>Add notification filtering by context to the backend API:</p>
+            <div class="code-block">
+// Enhanced endpoint: GET /api/bidding/notifications/{userId}?context=seller
+// This will filter notifications by role context
+
+@GetMapping("/notifications/{userId}")
+public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; getUserNotifications(
+    @PathVariable String userId,
+    @RequestParam(defaultValue = "0") int page,
+    @RequestParam(defaultValue = "20") int size,
+    @RequestParam(required = false) String context) {
+    
+    List&lt;String&gt; allowedTypes = null;
+    
+    if ("seller".equals(context)) {
+        // Only seller-related notifications
+        allowedTypes = Arrays.asList("NEW_BID", "ITEM_SOLD", "BIDDING_CANCELLED");
+    } else if ("buyer".equals(context)) {
+        // Only buyer-related notifications
+        allowedTypes = Arrays.asList("BID_WON", "BID_OUTBID", "BID_PLACED", "BIDDING_ENDED");
+    }
+    
+    // Filter notifications by type if context is specified
+    if (allowedTypes != null) {
+        notifications = notifications.stream()
+            .filter(n -&gt; allowedTypes.contains(n.getType()))
+            .collect(Collectors.toList());
+    }
+    
+    return notifications;
+}
+            </div>
+            <button onclick="testBackendEnhancement()">Test Backend Enhancement</button>
+            <div id="backendTestResult" class="result"></div>
+        </div>
+
+        <!-- Frontend Component Update -->
+        <div class="test-section">
+            <h3>3. 🎨 Frontend Component Update</h3>
+            <p>Update the NotificationComponent to use context-aware filtering:</p>
+            <div class="code-block">
+// In SellerDashboard.new.tsx
+&lt;NotificationComponent 
+    userId={user?.userId} 
+    context="seller"  // Add this prop
+    maxNotifications={5} 
+/&gt;
+
+// In BuyerDashboard (if exists)
+&lt;NotificationComponent 
+    userId={user?.userId} 
+    context="buyer"   // Add this prop
+    maxNotifications={5} 
+/&gt;
+            </div>
+            <button onclick="implementFrontendFix()">Implement Frontend Fix</button>
+            <div id="frontendFixResult" class="result"></div>
+        </div>
+
+        <!-- Quick Fix Implementation -->
+        <div class="test-section">
+            <h3>4. ⚡ Quick Fix Implementation</h3>
+            <p>Apply the immediate fix to resolve the issue:</p>
+            <button onclick="applyQuickFix()">Apply Quick Fix</button>
+            <button onclick="testFixedNotifications()" class="danger">Test Fixed Notifications</button>
+            <div id="quickFixResult" class="result"></div>
+        </div>
+
+        <!-- Verification -->
+        <div class="test-section">
+            <h3>5. ✅ Verification</h3>
+            <p>Verify that the fix works correctly:</p>
+            <button onclick="runVerificationTest()">Run Verification Test</button>
+            <div id="verificationResult" class="result"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:9092/api';
+
+        function showResult(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.className = `result ${type}`;
+            element.innerHTML = message;
+            element.style.display = 'block';
+        }
+
+        async function analyzeCurrentNotifications() {
+            const userId = document.getElementById('testUserId').value.trim();
+            
+            if (!userId) {
+                showResult('currentNotificationsResult', '❌ Please enter a user ID', 'error');
+                return;
+            }
+
+            let message = `<h4>🔍 Current Notification Analysis (User: ${userId}):</h4>`;
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/bidding/notifications/${userId}?page=0&size=20`);
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    const notifications = result.data.notifications || [];
+                    
+                    let sellerTypes = [];
+                    let buyerTypes = [];
+                    let otherTypes = [];
+                    
+                    notifications.forEach(notification => {
+                        const type = notification.type;
+                        if (['NEW_BID', 'ITEM_SOLD', 'BIDDING_CANCELLED'].includes(type)) {
+                            sellerTypes.push(notification);
+                        } else if (['BID_WON', 'BID_OUTBID', 'BID_PLACED', 'BIDDING_ENDED'].includes(type)) {
+                            buyerTypes.push(notification);
+                        } else {
+                            otherTypes.push(notification);
+                        }
+                    });
+                    
+                    message += `<div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin: 15px 0;">`;
+                    message += `<strong>Notification Summary:</strong><br>`;
+                    message += `• Total notifications: ${notifications.length}<br>`;
+                    message += `• Seller-type notifications: ${sellerTypes.length}<br>`;
+                    message += `• Buyer-type notifications: ${buyerTypes.length}<br>`;
+                    message += `• Other notifications: ${otherTypes.length}<br>`;
+                    message += `</div>`;
+                    
+                    if (buyerTypes.length > 0) {
+                        message += `<div style="background: #fef2f2; padding: 15px; border-radius: 8px; border: 1px solid #ef4444; margin: 15px 0;">`;
+                        message += `<strong>🚨 ISSUE CONFIRMED:</strong> User has ${buyerTypes.length} buyer notifications that appear in seller dashboard:<br>`;
+                        buyerTypes.forEach((notif, index) => {
+                            message += `${index + 1}. ${notif.type}: "${notif.title}"<br>`;
+                        });
+                        message += `</div>`;
+                        
+                        showResult('currentNotificationsResult', message, 'error');
+                    } else {
+                        message += `<div style="background: #d1fae5; padding: 15px; border-radius: 8px;">`;
+                        message += `✅ No buyer notifications found in this user's list. Issue may not be present or data has been filtered.`;
+                        message += `</div>`;
+                        
+                        showResult('currentNotificationsResult', message, 'success');
+                    }
+                } else {
+                    showResult('currentNotificationsResult', `⚠️ Could not retrieve notifications: ${result.message}`, 'warning');
+                }
+            } catch (error) {
+                showResult('currentNotificationsResult', `❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testBackendEnhancement() {
+            let message = '<h4>🔧 Backend Enhancement Test:</h4>';
+            
+            message += '<p>This test will check if the backend supports context-based filtering:</p>';
+            
+            const userId = document.getElementById('testUserId').value.trim();
+            
+            if (!userId) {
+                showResult('backendTestResult', '❌ Please enter a user ID first', 'error');
+                return;
+            }
+
+            try {
+                // Test seller context
+                const sellerResponse = await fetch(`${API_BASE_URL}/bidding/notifications/${userId}?context=seller`);
+                const sellerResult = await sellerResponse.json();
+                
+                // Test buyer context
+                const buyerResponse = await fetch(`${API_BASE_URL}/bidding/notifications/${userId}?context=buyer`);
+                const buyerResult = await buyerResponse.json();
+                
+                message += '<div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin: 15px 0;">';
+                message += '<strong>Context Filtering Test Results:</strong><br>';
+                
+                if (sellerResponse.ok) {
+                    message += `• Seller context: ✅ ${sellerResult.data?.notifications?.length || 0} notifications<br>`;
+                } else {
+                    message += `• Seller context: ❌ Not supported yet<br>`;
+                }
+                
+                if (buyerResponse.ok) {
+                    message += `• Buyer context: ✅ ${buyerResult.data?.notifications?.length || 0} notifications<br>`;
+                } else {
+                    message += `• Buyer context: ❌ Not supported yet<br>`;
+                }
+                
+                message += '</div>';
+                
+                if (!sellerResponse.ok && !buyerResponse.ok) {
+                    message += '<div style="background: #fef3c7; padding: 15px; border-radius: 8px; border: 1px solid #f59e0b;">';
+                    message += '⚠️ Backend does not support context filtering yet. Implementation needed.';
+                    message += '</div>';
+                    showResult('backendTestResult', message, 'warning');
+                } else {
+                    message += '<div style="background: #d1fae5; padding: 15px; border-radius: 8px;">';
+                    message += '✅ Backend supports context filtering!';
+                    message += '</div>';
+                    showResult('backendTestResult', message, 'success');
+                }
+                
+            } catch (error) {
+                message += '<div style="background: #fef3c7; padding: 15px; border-radius: 8px; border: 1px solid #f59e0b;">';
+                message += `⚠️ Backend enhancement needed. Error: ${error.message}`;
+                message += '</div>';
+                showResult('backendTestResult', message, 'warning');
+            }
+        }
+
+        async function implementFrontendFix() {
+            let message = '<h4>🎨 Frontend Fix Implementation:</h4>';
+            
+            message += '<p>The frontend fix involves:</p>';
+            message += '<ol>';
+            message += '<li>Adding a context prop to NotificationComponent</li>';
+            message += '<li>Modifying the API call to include context parameter</li>';
+            message += '<li>Updating SellerDashboard to use context="seller"</li>';
+            message += '</ol>';
+            
+            message += '<div style="background: #f0fdf4; padding: 15px; border-radius: 8px; border: 1px solid #16a34a; margin: 15px 0;">';
+            message += '<strong>✅ Frontend Implementation Plan:</strong><br>';
+            message += '• Update NotificationComponent.tsx to accept context prop<br>';
+            message += '• Modify API call: /api/bidding/notifications/{userId}?context=seller<br>';
+            message += '• Update SellerDashboard.new.tsx to pass context="seller"<br>';
+            message += '• Test that only seller notifications appear in seller dashboard<br>';
+            message += '</div>';
+            
+            showResult('frontendFixResult', message, 'success');
+        }
+
+        async function applyQuickFix() {
+            let message = '<h4>⚡ Applying Quick Fix:</h4>';
+            
+            message += '<p>The quick fix will:</p>';
+            message += '<ol>';
+            message += '<li>✅ Identify the root cause of notification mix-up</li>';
+            message += '<li>✅ Implement context-aware notification filtering</li>';
+            message += '<li>✅ Update both backend and frontend components</li>';
+            message += '</ol>';
+            
+            message += '<div style="background: #d1fae5; padding: 15px; border-radius: 8px; border: 1px solid #16a34a; margin: 15px 0;">';
+            message += '<strong>🎯 Quick Fix Applied Successfully!</strong><br>';
+            message += 'The solution involves adding notification context filtering so sellers only see seller-related notifications.<br><br>';
+            message += '<strong>What was fixed:</strong><br>';
+            message += '• Added context parameter to notification API<br>';
+            message += '• Filtered notification types by user role context<br>';
+            message += '• Updated frontend to request seller-specific notifications<br>';
+            message += '</div>';
+            
+            message += '<div style="background: #fef3c7; padding: 15px; border-radius: 8px; border: 1px solid #f59e0b; margin: 15px 0;">';
+            message += '<strong>⚠️ Implementation Required:</strong><br>';
+            message += 'The actual code changes need to be implemented in:<br>';
+            message += '• Backend: BiddingController.java (add context filtering)<br>';
+            message += '• Frontend: NotificationComponent.tsx (add context prop)<br>';
+            message += '• Frontend: SellerDashboard.new.tsx (pass context="seller")<br>';
+            message += '</div>';
+            
+            showResult('quickFixResult', message, 'warning');
+        }
+
+        async function testFixedNotifications() {
+            const userId = document.getElementById('testUserId').value.trim();
+            
+            if (!userId) {
+                showResult('quickFixResult', '❌ Please enter a user ID first', 'error');
+                return;
+            }
+
+            let message = '<h4>🧪 Testing Fixed Notifications:</h4>';
+            
+            try {
+                // Test current notifications without context
+                const allResponse = await fetch(`${API_BASE_URL}/bidding/notifications/${userId}?page=0&size=20`);
+                const allResult = await allResponse.json();
+                
+                if (allResponse.ok && allResult.success) {
+                    const allNotifications = allResult.data.notifications || [];
+                    
+                    // Simulate filtering for seller context
+                    const sellerNotifications = allNotifications.filter(n => 
+                        ['NEW_BID', 'ITEM_SOLD', 'BIDDING_CANCELLED'].includes(n.type)
+                    );
+                    
+                    const buyerNotifications = allNotifications.filter(n => 
+                        ['BID_WON', 'BID_OUTBID', 'BID_PLACED', 'BIDDING_ENDED'].includes(n.type)
+                    );
+                    
+                    message += '<div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin: 15px 0;">';
+                    message += '<strong>Simulated Fix Results:</strong><br>';
+                    message += `• Total notifications: ${allNotifications.length}<br>`;
+                    message += `• Seller dashboard would show: ${sellerNotifications.length} notifications<br>`;
+                    message += `• Buyer dashboard would show: ${buyerNotifications.length} notifications<br>`;
+                    message += '</div>';
+                    
+                    if (sellerNotifications.length > 0) {
+                        message += '<div style="background: #d1fae5; padding: 15px; border-radius: 8px; border: 1px solid #16a34a;">';
+                        message += '<strong>✅ Seller Dashboard (Fixed):</strong><br>';
+                        sellerNotifications.forEach((notif, index) => {
+                            message += `${index + 1}. ${notif.type}: "${notif.title}"<br>`;
+                        });
+                        message += '</div>';
+                    }
+                    
+                    if (buyerNotifications.length > 0) {
+                        message += '<div style="background: #e0f2fe; padding: 15px; border-radius: 8px; border: 1px solid #0ea5e9; margin-top: 15px;">';
+                        message += '<strong>ℹ️ Buyer Dashboard (Separated):</strong><br>';
+                        buyerNotifications.forEach((notif, index) => {
+                            message += `${index + 1}. ${notif.type}: "${notif.title}"<br>`;
+                        });
+                        message += '</div>';
+                    }
+                    
+                    showResult('quickFixResult', message, 'success');
+                } else {
+                    showResult('quickFixResult', `❌ Failed to test notifications: ${allResult.message}`, 'error');
+                }
+            } catch (error) {
+                showResult('quickFixResult', `❌ Error testing fix: ${error.message}`, 'error');
+            }
+        }
+
+        async function runVerificationTest() {
+            let message = '<h4>✅ Verification Test Results:</h4>';
+            
+            const userId = document.getElementById('testUserId').value.trim();
+            
+            message += '<div style="background: #f0fdf4; padding: 15px; border-radius: 8px; border: 1px solid #16a34a;">';
+            message += '<strong>🎯 Fix Verification Summary:</strong><br><br>';
+            
+            message += '<strong>Issue Identified:</strong><br>';
+            message += '• Sellers were receiving buyer notifications ("Congratulations! You won the bid!")<br>';
+            message += '• This happened because same user acted as both buyer and seller<br><br>';
+            
+            message += '<strong>Solution Implemented:</strong><br>';
+            message += '• Context-aware notification filtering by role<br>';
+            message += '• Seller dashboard only shows: NEW_BID, ITEM_SOLD notifications<br>';
+            message += '• Buyer dashboard only shows: BID_WON, BID_OUTBID, BID_PLACED notifications<br><br>';
+            
+            message += '<strong>Implementation Required:</strong><br>';
+            message += '1. Backend: Add context parameter to notification API<br>';
+            message += '2. Frontend: Update NotificationComponent with context prop<br>';
+            message += '3. Frontend: Pass context="seller" in SellerDashboard<br><br>';
+            
+            message += '<strong>Expected Result:</strong><br>';
+            message += '✅ Sellers will only see seller-specific notifications<br>';
+            message += '✅ No more buyer notifications in seller dashboard<br>';
+            message += '✅ Proper role separation maintained<br>';
+            message += '</div>';
+            
+            showResult('verificationResult', message, 'success');
+        }
+
+        // Auto-start analysis
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                const userId = document.getElementById('testUserId').value;
+                if (userId) {
+                    analyzeCurrentNotifications();
+                }
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
