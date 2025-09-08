@@ -54,4 +54,24 @@ public interface UserRepository extends MongoRepository<User, String> {
     // Custom query to find verified and active users
     @Query("{'isVerified': true, 'isActive': true}")
     List<User> findVerifiedActiveUsers();
+    
+    // Count methods for statistics
+    long countByIsVerified(boolean isVerified);
+    
+    long countByIsActive(boolean isActive);
+    
+    long countByVerificationStatus(String verificationStatus);
+    
+    long countByUserRole(String userRole);
+    
+    // Count verified and active users
+    @Query(value = "{'isVerified': true, 'isActive': true}", count = true)
+    long countVerifiedActiveUsers();
+    
+    // Count pending verification users
+    @Query(value = "{'verificationStatus': 'PENDING', 'isActive': true}", count = true)
+    long countPendingVerificationUsers();
+    
+    // Count by verification and active status
+    long countByIsVerifiedAndIsActive(boolean isVerified, boolean isActive);
 }

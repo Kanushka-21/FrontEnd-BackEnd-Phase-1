@@ -274,15 +274,20 @@ const AdminDashboard: React.FC = () => {
     { id: 'settings', label: 'System Settings', icon: <Settings size={24} /> }
   ];
   
-  // Statistics
-  const stats = {
-    pendingApprovals: pendingUsers.length + pendingListings.length + pendingMeetings.length,
+  // Dynamic Statistics State
+  const [stats, setStats] = useState({
+    pendingApprovals: 0,
     totalUsers: 125,
     totalListings: 342,
     totalRevenue: 48750,
     commissionRate: 10,
-    totalCommission: 4875
-  };
+    totalCommission: 4875,
+    activeAdvertisements: 1,
+    pendingAdvertisements: 0,
+    pendingListings: 0,
+    approvedListings: 0,
+    rejectedListings: 0
+  });
   
   // Function to fetch pending listings from API
   const fetchPendingListings = async (page = 0, size = 10) => {
@@ -340,6 +345,22 @@ const AdminDashboard: React.FC = () => {
       if (response.success) {
         console.log('Fetched dashboard stats:', response.data);
         setDashboardStats(response.data);
+        
+        // Update the main stats object for the overview cards
+        setStats(prevStats => ({
+          ...prevStats,
+          pendingApprovals: response.data.pendingApprovals || 0,
+          totalUsers: response.data.totalUsers || prevStats.totalUsers,
+          totalListings: response.data.totalListings || prevStats.totalListings,
+          totalRevenue: response.data.totalRevenue || prevStats.totalRevenue,
+          commissionRate: response.data.commissionRate || prevStats.commissionRate,
+          totalCommission: response.data.totalCommission || prevStats.totalCommission,
+          activeAdvertisements: response.data.activeAdvertisements || prevStats.activeAdvertisements,
+          pendingAdvertisements: response.data.pendingAdvertisements || 0,
+          pendingListings: response.data.pendingListings || 0,
+          approvedListings: response.data.approvedListings || 0,
+          rejectedListings: response.data.rejectedListings || 0
+        }));
       } else {
         message.error('Failed to fetch dashboard statistics');
       }

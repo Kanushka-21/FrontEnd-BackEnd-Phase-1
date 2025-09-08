@@ -7,11 +7,15 @@ import com.gemnet.model.User;
 import com.gemnet.repository.GemListingRepository;
 import com.gemnet.repository.NotificationRepository;
 import com.gemnet.repository.UserRepository;
+import com.gemnet.repository.AdvertisementRepository;
+import com.gemnet.repository.MeetingRepository;
+import com.gemnet.repository.BidRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -32,6 +36,15 @@ public class AdminService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private AdvertisementRepository advertisementRepository;
+
+    @Autowired
+    private MeetingRepository meetingRepository;
+
+    @Autowired
+    private BidRepository bidRepository;
 
     /**
      * Get pending gemstone listings for admin approval
@@ -130,28 +143,100 @@ public class AdminService {
      */
     public ApiResponse<Map<String, Object>> getDashboardStats() {
         try {
-            System.out.println("📊 AdminService - Getting dashboard statistics");
+            System.out.println("📊 AdminService - Getting comprehensive dashboard statistics");
             
-            // Count listings by status
+            // ===== USER STATISTICS =====
+            long totalUsers = userRepository.count();
+            long verifiedUsers = userRepository.countByIsVerified(true);
+            long activeUsers = userRepository.countByIsActive(true);
+            long pendingVerificationUsers = userRepository.countPendingVerificationUsers();
+            
+            // ===== LISTING STATISTICS =====
+            long totalListings = gemListingRepository.count();
             long pendingListings = gemListingRepository.countByListingStatus("PENDING");
             long approvedListings = gemListingRepository.countByListingStatus("APPROVED");
             long rejectedListings = gemListingRepository.countByListingStatus("REJECTED");
             long activeListings = gemListingRepository.countByListingStatus("ACTIVE");
             long soldListings = gemListingRepository.countByListingStatus("SOLD");
             
-            // Total listings
-            long totalListings = gemListingRepository.count();
+            // ===== ADVERTISEMENT STATISTICS =====
+            long totalAdvertisements = advertisementRepository.count();
+            long pendingAds = advertisementRepository.findByApproved("pending").size();
+            long approvedAds = advertisementRepository.findByApproved("approved").size();
+            long rejectedAds = advertisementRepository.findByApproved("rejected").size();
             
-            // Prepare response data
+            // Add null/undefined approved status as pending
+            try {
+                pendingAds += advertisementRepository.findAll().stream()
+                    .mapToLong(ad -> (ad.getApproved() == null || ad.getApproved().isEmpty()) ? 1 : 0)
+                    .sum();
+            } catch (Exception e) {
+                System.out.println("⚠️  Warning: Could not count null/undefined advertisement approvals: " + e.getMessage());
+            }
+            
+            // ===== MEETING STATISTICS =====
+            long totalMeetings = meetingRepository.count();
+            long pendingMeetings = meetingRepository.countByStatus("PENDING");
+            long confirmedMeetings = meetingRepository.countByStatus("CONFIRMED");
+            long completedMeetings = meetingRepository.countByStatus("COMPLETED");
+            
+            // ===== BID STATISTICS =====
+            long totalBids = bidRepository.count();
+            long activeBids = bidRepository.findByStatus("ACTIVE").size();
+            
+            // ===== REVENUE CALCULATIONS =====
+            // Calculate estimated revenue based on sold listings (10% commission)
+            List<GemListing> soldListingsList = gemListingRepository.findByListingStatus("SOLD");
+            BigDecimal totalRevenue = BigDecimal.ZERO;
+            
+            for (GemListing listing : soldListingsList) {
+                if (listing.getPrice() != null) {
+                    totalRevenue = totalRevenue.add(listing.getPrice());
+                }
+            }
+            
+            BigDecimal commissionRate = BigDecimal.valueOf(10); // 10% commission
+            BigDecimal totalCommission = totalRevenue.multiply(commissionRate).divide(BigDecimal.valueOf(100));
+            
+            // ===== PREPARE RESPONSE DATA =====
             Map<String, Object> stats = new HashMap<>();
+            
+            // User statistics
+            stats.put("totalUsers", totalUsers);
+            stats.put("verifiedUsers", verifiedUsers);
+            stats.put("activeUsers", activeUsers);
+            stats.put("pendingVerificationUsers", pendingVerificationUsers);
+            
+            // Listing statistics
+            stats.put("totalListings", totalListings);
             stats.put("pendingListings", pendingListings);
             stats.put("approvedListings", approvedListings);
             stats.put("rejectedListings", rejectedListings);
             stats.put("activeListings", activeListings);
             stats.put("soldListings", soldListings);
-            stats.put("totalListings", totalListings);
             
-            // Calculate percentages
+            // Advertisement statistics
+            stats.put("totalAdvertisements", totalAdvertisements);
+            stats.put("activeAdvertisements", approvedAds);
+            stats.put("pendingAdvertisements", pendingAds);
+            stats.put("rejectedAdvertisements", rejectedAds);
+            
+            // Meeting statistics
+            stats.put("totalMeetings", totalMeetings);
+            stats.put("pendingMeetings", pendingMeetings);
+            stats.put("confirmedMeetings", confirmedMeetings);
+            stats.put("completedMeetings", completedMeetings);
+            
+            // Bid statistics
+            stats.put("totalBids", totalBids);
+            stats.put("activeBids", activeBids);
+            
+            // Revenue statistics
+            stats.put("totalRevenue", totalRevenue.doubleValue());
+            stats.put("commissionRate", commissionRate.doubleValue());
+            stats.put("totalCommission", totalCommission.doubleValue());
+            
+            // Calculate percentages for listings
             if (totalListings > 0) {
                 stats.put("pendingPercentage", Math.round((pendingListings * 100.0) / totalListings));
                 stats.put("approvedPercentage", Math.round((approvedListings * 100.0) / totalListings));
@@ -162,10 +247,15 @@ public class AdminService {
                 stats.put("rejectedPercentage", 0);
             }
             
+            // Additional aggregated statistics
+            stats.put("pendingApprovals", pendingListings + pendingMeetings + pendingVerificationUsers + pendingAds);
+            stats.put("lastUpdated", LocalDateTime.now());
+            
             System.out.println("✅ Dashboard stats retrieved: " + 
-                             "Pending=" + pendingListings + 
-                             ", Approved=" + approvedListings + 
-                             ", Rejected=" + rejectedListings);
+                             "Users=" + totalUsers + 
+                             ", Listings=" + totalListings + 
+                             ", Ads=" + totalAdvertisements + 
+                             ", Revenue=" + totalRevenue.doubleValue());
             
             return ApiResponse.success("Dashboard statistics retrieved successfully", stats);
             
