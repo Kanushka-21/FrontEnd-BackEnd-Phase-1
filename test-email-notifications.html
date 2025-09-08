@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📧 GemNet Email Notification System Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .test-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 25px;
+            border-left: 5px solid #007bff;
+        }
+        
+        .test-section h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+        }
+        
+        button {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(0, 123, 255, 0.3);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+        
+        .result.success {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        
+        .result.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        
+        .result.info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        
+        .result.warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        
+        .status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #28a745;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+            z-index: 1000;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.3s ease;
+        }
+        
+        .status.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+        
+        .email-preview {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .email-preview h4 {
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+        
+        .email-preview .preview-content {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+            font-size: 13px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div id="status" class="status">Ready</div>
+    
+    <div class="container">
+        <div class="header">
+            <h1>📧 GemNet Email Notification System</h1>
+            <p>Test email notifications for buyers, sellers, and admins</p>
+        </div>
+        
+        <div class="content">
+            <!-- Basic Email Test -->
+            <div class="test-section">
+                <h3>📧 1. Basic Email Configuration Test</h3>
+                <p>Test if the email system is working with basic configuration.</p>
+                
+                <div class="form-group">
+                    <label for="testEmail">Your Email Address:</label>
+                    <input type="email" id="testEmail" placeholder="Enter your email to receive test" value="kanushkamarasinghe04@gmail.com">
+                </div>
+                
+                <button onclick="testBasicEmail()">Send Test Email</button>
+                <div id="basicTestResult" class="result"></div>
+            </div>
+            
+            <!-- Buyer Notification Test -->
+            <div class="test-section">
+                <h3>🛒 2. Buyer Notification Email Test</h3>
+                <p>Test buyer notification emails (bid confirmation, win notifications, etc.)</p>
+                
+                <div class="form-group">
+                    <label for="buyerUserId">Buyer User ID:</label>
+                    <input type="text" id="buyerUserId" placeholder="Enter buyer user ID" value="68ade03256c2ce307892eda2">
+                </div>
+                
+                <button onclick="testBuyerNotification()">Send Buyer Email</button>
+                <div id="buyerTestResult" class="result"></div>
+                
+                <div class="email-preview">
+                    <h4>📋 Expected Buyer Email Content:</h4>
+                    <div class="preview-content">
+                        <strong>Subject:</strong> 🔔 Bid placed successfully - GemNet<br>
+                        <strong>Type:</strong> Buyer Notification<br>
+                        <strong>Content:</strong> Confirmation email for successful bid placement<br>
+                        <strong>Details:</strong> Bid amount, gemstone name, timestamp
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Seller Notification Test -->
+            <div class="test-section">
+                <h3>💎 3. Seller Notification Email Test</h3>
+                <p>Test seller notification emails (new bid alerts, item sold notifications, etc.)</p>
+                
+                <div class="form-group">
+                    <label for="sellerUserId">Seller User ID:</label>
+                    <input type="text" id="sellerUserId" placeholder="Enter seller user ID" value="68ade03256c2ce307892eda2">
+                </div>
+                
+                <button onclick="testSellerNotification()">Send Seller Email</button>
+                <div id="sellerTestResult" class="result"></div>
+                
+                <div class="email-preview">
+                    <h4>📋 Expected Seller Email Content:</h4>
+                    <div class="preview-content">
+                        <strong>Subject:</strong> 🔔 New bid received - GemNet<br>
+                        <strong>Type:</strong> Seller Notification<br>
+                        <strong>Content:</strong> Alert about new bid on their listing<br>
+                        <strong>Details:</strong> Bidder name, bid amount, gemstone details
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Admin Notification Test -->
+            <div class="test-section">
+                <h3>⚙️ 4. Admin Notification Email Test</h3>
+                <p>Test admin notification emails (approval requests, system alerts, etc.)</p>
+                
+                <button onclick="testAdminNotification()">Send Admin Email</button>
+                <div id="adminTestResult" class="result"></div>
+                
+                <div class="email-preview">
+                    <h4>📋 Expected Admin Email Content:</h4>
+                    <div class="preview-content">
+                        <strong>Subject:</strong> 🔔 Admin Alert: New Listing Approval Required - GemNet<br>
+                        <strong>Type:</strong> Admin Notification<br>
+                        <strong>Content:</strong> System alert requiring admin action<br>
+                        <strong>Details:</strong> Priority level, action required, timestamp
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Meeting Notification Test -->
+            <div class="test-section">
+                <h3>🤝 5. Meeting Notification Email Test</h3>
+                <p>Test meeting notification emails (requests, confirmations, completions, etc.)</p>
+                
+                <div class="form-group">
+                    <label for="meetingUserId">User ID for Meeting:</label>
+                    <input type="text" id="meetingUserId" placeholder="Enter user ID for meeting notification" value="68ade03256c2ce307892eda2">
+                </div>
+                
+                <button onclick="testMeetingNotification()">Send Meeting Email</button>
+                <div id="meetingTestResult" class="result"></div>
+                
+                <div class="email-preview">
+                    <h4>📋 Expected Meeting Email Content:</h4>
+                    <div class="preview-content">
+                        <strong>Subject:</strong> 🤝 Meeting Completed - Trade Approved - GemNet<br>
+                        <strong>Type:</strong> Meeting Notification<br>
+                        <strong>Content:</strong> Meeting status update with details<br>
+                        <strong>Details:</strong> Meeting time, location, status, participants
+                    </div>
+                </div>
+            </div>
+            
+            <!-- All Tests -->
+            <div class="test-section" style="border-left-color: #28a745;">
+                <h3>🚀 6. Run All Email Tests</h3>
+                <p>Send all types of email notifications at once to test the complete system.</p>
+                
+                <button onclick="runAllTests()" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+                    Run All Email Tests
+                </button>
+                <div id="allTestsResult" class="result"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:9092/api/email';
+        
+        function updateStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status show ${type}`;
+            
+            setTimeout(() => {
+                status.classList.remove('show');
+            }, 3000);
+        }
+        
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = message;
+            element.className = `result ${type}`;
+        }
+        
+        async function testBasicEmail() {
+            const email = document.getElementById('testEmail').value.trim();
+            
+            if (!email) {
+                showResult('basicTestResult', '❌ Please enter your email address.', 'error');
+                return;
+            }
+            
+            updateStatus('🔄 Sending basic test email...');
+            showResult('basicTestResult', '⏳ Sending test email...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/test?email=${encodeURIComponent(email)}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showResult('basicTestResult', `✅ ${result.message}<br><br>
+                        <strong>📧 Check your email inbox!</strong><br>
+                        Subject: "🔔 GemNet Email System Test"<br>
+                        From: GemNet System`, 'success');
+                    updateStatus('✅ Test email sent successfully!', 'success');
+                } else {
+                    showResult('basicTestResult', `❌ ${result.message}`, 'error');
+                    updateStatus('❌ Failed to send test email', 'error');
+                }
+            } catch (error) {
+                showResult('basicTestResult', `❌ Error: ${error.message}<br><br>
+                    <strong>Troubleshooting:</strong><br>
+                    • Check if backend is running on port 9092<br>
+                    • Verify email configuration in application.properties<br>
+                    • Check Gmail app password settings`, 'error');
+                updateStatus('❌ Test email failed', 'error');
+            }
+        }
+        
+        async function testBuyerNotification() {
+            const userId = document.getElementById('buyerUserId').value.trim();
+            
+            if (!userId) {
+                showResult('buyerTestResult', '❌ Please enter a buyer user ID.', 'error');
+                return;
+            }
+            
+            updateStatus('🔄 Sending buyer notification email...');
+            showResult('buyerTestResult', '⏳ Sending buyer notification email...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/test-buyer-notification?userId=${encodeURIComponent(userId)}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showResult('buyerTestResult', `✅ ${result.message}<br><br>
+                        <strong>📧 Buyer notification email sent!</strong><br>
+                        Type: BID_PLACED notification<br>
+                        Content: Bid confirmation with amount and gemstone details`, 'success');
+                    updateStatus('✅ Buyer notification sent!', 'success');
+                } else {
+                    showResult('buyerTestResult', `❌ ${result.message}`, 'error');
+                    updateStatus('❌ Buyer notification failed', 'error');
+                }
+            } catch (error) {
+                showResult('buyerTestResult', `❌ Error: ${error.message}`, 'error');
+                updateStatus('❌ Buyer notification failed', 'error');
+            }
+        }
+        
+        async function testSellerNotification() {
+            const userId = document.getElementById('sellerUserId').value.trim();
+            
+            if (!userId) {
+                showResult('sellerTestResult', '❌ Please enter a seller user ID.', 'error');
+                return;
+            }
+            
+            updateStatus('🔄 Sending seller notification email...');
+            showResult('sellerTestResult', '⏳ Sending seller notification email...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/test-seller-notification?userId=${encodeURIComponent(userId)}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showResult('sellerTestResult', `✅ ${result.message}<br><br>
+                        <strong>📧 Seller notification email sent!</strong><br>
+                        Type: NEW_BID notification<br>
+                        Content: New bid alert with bidder details and amount`, 'success');
+                    updateStatus('✅ Seller notification sent!', 'success');
+                } else {
+                    showResult('sellerTestResult', `❌ ${result.message}`, 'error');
+                    updateStatus('❌ Seller notification failed', 'error');
+                }
+            } catch (error) {
+                showResult('sellerTestResult', `❌ Error: ${error.message}`, 'error');
+                updateStatus('❌ Seller notification failed', 'error');
+            }
+        }
+        
+        async function testAdminNotification() {
+            updateStatus('🔄 Sending admin notification email...');
+            showResult('adminTestResult', '⏳ Sending admin notification email...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/test-admin-notification`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showResult('adminTestResult', `✅ ${result.message}<br><br>
+                        <strong>📧 Admin notification email sent!</strong><br>
+                        Type: LISTING_PENDING notification<br>
+                        Content: Admin alert requiring approval action<br>
+                        Recipients: All admin users in the system`, 'success');
+                    updateStatus('✅ Admin notification sent!', 'success');
+                } else {
+                    showResult('adminTestResult', `❌ ${result.message}`, 'error');
+                    updateStatus('❌ Admin notification failed', 'error');
+                }
+            } catch (error) {
+                showResult('adminTestResult', `❌ Error: ${error.message}`, 'error');
+                updateStatus('❌ Admin notification failed', 'error');
+            }
+        }
+        
+        async function testMeetingNotification() {
+            const userId = document.getElementById('meetingUserId').value.trim();
+            
+            if (!userId) {
+                showResult('meetingTestResult', '❌ Please enter a user ID for meeting notification.', 'error');
+                return;
+            }
+            
+            updateStatus('🔄 Sending meeting notification email...');
+            showResult('meetingTestResult', '⏳ Sending meeting notification email...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/test-meeting-notification?userId=${encodeURIComponent(userId)}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showResult('meetingTestResult', `✅ ${result.message}<br><br>
+                        <strong>📧 Meeting notification email sent!</strong><br>
+                        Type: MEETING_COMPLETED notification<br>
+                        Content: Meeting completion notice with location and time details`, 'success');
+                    updateStatus('✅ Meeting notification sent!', 'success');
+                } else {
+                    showResult('meetingTestResult', `❌ ${result.message}`, 'error');
+                    updateStatus('❌ Meeting notification failed', 'error');
+                }
+            } catch (error) {
+                showResult('meetingTestResult', `❌ Error: ${error.message}`, 'error');
+                updateStatus('❌ Meeting notification failed', 'error');
+            }
+        }
+        
+        async function runAllTests() {
+            updateStatus('🔄 Running all email tests...');
+            showResult('allTestsResult', '⏳ Running comprehensive email test suite...', 'info');
+            
+            const testEmail = document.getElementById('testEmail').value.trim() || 'test@example.com';
+            const buyerUserId = document.getElementById('buyerUserId').value.trim() || 'test-buyer-id';
+            const sellerUserId = document.getElementById('sellerUserId').value.trim() || 'test-seller-id';
+            const meetingUserId = document.getElementById('meetingUserId').value.trim() || 'test-meeting-id';
+            
+            let results = [];
+            let successCount = 0;
+            let totalTests = 5;
+            
+            // Test 1: Basic Email
+            try {
+                const basicResponse = await fetch(`${API_BASE_URL}/test?email=${encodeURIComponent(testEmail)}`, {
+                    method: 'POST'
+                });
+                const basicResult = await basicResponse.json();
+                results.push(`1. Basic Email: ${basicResult.success ? '✅' : '❌'}`);
+                if (basicResult.success) successCount++;
+            } catch (error) {
+                results.push(`1. Basic Email: ❌ (${error.message})`);
+            }
+            
+            // Test 2: Buyer Notification
+            try {
+                const buyerResponse = await fetch(`${API_BASE_URL}/test-buyer-notification?userId=${encodeURIComponent(buyerUserId)}`, {
+                    method: 'POST'
+                });
+                const buyerResult = await buyerResponse.json();
+                results.push(`2. Buyer Notification: ${buyerResult.success ? '✅' : '❌'}`);
+                if (buyerResult.success) successCount++;
+            } catch (error) {
+                results.push(`2. Buyer Notification: ❌ (${error.message})`);
+            }
+            
+            // Test 3: Seller Notification
+            try {
+                const sellerResponse = await fetch(`${API_BASE_URL}/test-seller-notification?userId=${encodeURIComponent(sellerUserId)}`, {
+                    method: 'POST'
+                });
+                const sellerResult = await sellerResponse.json();
+                results.push(`3. Seller Notification: ${sellerResult.success ? '✅' : '❌'}`);
+                if (sellerResult.success) successCount++;
+            } catch (error) {
+                results.push(`3. Seller Notification: ❌ (${error.message})`);
+            }
+            
+            // Test 4: Admin Notification
+            try {
+                const adminResponse = await fetch(`${API_BASE_URL}/test-admin-notification`, {
+                    method: 'POST'
+                });
+                const adminResult = await adminResponse.json();
+                results.push(`4. Admin Notification: ${adminResult.success ? '✅' : '❌'}`);
+                if (adminResult.success) successCount++;
+            } catch (error) {
+                results.push(`4. Admin Notification: ❌ (${error.message})`);
+            }
+            
+            // Test 5: Meeting Notification
+            try {
+                const meetingResponse = await fetch(`${API_BASE_URL}/test-meeting-notification?userId=${encodeURIComponent(meetingUserId)}`, {
+                    method: 'POST'
+                });
+                const meetingResult = await meetingResponse.json();
+                results.push(`5. Meeting Notification: ${meetingResult.success ? '✅' : '❌'}`);
+                if (meetingResult.success) successCount++;
+            } catch (error) {
+                results.push(`5. Meeting Notification: ❌ (${error.message})`);
+            }
+            
+            // Show results
+            const resultType = successCount === totalTests ? 'success' : (successCount > 0 ? 'warning' : 'error');
+            const resultMessage = `
+                <strong>📊 Email Test Suite Results:</strong><br><br>
+                ${results.join('<br>')}
+                <br><br>
+                <strong>Summary:</strong> ${successCount}/${totalTests} tests passed<br><br>
+                ${successCount === totalTests ? 
+                    '🎉 <strong>All email notifications are working perfectly!</strong>' : 
+                    successCount > 0 ? 
+                        '⚠️ <strong>Some email notifications are working. Check failed tests above.</strong>' :
+                        '❌ <strong>Email system needs configuration. Check application.properties and Gmail settings.</strong>'
+                }
+            `;
+            
+            showResult('allTestsResult', resultMessage, resultType);
+            updateStatus(`${successCount}/${totalTests} tests passed`, successCount === totalTests ? 'success' : 'warning');
+        }
+        
+        // Initialize
+        updateStatus('📧 Email notification system ready for testing');
+    </script>
+</body>
+</html>

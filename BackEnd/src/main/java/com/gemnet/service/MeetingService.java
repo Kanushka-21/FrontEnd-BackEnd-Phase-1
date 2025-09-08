@@ -40,6 +40,9 @@ public class MeetingService {
     @Autowired
     private NotificationRepository notificationRepository;
     
+    @Autowired
+    private EmailService emailService;
+    
     /**
      * Helper method to create meeting-related notifications for buyers and sellers
      */
@@ -61,6 +64,25 @@ public class MeetingService {
             );
             notificationRepository.save(notification);
             System.out.println("✅ Meeting notification created: " + type + " for user " + userId);
+            
+            // Send meeting email notification
+            try {
+                String details = "Gem: " + gemName + " | From: " + triggerUserName;
+                emailService.sendMeetingNotificationEmail(
+                    userId, 
+                    type, 
+                    title, 
+                    message, 
+                    null, // meetingLocation - will be added when available
+                    null, // meetingTime - will be added when available
+                    details
+                );
+                System.out.println("📧 Meeting email notification sent for: " + type + " to user " + userId);
+            } catch (Exception e) {
+                System.err.println("⚠️ Failed to send meeting email notification: " + e.getMessage());
+                // Don't fail the notification creation if email fails
+            }
+            
         } catch (Exception e) {
             System.err.println("❌ Error creating meeting notification: " + e.getMessage());
             e.printStackTrace();

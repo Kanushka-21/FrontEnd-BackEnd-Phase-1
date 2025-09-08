@@ -37,6 +37,9 @@ public class BiddingService {
     @Autowired
     private UserRepository userRepository;
     
+    @Autowired
+    private EmailService emailService;
+    
     /**
      * Place a bid on a gem listing
      */
@@ -488,6 +491,17 @@ public class BiddingService {
             );
             notificationRepository.save(notification);
             System.out.println("✅ Notification created: " + type + " for user " + userId);
+            
+            // Send email notification
+            try {
+                String details = "Gem: " + gemName + " | Amount: " + bidAmount + " | From: " + triggerUserName;
+                emailService.sendNotificationEmail(userId, type, title, message, details);
+                System.out.println("📧 Email notification sent for: " + type + " to user " + userId);
+            } catch (Exception e) {
+                System.err.println("⚠️ Failed to send email notification: " + e.getMessage());
+                // Don't fail the notification creation if email fails
+            }
+            
         } catch (Exception e) {
             System.err.println("❌ Error creating notification: " + e.getMessage());
             e.printStackTrace();
