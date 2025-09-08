@@ -43,6 +43,15 @@ public class EmailService {
      */
     @Async
     public void sendNotificationEmail(String userId, String type, String title, String message, String details) {
+        sendNotificationEmail(userId, type, title, message, details, null, null);
+    }
+
+    /**
+     * Send notification email with bidding countdown information
+     */
+    @Async
+    public void sendNotificationEmail(String userId, String type, String title, String message, String details, 
+                                    String biddingEndTime, String gemName) {
         if (!emailEnabled) {
             logger.info("📧 Email service disabled - would send {} notification to user {}", type, userId);
             return;
@@ -54,7 +63,7 @@ public class EmailService {
                 User user = userOptional.get();
                 if (user.getEmail() != null && !user.getEmail().isEmpty()) {
                     String subject = "🔔 " + title + " - GemNet";
-                    String htmlContent = createNotificationEmailTemplate(getUserName(user), type, title, message, details);
+                    String htmlContent = createNotificationEmailTemplate(getUserName(user), type, title, message, details, biddingEndTime, gemName);
                     sendHtmlEmail(user.getEmail(), subject, htmlContent);
                     logger.info("📧 Notification email sent to user {}: {} ({})", getUserName(user), type, user.getEmail());
                 } else {
@@ -156,14 +165,41 @@ public class EmailService {
      * Create notification email template (buyer/seller notifications)
      */
     private String createNotificationEmailTemplate(String userName, String type, String title, String message, String details) {
+        return createNotificationEmailTemplate(userName, type, title, message, details, null, null);
+    }
+
+    /**
+     * Create enhanced notification email template with countdown and formatted details
+     */
+    private String createNotificationEmailTemplate(String userName, String type, String title, String message, String details, 
+                                                  String biddingEndTime, String gemName) {
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("MMM dd, yyyy 'at' HH:mm"));
         String notificationIcon = getNotificationIcon(type);
         String notificationColor = getNotificationColor(type);
         String userRole = getUserRole(type);
 
+        // Parse details into structured format
+        String formattedDetails = formatDetailsAsPoints(details, type);
+        
+        // Create countdown section if bidding end time is available
+        String countdownSection = "";
+        if (biddingEndTime != null && !biddingEndTime.isEmpty()) {
+            countdownSection = createCountdownSection(biddingEndTime, gemName);
+        }
+
         return "<!DOCTYPE html>" +
                "<html lang='en'>" +
-               "<head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'><title>GemNet Notification</title></head>" +
+               "<head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'><title>GemNet Notification</title>" +
+               "<style>" +
+               "  .countdown-timer { background: linear-gradient(135deg, #ff6b6b, #ee5a24); color: white; padding: 20px; border-radius: 10px; text-align: center; margin: 20px 0; }" +
+               "  .countdown-digits { font-size: 24px; font-weight: bold; letter-spacing: 2px; }" +
+               "  .countdown-labels { font-size: 12px; opacity: 0.9; margin-top: 5px; }" +
+               "  .details-list { background: #f8f9fa; border-left: 4px solid #007bff; padding: 20px; margin: 20px 0; border-radius: 5px; }" +
+               "  .detail-item { margin: 8px 0; font-size: 14px; }" +
+               "  .detail-label { color: #6c757d; font-weight: normal; }" +
+               "  .detail-value { color: #333; font-weight: bold; }" +
+               "</style>" +
+               "</head>" +
                "<body style='font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f4f4f4;'>" +
                "<div style='max-width: 600px; margin: 0 auto; background-color: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); overflow: hidden;'>" +
                
@@ -173,14 +209,19 @@ public class EmailService {
                "</div>" +
                
                "<div style='padding: 30px;'>" +
-               "<h2>Hello " + userName + ",</h2>" +
+               "<h2>Hello <strong>" + userName + "</strong>,</h2>" +
                "<p>You have a new notification from GemNet:</p>" +
                
                "<div style='background: " + notificationColor + "; border-left: 4px solid #007bff; padding: 20px; border-radius: 5px; margin: 20px 0;'>" +
-               "<h3>" + notificationIcon + " " + title + "</h3>" +
+               "<h3 style='margin-top: 0;'>" + notificationIcon + " " + title + "</h3>" +
                "<p><strong>Message:</strong> " + message + "</p>" +
-               (details != null && !details.isEmpty() ? "<p><strong>Details:</strong> " + details + "</p>" : "") +
-               "<p><strong>Time:</strong> " + timestamp + "</p>" +
+               "</div>" +
+               
+               formattedDetails +
+               countdownSection +
+               
+               "<div style='background: #e9ecef; padding: 15px; border-radius: 5px; margin: 20px 0;'>" +
+               "<p style='margin: 0; font-size: 14px;'><strong>Notification Time:</strong> " + timestamp + "</p>" +
                "</div>" +
                
                "<p>Visit your GemNet dashboard to view all your notifications and take action.</p>" +
@@ -290,6 +331,159 @@ public class EmailService {
             return user.getUsername();
         } else {
             return "User";
+        }
+    }
+
+    /**
+     * Format details string into point-wise HTML list with bold dynamic information
+     */
+    private String formatDetailsAsPoints(String details, String type) {
+        if (details == null || details.isEmpty()) {
+            return "";
+        }
+
+        StringBuilder formattedDetails = new StringBuilder();
+        formattedDetails.append("<div class='details-list'>");
+        formattedDetails.append("<h4 style='margin-top: 0; color: #007bff;'>📋 Transaction Details</h4>");
+
+        // Parse different detail formats
+        if (details.contains(" | ")) {
+            // Format: "Gem: test 3 | Amount: 247.86 | From: pasindu Perera"
+            String[] parts = details.split(" \\| ");
+            for (String part : parts) {
+                if (part.contains(":")) {
+                    String[] keyValue = part.split(":", 2);
+                    if (keyValue.length == 2) {
+                        String key = keyValue[0].trim();
+                        String value = keyValue[1].trim();
+                        
+                        // Add appropriate icons and format values
+                        String icon = getDetailIcon(key);
+                        String formattedValue = formatDetailValue(value, key);
+                        
+                        formattedDetails.append("<div class='detail-item'>");
+                        formattedDetails.append("<span class='detail-label'>").append(icon).append(" ").append(key).append(":</span> ");
+                        formattedDetails.append("<span class='detail-value'>").append(formattedValue).append("</span>");
+                        formattedDetails.append("</div>");
+                    }
+                }
+            }
+        } else if (details.contains(":")) {
+            // Single key-value pair
+            String[] keyValue = details.split(":", 2);
+            if (keyValue.length == 2) {
+                String key = keyValue[0].trim();
+                String value = keyValue[1].trim();
+                String icon = getDetailIcon(key);
+                String formattedValue = formatDetailValue(value, key);
+                
+                formattedDetails.append("<div class='detail-item'>");
+                formattedDetails.append("<span class='detail-label'>").append(icon).append(" ").append(key).append(":</span> ");
+                formattedDetails.append("<span class='detail-value'>").append(formattedValue).append("</span>");
+                formattedDetails.append("</div>");
+            }
+        } else {
+            // Plain text details
+            formattedDetails.append("<div class='detail-item'>");
+            formattedDetails.append("<span class='detail-value'>").append(details).append("</span>");
+            formattedDetails.append("</div>");
+        }
+
+        formattedDetails.append("</div>");
+        return formattedDetails.toString();
+    }
+
+    /**
+     * Get appropriate icon for detail keys
+     */
+    private String getDetailIcon(String key) {
+        switch (key.toLowerCase()) {
+            case "gem":
+            case "gemstone": return "💎";
+            case "amount":
+            case "price":
+            case "bid": return "💰";
+            case "from":
+            case "user":
+            case "buyer":
+            case "seller": return "👤";
+            case "time":
+            case "date": return "🕐";
+            case "location": return "📍";
+            case "status": return "📊";
+            default: return "•";
+        }
+    }
+
+    /**
+     * Format detail values with appropriate styling
+     */
+    private String formatDetailValue(String value, String key) {
+        if (key.toLowerCase().contains("amount") || key.toLowerCase().contains("price") || key.toLowerCase().contains("bid")) {
+            // Format currency values
+            try {
+                double amount = Double.parseDouble(value.replaceAll("[^0-9.]", ""));
+                return String.format("$%.2f", amount);
+            } catch (NumberFormatException e) {
+                return value;
+            }
+        }
+        return value;
+    }
+
+    /**
+     * Create countdown timer section for bidding end time
+     */
+    private String createCountdownSection(String biddingEndTime, String gemName) {
+        if (biddingEndTime == null || biddingEndTime.isEmpty()) {
+            return "";
+        }
+
+        try {
+            // Parse the bidding end time (assuming it's in a parseable format)
+            LocalDateTime endTime;
+            if (biddingEndTime.contains("T")) {
+                endTime = LocalDateTime.parse(biddingEndTime.substring(0, 19));
+            } else {
+                // Handle different date formats if needed
+                endTime = LocalDateTime.parse(biddingEndTime, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            }
+            
+            LocalDateTime now = LocalDateTime.now();
+            
+            if (endTime.isAfter(now)) {
+                // Calculate time remaining
+                long totalSeconds = java.time.Duration.between(now, endTime).getSeconds();
+                long days = totalSeconds / (24 * 3600);
+                long hours = (totalSeconds % (24 * 3600)) / 3600;
+                long minutes = (totalSeconds % 3600) / 60;
+                long seconds = totalSeconds % 60;
+
+                return "<div class='countdown-timer'>" +
+                       "<h3 style='margin-top: 0;'>⏰ Bidding Countdown" + (gemName != null ? " - " + gemName : "") + "</h3>" +
+                       "<div class='countdown-digits'>" +
+                       "<span>" + String.format("%02d", days) + "d</span> : " +
+                       "<span>" + String.format("%02d", hours) + "h</span> : " +
+                       "<span>" + String.format("%02d", minutes) + "m</span> : " +
+                       "<span>" + String.format("%02d", seconds) + "s</span>" +
+                       "</div>" +
+                       "<div class='countdown-labels'>DAYS : HOURS : MINUTES : SECONDS</div>" +
+                       "<p style='margin-bottom: 0; font-size: 14px; opacity: 0.9;'>⚡ Bidding ends on " + 
+                       endTime.format(DateTimeFormatter.ofPattern("MMM dd, yyyy 'at' HH:mm")) + "</p>" +
+                       "</div>";
+            } else {
+                // Bidding has ended
+                return "<div style='background: #dc3545; color: white; padding: 20px; border-radius: 10px; text-align: center; margin: 20px 0;'>" +
+                       "<h3 style='margin-top: 0;'>⏱️ Bidding Ended" + (gemName != null ? " - " + gemName : "") + "</h3>" +
+                       "<p style='margin-bottom: 0; font-size: 16px; font-weight: bold;'>🔚 Bidding closed on " + 
+                       endTime.format(DateTimeFormatter.ofPattern("MMM dd, yyyy 'at' HH:mm")) + "</p>" +
+                       "</div>";
+            }
+        } catch (Exception e) {
+            // Fallback if date parsing fails
+            return "<div style='background: #ffc107; color: #333; padding: 15px; border-radius: 5px; text-align: center; margin: 20px 0;'>" +
+                   "<p style='margin: 0;'>⏰ Bidding deadline: " + biddingEndTime + "</p>" +
+                   "</div>";
         }
     }
     
