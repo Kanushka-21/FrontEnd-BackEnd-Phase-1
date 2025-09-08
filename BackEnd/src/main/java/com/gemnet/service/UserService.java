@@ -51,6 +51,9 @@ public class UserService {
     @Autowired
     private NotificationService notificationService;
     
+    @Autowired
+    private EmailService emailService;
+    
     /**
      * Register a new user with personal data
      */
@@ -104,6 +107,15 @@ public class UserService {
             } catch (Exception e) {
                 System.err.println("⚠️ Failed to notify admin of new user registration: " + e.getMessage());
                 // Don't fail the registration if notification fails
+            }
+            
+            // Send welcome email to the new user
+            try {
+                emailService.sendWelcomeEmail(savedUser);
+                System.out.println("📧 Welcome email sent to new user: " + savedUser.getEmail());
+            } catch (Exception e) {
+                System.err.println("⚠️ Failed to send welcome email: " + e.getMessage());
+                // Don't fail the registration if welcome email fails
             }
             
             System.out.println("✅ User registered successfully: " + savedUser.getId());

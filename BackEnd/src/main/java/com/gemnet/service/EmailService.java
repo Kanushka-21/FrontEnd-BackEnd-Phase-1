@@ -142,6 +142,38 @@ public class EmailService {
     }
 
     /**
+     * Send welcome email to newly registered users
+     */
+    @Async
+    public void sendWelcomeEmail(String userEmail, String userName, String userFirstName) {
+        if (!emailEnabled) {
+            logger.info("📧 Email service disabled - would send welcome email to {}", userEmail);
+            return;
+        }
+
+        try {
+            String subject = "🎉 Welcome to GemNet - Your Gemstone Journey Begins!";
+            String htmlContent = createWelcomeEmailTemplate(userName, userFirstName, userEmail);
+            sendHtmlEmail(userEmail, subject, htmlContent);
+            logger.info("📧 Welcome email sent to new user: {} ({})", userName, userEmail);
+        } catch (Exception e) {
+            logger.error("❌ Failed to send welcome email to {}: {}", userEmail, e.getMessage());
+        }
+    }
+
+    /**
+     * Send welcome email using User object
+     */
+    @Async
+    public void sendWelcomeEmail(User user) {
+        if (user.getEmail() != null && !user.getEmail().isEmpty()) {
+            sendWelcomeEmail(user.getEmail(), getUserName(user), user.getFirstName());
+        } else {
+            logger.warn("⚠️ Cannot send welcome email - user has no email address: {}", user.getId());
+        }
+    }
+
+    /**
      * Send HTML email
      */
     private void sendHtmlEmail(String to, String subject, String htmlContent) throws MessagingException {
@@ -316,6 +348,137 @@ public class EmailService {
                "<div style='background: #f8f9fa; padding: 20px; text-align: center; color: #6c757d; font-size: 14px;'>" +
                "<p>This is an automated meeting notification from GemNet. Please do not reply to this email.</p>" +
                "<p>&copy; 2025 GemNet. All rights reserved.</p>" +
+               "</div>" +
+               "</div>" +
+               "</body></html>";
+    }
+
+    /**
+     * Create welcome email template for new users
+     */
+    private String createWelcomeEmailTemplate(String userName, String userFirstName, String userEmail) {
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("MMM dd, yyyy"));
+        String displayName = userFirstName != null && !userFirstName.trim().isEmpty() ? userFirstName : userName;
+
+        return "<!DOCTYPE html>" +
+               "<html lang='en'>" +
+               "<head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'><title>Welcome to GemNet</title>" +
+               "<style>" +
+               "  .welcome-hero { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px; text-align: center; }" +
+               "  .welcome-content { padding: 40px 30px; }" +
+               "  .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin: 30px 0; }" +
+               "  .feature-card { background: #f8f9fa; border-radius: 10px; padding: 20px; text-align: center; }" +
+               "  .feature-icon { font-size: 48px; margin-bottom: 15px; }" +
+               "  .cta-button { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; border-radius: 25px; text-decoration: none; display: inline-block; font-weight: bold; margin: 20px 0; }" +
+               "  .welcome-stats { background: #e9ecef; border-radius: 10px; padding: 20px; margin: 20px 0; }" +
+               "  .stat-item { display: inline-block; margin: 0 15px; text-align: center; }" +
+               "</style>" +
+               "</head>" +
+               "<body style='font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f4f4f4;'>" +
+               "<div style='max-width: 600px; margin: 0 auto; background-color: white; border-radius: 15px; box-shadow: 0 6px 20px rgba(0,0,0,0.1); overflow: hidden;'>" +
+               
+               "<div class='welcome-hero'>" +
+               "<h1 style='margin: 0; font-size: 36px;'>🎉 Welcome to GemNet!</h1>" +
+               "<p style='font-size: 18px; margin: 15px 0 0 0; opacity: 0.9;'>Your Gateway to Precious Gemstones</p>" +
+               "</div>" +
+               
+               "<div class='welcome-content'>" +
+               "<h2 style='color: #333; margin-top: 0;'>Hello <strong style='color: #667eea;'>" + displayName + "</strong>!</h2>" +
+               "<p style='font-size: 16px; line-height: 1.6; color: #555;'>Congratulations on joining GemNet, Sri Lanka's premier gemstone marketplace! We're thrilled to have you as part of our community of gemstone enthusiasts, collectors, and traders.</p>" +
+               
+               "<div class='welcome-stats'>" +
+               "<h3 style='text-align: center; color: #333; margin-top: 0;'>🌟 Join Our Growing Community</h3>" +
+               "<div style='text-align: center;'>" +
+               "<div class='stat-item'>" +
+               "<div style='font-size: 24px; font-weight: bold; color: #667eea;'>1000+</div>" +
+               "<div style='font-size: 14px; color: #6c757d;'>Premium Gemstones</div>" +
+               "</div>" +
+               "<div class='stat-item'>" +
+               "<div style='font-size: 24px; font-weight: bold; color: #28a745;'>500+</div>" +
+               "<div style='font-size: 14px; color: #6c757d;'>Verified Sellers</div>" +
+               "</div>" +
+               "<div class='stat-item'>" +
+               "<div style='font-size: 24px; font-weight: bold; color: #dc3545;'>2000+</div>" +
+               "<div style='font-size: 14px; color: #6c757d;'>Happy Buyers</div>" +
+               "</div>" +
+               "</div>" +
+               "</div>" +
+               
+               "<h3 style='color: #333; margin: 30px 0 20px 0;'>🚀 What You Can Do on GemNet:</h3>" +
+               
+               "<div class='feature-grid'>" +
+               "<div class='feature-card'>" +
+               "<div class='feature-icon'>💎</div>" +
+               "<h4 style='margin: 0 0 10px 0; color: #333;'>Buy Premium Gemstones</h4>" +
+               "<p style='margin: 0; font-size: 14px; color: #6c757d;'>Discover authenticated gemstones with certificates from trusted sellers.</p>" +
+               "</div>" +
+               
+               "<div class='feature-card'>" +
+               "<div class='feature-icon'>🏆</div>" +
+               "<h4 style='margin: 0 0 10px 0; color: #333;'>Participate in Auctions</h4>" +
+               "<p style='margin: 0; font-size: 14px; color: #6c757d;'>Join live bidding sessions and compete for rare gemstones.</p>" +
+               "</div>" +
+               
+               "<div class='feature-card'>" +
+               "<div class='feature-icon'>🤝</div>" +
+               "<h4 style='margin: 0 0 10px 0; color: #333;'>Secure Meetings</h4>" +
+               "<p style='margin: 0; font-size: 14px; color: #6c757d;'>Arrange safe, verified meetings with sellers for inspections.</p>" +
+               "</div>" +
+               
+               "<div class='feature-card'>" +
+               "<div class='feature-icon'>🔐</div>" +
+               "<h4 style='margin: 0 0 10px 0; color: #333;'>Verified Identity</h4>" +
+               "<p style='margin: 0; font-size: 14px; color: #6c757d;'>Advanced face recognition ensures all users are verified and trustworthy.</p>" +
+               "</div>" +
+               "</div>" +
+               
+               "<div style='text-align: center; margin: 40px 0;'>" +
+               "<a href='#' class='cta-button' style='color: white; text-decoration: none;'>🌟 Explore Gemstones Now</a>" +
+               "</div>" +
+               
+               "<div style='background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin: 30px 0;'>" +
+               "<h4 style='margin: 0 0 10px 0; color: #856404;'>📋 Next Steps:</h4>" +
+               "<ul style='margin: 10px 0; padding-left: 20px; color: #856404;'>" +
+               "<li><strong>Complete Your Profile:</strong> Add your details and preferences</li>" +
+               "<li><strong>Verify Your Identity:</strong> Complete face recognition verification for full access</li>" +
+               "<li><strong>Browse Gemstones:</strong> Explore our extensive collection</li>" +
+               "<li><strong>Start Bidding:</strong> Participate in live auctions</li>" +
+               "</ul>" +
+               "</div>" +
+               
+               "<div style='background: #d1ecf1; border-radius: 8px; padding: 20px; margin: 30px 0;'>" +
+               "<h4 style='margin: 0 0 15px 0; color: #0c5460;'>📞 Need Help? We're Here for You!</h4>" +
+               "<p style='margin: 0; color: #0c5460; font-size: 14px;'>" +
+               "<strong>Email:</strong> support@gemnet.com<br>" +
+               "<strong>Phone:</strong> +94 11 234 5678<br>" +
+               "<strong>Hours:</strong> Monday - Friday, 9:00 AM - 6:00 PM (IST)" +
+               "</p>" +
+               "</div>" +
+               
+               "<div style='text-align: center; margin: 30px 0;'>" +
+               "<h4 style='color: #333;'>🎯 Account Details</h4>" +
+               "<div style='background: #f8f9fa; border-radius: 8px; padding: 15px; font-family: monospace; font-size: 14px;'>" +
+               "<p style='margin: 5px 0;'><strong>Email:</strong> " + userEmail + "</p>" +
+               "<p style='margin: 5px 0;'><strong>Registration Date:</strong> " + timestamp + "</p>" +
+               "<p style='margin: 5px 0;'><strong>Account Status:</strong> <span style='color: #28a745;'>Active</span></p>" +
+               "</div>" +
+               "</div>" +
+               
+               "<p style='text-align: center; font-size: 16px; color: #333;'>Welcome to the GemNet family! 💎✨</p>" +
+               "</div>" +
+               
+               "<div style='background: #343a40; color: white; padding: 30px; text-align: center;'>" +
+               "<h3 style='margin: 0 0 15px 0;'>Stay Connected</h3>" +
+               "<p style='margin: 0 0 15px 0; opacity: 0.8;'>Follow us for the latest gemstone discoveries and exclusive offers</p>" +
+               "<div style='margin: 15px 0;'>" +
+               "<span style='margin: 0 10px; font-size: 24px;'>📧</span>" +
+               "<span style='margin: 0 10px; font-size: 24px;'>📱</span>" +
+               "<span style='margin: 0 10px; font-size: 24px;'>🌐</span>" +
+               "</div>" +
+               "<p style='margin: 20px 0 0 0; font-size: 14px; opacity: 0.7;'>" +
+               "This is an automated welcome email from GemNet. Please do not reply to this email.<br>" +
+               "&copy; 2025 GemNet - Sri Lankan Gemstone Marketplace. All rights reserved." +
+               "</p>" +
                "</div>" +
                "</div>" +
                "</body></html>";
