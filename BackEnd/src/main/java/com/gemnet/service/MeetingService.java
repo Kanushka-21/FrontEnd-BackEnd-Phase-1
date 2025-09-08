@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.ArrayList;
 
 @Service
 public class MeetingService {
@@ -38,6 +39,9 @@ public class MeetingService {
     
     @Autowired
     private NotificationRepository notificationRepository;
+    
+    @Autowired
+    private EmailService emailService;
     
     /**
      * Helper method to create meeting-related notifications for buyers and sellers
@@ -60,6 +64,25 @@ public class MeetingService {
             );
             notificationRepository.save(notification);
             System.out.println("✅ Meeting notification created: " + type + " for user " + userId);
+            
+            // Send meeting email notification
+            try {
+                String details = "Gem: " + gemName + " | From: " + triggerUserName;
+                emailService.sendMeetingNotificationEmail(
+                    userId, 
+                    type, 
+                    title, 
+                    message, 
+                    null, // meetingLocation - will be added when available
+                    null, // meetingTime - will be added when available
+                    details
+                );
+                System.out.println("📧 Meeting email notification sent for: " + type + " to user " + userId);
+            } catch (Exception e) {
+                System.err.println("⚠️ Failed to send meeting email notification: " + e.getMessage());
+                // Don't fail the notification creation if email fails
+            }
+            
         } catch (Exception e) {
             System.err.println("❌ Error creating meeting notification: " + e.getMessage());
             e.printStackTrace();
@@ -624,7 +647,116 @@ public class MeetingService {
     }
     
     /**
-     * Get all meetings for admin dashboard
+     * Get all meetings for admin dashboard with detailed information
+     */
+    public List<Map<String, Object>> getAllMeetingsWithDetails() {
+        logger.info("🔄 [MeetingService] Starting getAllMeetingsWithDetails()");
+        
+        try {
+            List<Meeting> meetings = meetingRepository.findAllByOrderByCreatedAtDesc();
+            logger.info("✅ [MeetingService] Retrieved {} meetings from database", meetings.size());
+            
+            List<Map<String, Object>> detailedMeetings = new ArrayList<>();
+            
+            for (Meeting meeting : meetings) {
+                logger.debug("🔧 [MeetingService] Processing meeting: {}", meeting.getId());
+                
+                Map<String, Object> meetingDetail = new HashMap<>();
+                
+                try {
+                    // Basic meeting information
+                    meetingDetail.put("id", meeting.getId());
+                    meetingDetail.put("purchaseId", meeting.getPurchaseId());
+                    meetingDetail.put("buyerId", meeting.getBuyerId());
+                    meetingDetail.put("sellerId", meeting.getSellerId());
+                    meetingDetail.put("gemName", meeting.getGemName());
+                    meetingDetail.put("gemType", meeting.getGemType());
+                    meetingDetail.put("finalPrice", meeting.getFinalPrice());
+                    meetingDetail.put("primaryImageUrl", null); // Not available in current Meeting model
+                    meetingDetail.put("proposedDateTime", meeting.getProposedDateTime());
+                    meetingDetail.put("confirmedDateTime", meeting.getConfirmedDateTime());
+                    meetingDetail.put("location", meeting.getLocation());
+                    meetingDetail.put("meetingType", meeting.getMeetingType());
+                    meetingDetail.put("status", meeting.getStatus());
+                    meetingDetail.put("buyerNotes", meeting.getBuyerNotes());
+                    meetingDetail.put("sellerNotes", meeting.getSellerNotes());
+                    meetingDetail.put("createdAt", meeting.getCreatedAt());
+                    meetingDetail.put("updatedAt", meeting.getUpdatedAt());
+                    
+                    // Get buyer details
+                    try {
+                        Optional<User> buyerOpt = userRepository.findById(meeting.getBuyerId());
+                        if (buyerOpt.isPresent()) {
+                            User buyer = buyerOpt.get();
+                            meetingDetail.put("buyerName", buyer.getFirstName() + " " + buyer.getLastName());
+                            meetingDetail.put("buyerEmail", buyer.getEmail());
+                            meetingDetail.put("buyerPhone", buyer.getPhoneNumber());
+                            
+                            Map<String, Object> buyerContact = new HashMap<>();
+                            buyerContact.put("fullName", buyer.getFirstName() + " " + buyer.getLastName());
+                            buyerContact.put("email", buyer.getEmail());
+                            buyerContact.put("phoneNumber", buyer.getPhoneNumber());
+                            meetingDetail.put("buyerContact", buyerContact);
+                        } else {
+                            logger.warn("⚠️ [MeetingService] Buyer not found for ID: {}", meeting.getBuyerId());
+                            meetingDetail.put("buyerName", "Unknown Buyer");
+                            meetingDetail.put("buyerEmail", "N/A");
+                            meetingDetail.put("buyerPhone", "N/A");
+                        }
+                    } catch (Exception e) {
+                        logger.error("❌ [MeetingService] Error getting buyer details for meeting {}: {}", meeting.getId(), e.getMessage());
+                        meetingDetail.put("buyerName", "Unknown Buyer");
+                        meetingDetail.put("buyerEmail", "N/A");
+                        meetingDetail.put("buyerPhone", "N/A");
+                    }
+                    
+                    // Get seller details
+                    try {
+                        Optional<User> sellerOpt = userRepository.findById(meeting.getSellerId());
+                        if (sellerOpt.isPresent()) {
+                            User seller = sellerOpt.get();
+                            meetingDetail.put("sellerName", seller.getFirstName() + " " + seller.getLastName());
+                            meetingDetail.put("sellerEmail", seller.getEmail());
+                            meetingDetail.put("sellerPhone", seller.getPhoneNumber());
+                            
+                            Map<String, Object> sellerContact = new HashMap<>();
+                            sellerContact.put("fullName", seller.getFirstName() + " " + seller.getLastName());
+                            sellerContact.put("email", seller.getEmail());
+                            sellerContact.put("phoneNumber", seller.getPhoneNumber());
+                            meetingDetail.put("sellerContact", sellerContact);
+                        } else {
+                            logger.warn("⚠️ [MeetingService] Seller not found for ID: {}", meeting.getSellerId());
+                            meetingDetail.put("sellerName", "Unknown Seller");
+                            meetingDetail.put("sellerEmail", "N/A");
+                            meetingDetail.put("sellerPhone", "N/A");
+                        }
+                    } catch (Exception e) {
+                        logger.error("❌ [MeetingService] Error getting seller details for meeting {}: {}", meeting.getId(), e.getMessage());
+                        meetingDetail.put("sellerName", "Unknown Seller");
+                        meetingDetail.put("sellerEmail", "N/A");
+                        meetingDetail.put("sellerPhone", "N/A");
+                    }
+                    
+                    detailedMeetings.add(meetingDetail);
+                    logger.debug("✅ [MeetingService] Successfully processed meeting: {}", meeting.getId());
+                    
+                } catch (Exception e) {
+                    logger.error("❌ [MeetingService] Error processing meeting {}: {}", meeting.getId(), e.getMessage(), e);
+                    // Continue processing other meetings
+                }
+            }
+            
+            logger.info("✅ [MeetingService] Successfully processed {} meetings with details", detailedMeetings.size());
+            return detailedMeetings;
+            
+        } catch (Exception e) {
+            logger.error("❌ [MeetingService] Error in getAllMeetingsWithDetails(): {}", e.getMessage(), e);
+            throw e;
+        }
+    }
+    
+    /**
+     * Get all meetings for admin dashboard (legacy method)
      */
     public List<Meeting> getAllMeetings() {
         return meetingRepository.findAllByOrderByCreatedAtDesc();
@@ -642,5 +774,121 @@ public class MeetingService {
      */
     public List<Meeting> getMeetingsByStatus(String status) {
         return meetingRepository.findByStatus(status);
+    }
+    
+    /**
+     * Admin completes a meeting and sends notifications to both parties
+     */
+    public Map<String, Object> adminCompleteMeeting(String meetingId) {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            logger.info("🔄 [MeetingService] Admin completing meeting: {}", meetingId);
+            
+            // Find the meeting
+            Optional<Meeting> meetingOpt = meetingRepository.findById(meetingId);
+            if (!meetingOpt.isPresent()) {
+                logger.warn("⚠️ [MeetingService] Meeting not found: {}", meetingId);
+                response.put("success", false);
+                response.put("message", "Meeting not found");
+                return response;
+            }
+            
+            Meeting meeting = meetingOpt.get();
+            
+            // Check if meeting is confirmed (only confirmed meetings can be completed by admin)
+            if (!"CONFIRMED".equals(meeting.getStatus())) {
+                logger.warn("⚠️ [MeetingService] Meeting is not confirmed, cannot complete: {} (status: {})", 
+                           meetingId, meeting.getStatus());
+                response.put("success", false);
+                response.put("message", "Only confirmed meetings can be marked as completed");
+                return response;
+            }
+            
+            // Update meeting status to COMPLETED
+            meeting.setStatus("COMPLETED");
+            meeting.setUpdatedAt(LocalDateTime.now());
+            
+            Meeting savedMeeting = meetingRepository.save(meeting);
+            logger.info("✅ [MeetingService] Meeting status updated to COMPLETED: {}", meetingId);
+            
+            // Get buyer and seller information for notifications
+            String buyerId = meeting.getBuyerId();
+            String sellerId = meeting.getSellerId();
+            String gemName = meeting.getGemName() != null ? meeting.getGemName() : "Gemstone";
+            
+            // Get buyer and seller details
+            Optional<User> buyerOpt = userRepository.findById(buyerId);
+            Optional<User> sellerOpt = userRepository.findById(sellerId);
+            
+            String buyerName = buyerOpt.isPresent() ? 
+                              buyerOpt.get().getFirstName() + " " + buyerOpt.get().getLastName() : "Buyer";
+            String sellerName = sellerOpt.isPresent() ? 
+                               sellerOpt.get().getFirstName() + " " + sellerOpt.get().getLastName() : "Seller";
+            
+            // Get meeting details for notification
+            String meetingLocation = meeting.getLocation() != null ? meeting.getLocation() : "GemNet Office";
+            LocalDateTime meetingTime = meeting.getConfirmedDateTime() != null ? 
+                                       meeting.getConfirmedDateTime() : meeting.getProposedDateTime();
+            
+            // Create notification message
+            String notificationTitle = "Meeting Completed - Trade Approved";
+            String notificationMessage = String.format(
+                "Admin has reviewed your meeting for %s and marked it as completed. " +
+                "Both parties are now ready to meet physically and complete the business transaction " +
+                "at %s on %s. Please ensure you arrive on time with all necessary documentation.",
+                gemName,
+                meetingLocation,
+                meetingTime != null ? meetingTime.toString() : "scheduled time"
+            );
+            
+            // Send notification to buyer
+            try {
+                createMeetingNotification(
+                    buyerId,
+                    meetingId,
+                    gemName,
+                    "MEETING_COMPLETED",
+                    notificationTitle,
+                    notificationMessage,
+                    "admin",
+                    "Admin"
+                );
+                logger.info("✅ [MeetingService] Notification sent to buyer: {}", buyerId);
+            } catch (Exception e) {
+                logger.error("❌ [MeetingService] Failed to send notification to buyer {}: {}", buyerId, e.getMessage());
+            }
+            
+            // Send notification to seller
+            try {
+                createMeetingNotification(
+                    sellerId,
+                    meetingId,
+                    gemName,
+                    "MEETING_COMPLETED",
+                    notificationTitle,
+                    notificationMessage,
+                    "admin",
+                    "Admin"
+                );
+                logger.info("✅ [MeetingService] Notification sent to seller: {}", sellerId);
+            } catch (Exception e) {
+                logger.error("❌ [MeetingService] Failed to send notification to seller {}: {}", sellerId, e.getMessage());
+            }
+            
+            response.put("success", true);
+            response.put("message", "Meeting marked as completed successfully. Notifications sent to both parties.");
+            response.put("meeting", savedMeeting);
+            
+            logger.info("✅ [MeetingService] Admin successfully completed meeting: {}", meetingId);
+            return response;
+            
+        } catch (Exception e) {
+            logger.error("❌ [MeetingService] Error in adminCompleteMeeting(): {}", e.getMessage(), e);
+            response.put("success", false);
+            response.put("message", "Failed to complete meeting: " + e.getMessage());
+            response.put("error", e.getClass().getSimpleName());
+            return response;
+        }
     }
 }

@@ -326,7 +326,16 @@ export interface NotificationInfo {
   userId: string;
   listingId: string;
   bidId?: string;
-  type: 'NEW_BID' | 'BID_PLACED' | 'BID_OUTBID' | 'BID_ACTIVITY' | 'BID_ACCEPTED' | 'BID_REJECTED';
+  type: 
+    // Bidding notifications
+    | 'NEW_BID' | 'BID_PLACED' | 'BID_OUTBID' | 'BID_ACTIVITY' | 'BID_ACCEPTED' | 'BID_REJECTED' | 'BID_WON'
+    // Selling notifications  
+    | 'ITEM_SOLD' | 'BIDDING_CANCELLED' | 'BIDDING_ENDED'
+    // Meeting notifications
+    | 'MEETING_REQUEST_RECEIVED' | 'MEETING_REQUEST_SENT' | 'MEETING_CONFIRMED' 
+    | 'MEETING_RESCHEDULED' | 'MEETING_CANCELLED' | 'MEETING_COMPLETED' | 'MEETING_SCHEDULED'
+    // Admin notifications
+    | 'USER_REGISTRATION' | 'USER_VERIFICATION' | 'NEW_LISTING' | 'LISTING_APPROVED' | 'LISTING_REJECTED';
   title: string;
   message: string;
   isRead: boolean;

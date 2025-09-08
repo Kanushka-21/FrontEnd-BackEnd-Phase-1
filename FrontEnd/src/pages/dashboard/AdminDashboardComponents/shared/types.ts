@@ -81,12 +81,32 @@ export interface Advertisement {
 export interface AdminStats {
   pendingApprovals: number;
   totalUsers: number;
+  verifiedUsers: number;
+  activeUsers: number;
+  pendingVerificationUsers: number;
   totalListings: number;
+  pendingListings: number;
+  approvedListings: number;
+  rejectedListings: number;
+  activeListings: number;
+  soldListings: number;
   totalRevenue: number;
   commissionRate: number;
   totalCommission: number;
+  totalAdvertisements: number;
   activeAdvertisements: number;
   pendingAdvertisements: number;
+  rejectedAdvertisements: number;
+  totalMeetings: number;
+  pendingMeetings: number;
+  confirmedMeetings: number;
+  completedMeetings: number;
+  totalBids: number;
+  activeBids: number;
+  pendingPercentage?: number;
+  approvedPercentage?: number;
+  rejectedPercentage?: number;
+  lastUpdated?: string;
 }
 
 // Component props interfaces

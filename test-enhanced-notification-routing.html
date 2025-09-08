@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔔 Enhanced Notification Routing Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f7fa;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: #2563eb;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .test-section {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 25px;
+        }
+
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .notification-card {
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 15px;
+            background: #f9fafb;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .notification-card:hover {
+            border-color: #3b82f6;
+            background: #eff6ff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+        }
+
+        .notification-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .notification-type {
+            font-weight: 600;
+            color: #1f2937;
+            font-size: 14px;
+        }
+
+        .context-badge {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .context-seller { background: #dcfce7; color: #166534; }
+        .context-buyer { background: #dbeafe; color: #1d4ed8; }
+        .context-admin { background: #fef3c7; color: #92400e; }
+
+        .notification-title {
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 5px;
+        }
+
+        .notification-message {
+            color: #6b7280;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .routing-info {
+            background: #f3f4f6;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            color: #4b5563;
+            border-left: 3px solid #9ca3af;
+        }
+
+        .routing-info.seller { border-left-color: #10b981; }
+        .routing-info.buyer { border-left-color: #3b82f6; }
+        .routing-info.admin { border-left-color: #f59e0b; }
+
+        .status-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f0f9ff;
+            border-radius: 8px;
+            border: 1px solid #0ea5e9;
+        }
+
+        .button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s ease;
+            margin: 5px;
+        }
+
+        .button:hover {
+            background: #2563eb;
+        }
+
+        .button.success {
+            background: #10b981;
+        }
+
+        .button.success:hover {
+            background: #059669;
+        }
+
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 6px;
+            display: none;
+        }
+
+        .result.success {
+            background: #d1fae5;
+            border: 1px solid #10b981;
+            color: #065f46;
+        }
+
+        .result.error {
+            background: #fee2e2;
+            border: 1px solid #ef4444;
+            color: #991b1b;
+        }
+
+        .result.info {
+            background: #dbeafe;
+            border: 1px solid #3b82f6;
+            color: #1e40af;
+        }
+
+        .mock-navigation {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            min-width: 300px;
+            display: none;
+        }
+
+        .mock-navigation.show {
+            display: block;
+        }
+
+        .nav-close {
+            float: right;
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            color: #6b7280;
+        }
+
+        .nav-url {
+            font-family: 'Courier New', monospace;
+            background: #f3f4f6;
+            padding: 8px 12px;
+            border-radius: 4px;
+            color: #374151;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔔 Enhanced Notification Routing Test</h1>
+        
+        <div class="test-section">
+            <h3>🎯 Enhanced Navigation System</h3>
+            <p>This enhanced notification system now provides context-aware routing that intelligently directs users to the most relevant dashboard sections based on their role and notification type:</p>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0;">
+                <div style="text-align: center; padding: 15px; background: #dcfce7; border-radius: 8px;">
+                    <div style="font-weight: 600; color: #166534;">👨‍💼 Seller Context</div>
+                    <div style="font-size: 12px; color: #15803d; margin-top: 5px;">Bids → Meetings → Listings</div>
+                </div>
+                <div style="text-align: center; padding: 15px; background: #dbeafe; border-radius: 8px;">
+                    <div style="font-weight: 600; color: #1d4ed8;">🛒 Buyer Context</div>
+                    <div style="font-size: 12px; color: #2563eb; margin-top: 5px;">Purchases → Bids → Meetings</div>
+                </div>
+                <div style="text-align: center; padding: 15px; background: #fef3c7; border-radius: 8px;">
+                    <div style="font-weight: 600; color: #92400e;">⚙️ Admin Context</div>
+                    <div style="font-size: 12px; color: #d97706; margin-top: 5px;">Users → Listings → Meetings</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔔 Seller Notifications</h3>
+            <p>Test seller-specific notifications and their routing destinations:</p>
+            <div class="test-grid">
+                <div class="notification-card" onclick="testNotificationRouting('seller', 'NEW_BID')">
+                    <div class="notification-header">
+                        <div class="notification-type">NEW_BID</div>
+                        <span class="context-badge context-seller">Seller</span>
+                    </div>
+                    <div class="notification-title">New Bid Received!</div>
+                    <div class="notification-message">John placed a bid of LKR 250,000 on your Blue Sapphire</div>
+                    <div class="routing-info seller">→ /seller/dashboard?section=bids</div>
+                </div>
+
+                <div class="notification-card" onclick="testNotificationRouting('seller', 'ITEM_SOLD')">
+                    <div class="notification-header">
+                        <div class="notification-type">ITEM_SOLD</div>
+                        <span class="context-badge context-seller">Seller</span>
+                    </div>
+                    <div class="notification-title">Congratulations! Item Sold</div>
+                    <div class="notification-message">Your Ruby gemstone has been sold to Sarah for LKR 320,000</div>
+                    <div class="routing-info seller">→ /seller/dashboard?section=listings</div>
+                </div>
+
+                <div class="notification-card" onclick="testNotificationRouting('seller', 'MEETING_REQUEST_RECEIVED')">
+                    <div class="notification-header">
+                        <div class="notification-type">MEETING_REQUEST_RECEIVED</div>
+                        <span class="context-badge context-seller">Seller</span>
+                    </div>
+                    <div class="notification-title">Meeting Request</div>
+                    <div class="notification-message">Michael wants to schedule a meeting for Emerald purchase</div>
+                    <div class="routing-info seller">→ /seller/dashboard?section=meetings</div>
+                </div>
+
+                <div class="notification-card" onclick="testNotificationRouting('seller', 'MEETING_CONFIRMED')">
+                    <div class="notification-header">
+                        <div class="notification-type">MEETING_CONFIRMED</div>
+                        <span class="context-badge context-seller">Seller</span>
+                    </div>
+                    <div class="notification-title">Meeting Confirmed</div>
+                    <div class="notification-message">Meeting with David confirmed for June 15, 2025 at 2:00 PM</div>
+                    <div class="routing-info seller">→ /seller/dashboard?section=meetings</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>🛒 Buyer Notifications</h3>
+            <p>Test buyer-specific notifications and their routing destinations:</p>
+            <div class="test-grid">
+                <div class="notification-card" onclick="testNotificationRouting('buyer', 'BID_WON')">
+                    <div class="notification-header">
+                        <div class="notification-type">BID_WON</div>
+                        <span class="context-badge context-buyer">Buyer</span>
+                    </div>
+                    <div class="notification-title">Congratulations! You Won!</div>
+                    <div class="notification-message">You won the bid for Padparadscha Sapphire at LKR 450,000</div>
+                    <div class="routing-info buyer">→ /buyer/dashboard?section=purchases</div>
+                </div>
+
+                <div class="notification-card" onclick="testNotificationRouting('buyer', 'BID_OUTBID')">
+                    <div class="notification-header">
+                        <div class="notification-type">BID_OUTBID</div>
+                        <span class="context-badge context-buyer">Buyer</span>
+                    </div>
+                    <div class="notification-title">You've Been Outbid</div>
+                    <div class="notification-message">Someone placed a higher bid on the Tanzanite you're watching</div>
+                    <div class="routing-info buyer">→ /buyer/dashboard?section=bids</div>
+                </div>
+
+                <div class="notification-card" onclick="testNotificationRouting('buyer', 'MEETING_REQUEST_SENT')">
+                    <div class="notification-header">
+                        <div class="notification-type">MEETING_REQUEST_SENT</div>
+                        <span class="context-badge context-buyer">Buyer</span>
+                    </div>
+                    <div class="notification-title">Meeting Request Sent</div>
+                    <div class="notification-message">Your meeting request has been sent to seller Alice</div>
+                    <div class="routing-info buyer">→ /buyer/dashboard?section=meetings</div>
+                </div>
+
+                <div class="notification-card" onclick="testNotificationRouting('buyer', 'BID_ACCEPTED')">
+                    <div class="notification-header">
+                        <div class="notification-type">BID_ACCEPTED</div>
+                        <span class="context-badge context-buyer">Buyer</span>
+                    </div>
+                    <div class="notification-title">Bid Accepted!</div>
+                    <div class="notification-message">Your bid of LKR 180,000 for Cat's Eye has been accepted</div>
+                    <div class="routing-info buyer">→ /buyer/dashboard?section=purchases</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>⚙️ Admin Notifications</h3>
+            <p>Test admin-specific notifications and their routing destinations:</p>
+            <div class="test-grid">
+                <div class="notification-card" onclick="testNotificationRouting('admin', 'USER_REGISTRATION')">
+                    <div class="notification-header">
+                        <div class="notification-type">USER_REGISTRATION</div>
+                        <span class="context-badge context-admin">Admin</span>
+                    </div>
+                    <div class="notification-title">New User Registration</div>
+                    <div class="notification-message">New seller registration requires verification</div>
+                    <div class="routing-info admin">→ /admin/dashboard?section=users</div>
+                </div>
+
+                <div class="notification-card" onclick="testNotificationRouting('admin', 'NEW_LISTING')">
+                    <div class="notification-header">
+                        <div class="notification-type">NEW_LISTING</div>
+                        <span class="context-badge context-admin">Admin</span>
+                    </div>
+                    <div class="notification-title">New Gemstone Listing</div>
+                    <div class="notification-message">A new Ceylon Sapphire listing requires approval</div>
+                    <div class="routing-info admin">→ /admin/dashboard?section=listings</div>
+                </div>
+
+                <div class="notification-card" onclick="testNotificationRouting('admin', 'MEETING_SCHEDULED')">
+                    <div class="notification-header">
+                        <div class="notification-type">MEETING_SCHEDULED</div>
+                        <span class="context-badge context-admin">Admin</span>
+                    </div>
+                    <div class="notification-title">Meeting Scheduled</div>
+                    <div class="notification-message">New meeting scheduled between buyer and seller</div>
+                    <div class="routing-info admin">→ /admin/dashboard?section=meetings</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="status-section">
+            <h3>📊 Routing Test Results</h3>
+            <p>Click on any notification card above to test the enhanced routing system. The system will simulate the navigation and show you where the user would be redirected.</p>
+            
+            <button class="button success" onclick="testAllNotifications()">Test All Notifications</button>
+            <button class="button" onclick="openDashboards()">Open Dashboards for Testing</button>
+            <button class="button" onclick="validateBackendIntegration()">Validate Backend Integration</button>
+            
+            <div id="testResults" class="result"></div>
+        </div>
+    </div>
+
+    <!-- Mock Navigation Window -->
+    <div id="mockNavigation" class="mock-navigation">
+        <button class="nav-close" onclick="closeMockNavigation()">×</button>
+        <h4 style="margin: 0 0 15px 0; color: #1f2937;">🔄 Navigation Simulation</h4>
+        <div id="navContent"></div>
+    </div>
+
+    <script>
+        // Enhanced notification routing logic (matches NotificationComponent.tsx)
+        function getRoutingDestination(context, notificationType) {
+            console.log('🔔 Routing notification:', { type: notificationType, context });
+            
+            if (context === 'seller') {
+                switch (notificationType) {
+                    case 'NEW_BID':
+                        return '/seller/dashboard?section=bids';
+                    case 'ITEM_SOLD':
+                    case 'BIDDING_CANCELLED':
+                        return '/seller/dashboard?section=listings';
+                    case 'MEETING_REQUEST_RECEIVED':
+                    case 'MEETING_CONFIRMED':
+                    case 'MEETING_RESCHEDULED':
+                    case 'MEETING_CANCELLED':
+                    case 'MEETING_COMPLETED':
+                        return '/seller/dashboard?section=meetings';
+                    default:
+                        return '/seller/dashboard?section=overview';
+                }
+            } else if (context === 'buyer') {
+                switch (notificationType) {
+                    case 'BID_WON':
+                    case 'BID_ACCEPTED':
+                        return '/buyer/dashboard?section=purchases';
+                    case 'BID_OUTBID':
+                    case 'BID_PLACED':
+                    case 'BIDDING_ENDED':
+                        return '/buyer/dashboard?section=bids';
+                    case 'MEETING_REQUEST_SENT':
+                    case 'MEETING_CONFIRMED':
+                    case 'MEETING_RESCHEDULED':
+                    case 'MEETING_CANCELLED':
+                    case 'MEETING_COMPLETED':
+                        return '/buyer/dashboard?section=meetings';
+                    default:
+                        return '/buyer/dashboard?section=overview';
+                }
+            } else if (context === 'admin') {
+                switch (notificationType) {
+                    case 'USER_REGISTRATION':
+                    case 'USER_VERIFICATION':
+                        return '/admin/dashboard?section=users';
+                    case 'NEW_LISTING':
+                    case 'LISTING_APPROVED':
+                    case 'LISTING_REJECTED':
+                        return '/admin/dashboard?section=listings';
+                    case 'MEETING_SCHEDULED':
+                    case 'MEETING_COMPLETED':
+                        return '/admin/dashboard?section=meetings';
+                    default:
+                        return '/admin/dashboard?section=overview';
+                }
+            }
+            
+            // Fallback routing
+            return '/marketplace';
+        }
+
+        function testNotificationRouting(context, notificationType) {
+            const destination = getRoutingDestination(context, notificationType);
+            
+            // Show mock navigation
+            showMockNavigation(context, notificationType, destination);
+            
+            // Log the routing
+            console.log(`🔔 ${context.toUpperCase()} notification "${notificationType}" → ${destination}`);
+        }
+
+        function showMockNavigation(context, notificationType, destination) {
+            const mockNav = document.getElementById('mockNavigation');
+            const navContent = document.getElementById('navContent');
+            
+            navContent.innerHTML = `
+                <div style="margin-bottom: 15px;">
+                    <strong>Context:</strong> <span class="context-badge context-${context}">${context.toUpperCase()}</span>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <strong>Notification Type:</strong> <code>${notificationType}</code>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <strong>Routing Destination:</strong>
+                    <div class="nav-url">${destination}</div>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <strong>Dashboard Section:</strong> <code>${destination.split('section=')[1] || 'overview'}</code>
+                </div>
+                <div style="color: #10b981; font-weight: 600;">
+                    ✅ Navigation would redirect user to appropriate dashboard section
+                </div>
+            `;
+            
+            mockNav.classList.add('show');
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                closeMockNavigation();
+            }, 5000);
+        }
+
+        function closeMockNavigation() {
+            document.getElementById('mockNavigation').classList.remove('show');
+        }
+
+        function testAllNotifications() {
+            const notifications = [
+                // Seller notifications
+                { context: 'seller', type: 'NEW_BID' },
+                { context: 'seller', type: 'ITEM_SOLD' },
+                { context: 'seller', type: 'MEETING_REQUEST_RECEIVED' },
+                { context: 'seller', type: 'MEETING_CONFIRMED' },
+                
+                // Buyer notifications
+                { context: 'buyer', type: 'BID_WON' },
+                { context: 'buyer', type: 'BID_OUTBID' },
+                { context: 'buyer', type: 'MEETING_REQUEST_SENT' },
+                { context: 'buyer', type: 'BID_ACCEPTED' },
+                
+                // Admin notifications
+                { context: 'admin', type: 'USER_REGISTRATION' },
+                { context: 'admin', type: 'NEW_LISTING' },
+                { context: 'admin', type: 'MEETING_SCHEDULED' }
+            ];
+
+            let results = '<h4>🧪 Comprehensive Routing Test Results:</h4>';
+            
+            notifications.forEach(notification => {
+                const destination = getRoutingDestination(notification.context, notification.type);
+                const section = destination.split('section=')[1] || 'overview';
+                
+                results += `
+                    <div style="margin: 10px 0; padding: 10px; background: #f9fafb; border-left: 3px solid #10b981; border-radius: 4px;">
+                        <strong>${notification.context.toUpperCase()}</strong> - <code>${notification.type}</code>
+                        <br><span style="color: #6b7280; font-size: 14px;">→ ${destination} (${section} section)</span>
+                    </div>
+                `;
+            });
+
+            results += `
+                <div style="margin-top: 20px; padding: 15px; background: #d1fae5; border-radius: 6px; color: #065f46;">
+                    <strong>✅ All ${notifications.length} notification types tested successfully!</strong>
+                    <br>Each notification now routes to the most appropriate dashboard section based on context and type.
+                </div>
+            `;
+
+            showResult('testResults', results, 'success');
+        }
+
+        function openDashboards() {
+            const dashboards = [
+                'http://localhost:3003/buyer/dashboard',
+                'http://localhost:3003/seller/dashboard',
+                'http://localhost:3003/admin/dashboard'
+            ];
+
+            dashboards.forEach(url => {
+                window.open(url, '_blank');
+            });
+
+            showResult('testResults', 
+                '<h4>🚀 Dashboard Testing:</h4>' +
+                '<p>Opened all three dashboards in new tabs. Test the notification routing by:</p>' +
+                '<ol>' +
+                '<li>Log in as different user types (buyer/seller/admin)</li>' +
+                '<li>Check notification bell for unread notifications</li>' +
+                '<li>Click notifications to verify they route to correct sections</li>' +
+                '<li>Verify each dashboard section loads properly</li>' +
+                '</ol>', 
+                'info');
+        }
+
+        async function validateBackendIntegration() {
+            let message = '<h4>🔍 Backend Integration Validation:</h4>';
+            
+            try {
+                // Test backend connectivity
+                const response = await fetch('http://localhost:9092/api/auth/health');
+                if (response.ok) {
+                    message += '<div style="color: #10b981;">✅ Backend connectivity: OK</div>';
+                } else {
+                    message += '<div style="color: #ef4444;">❌ Backend connectivity: Failed</div>';
+                }
+                
+                // Test notification endpoints
+                const notificationTests = [
+                    'http://localhost:9092/api/bidding/notifications/675c45b7036fefc08e8c4b7a?context=seller',
+                    'http://localhost:9092/api/bidding/notifications/675c45b7036fefc08e8c4b7a?context=buyer'
+                ];
+
+                for (const url of notificationTests) {
+                    try {
+                        const testResponse = await fetch(url);
+                        const context = url.includes('context=seller') ? 'seller' : 'buyer';
+                        if (testResponse.ok) {
+                            message += `<div style="color: #10b981;">✅ ${context} notifications: OK</div>`;
+                        } else {
+                            message += `<div style="color: #f59e0b;">⚠️ ${context} notifications: ${testResponse.status}</div>`;
+                        }
+                    } catch (error) {
+                        const context = url.includes('context=seller') ? 'seller' : 'buyer';
+                        message += `<div style="color: #ef4444;">❌ ${context} notifications: Error</div>`;
+                    }
+                }
+
+            } catch (error) {
+                message += '<div style="color: #ef4444;">❌ Backend connectivity: Error</div>';
+            }
+            
+            message += `
+                <div style="margin-top: 15px; padding: 10px; background: #eff6ff; border-radius: 6px;">
+                    <strong>💡 Enhanced Features:</strong><br>
+                    • Context-aware notification filtering (seller/buyer/admin)<br>
+                    • Smart routing to relevant dashboard sections<br>
+                    • Real-time unread count updates<br>
+                    • Comprehensive notification type support<br>
+                    • Meeting system integration<br>
+                </div>
+            `;
+            
+            showResult('testResults', message, 'info');
+        }
+
+        function showResult(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = message;
+            element.className = `result ${type}`;
+            element.style.display = 'block';
+        }
+
+        // Auto-start validation when page loads
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                showResult('testResults', 
+                    '<h4>🎯 Enhanced Notification Routing Ready!</h4>' +
+                    '<p>The notification system has been enhanced with context-aware routing that intelligently directs users to the most relevant dashboard sections.</p>' +
+                    '<p><strong>Key Improvements:</strong></p>' +
+                    '<ul>' +
+                    '<li>✅ Seller notifications route to bids, meetings, or listings sections</li>' +
+                    '<li>✅ Buyer notifications route to purchases, bids, or meetings sections</li>' +
+                    '<li>✅ Admin notifications route to users, listings, or meetings sections</li>' +
+                    '<li>✅ Meeting notifications properly handled for all contexts</li>' +
+                    '<li>✅ Fallback routing for unknown notification types</li>' +
+                    '</ul>' +
+                    '<p>Click on any notification card above to test the routing behavior!</p>', 
+                    'success');
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

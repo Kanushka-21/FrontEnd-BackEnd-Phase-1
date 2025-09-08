@@ -323,7 +323,23 @@ const AdminNotificationComponent: React.FC<AdminNotificationComponentProps> = ({
     // Navigate to relevant section if callback provided
     if (onSectionChange && notification.section) {
       console.log('🔔 Navigating to admin section:', notification.section);
-      onSectionChange(notification.section);
+      
+      // Map notification sections to dashboard sections correctly
+      const sectionMap: { [key: string]: string } = {
+        'users': 'users',
+        'listings': 'listings', 
+        'meetings': 'meetings',
+        'advertisements': 'advertisements',
+        'settings': 'settings',
+        'overview': 'overview'
+      };
+      
+      const targetSection = sectionMap[notification.section] || notification.section;
+      console.log('🔔 Mapped section:', notification.section, '->', targetSection);
+      
+      onSectionChange(targetSection);
+    } else {
+      console.log('🔔 No section change callback available');
     }
   };
 

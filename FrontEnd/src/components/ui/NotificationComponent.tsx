@@ -240,20 +240,105 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({
     // Close notification dropdown first
     setIsOpen(false);
     
-    // Handle different notification types with different navigation
-    if (notification.type === 'BID_ACCEPTED') {
-      console.log('🔔 Navigating to Purchase History for BID_ACCEPTED notification');
-      // Navigate to Purchase History dashboard for successful bid wins
-      window.location.href = '/buyer/dashboard?section=purchases';
-    } else if (notification.listingId) {
-      console.log('🔔 Navigating to marketplace with listingId:', notification.listingId);
-      // Navigate to marketplace with specific gemstone for other notification types
-      const marketplaceUrl = `/marketplace?viewGemstone=${notification.listingId}`;
-      console.log('🔔 Navigation URL:', marketplaceUrl);
-      window.location.href = marketplaceUrl;
-    } else {
-      console.log('🔔 No specific navigation for this notification type');
-    }
+    // Enhanced notification routing based on context and type
+    const routeNotification = () => {
+      console.log('🔔 Routing notification:', { type: notification.type, context });
+      
+      // Context-aware routing based on user role
+      if (context === 'seller') {
+        // Seller dashboard routing
+        switch (notification.type) {
+          case 'NEW_BID':
+            console.log('🔔 Routing to seller bids section');
+            window.location.href = '/seller/dashboard?section=bids';
+            break;
+          case 'ITEM_SOLD':
+            console.log('🔔 Routing to seller listings section');
+            window.location.href = '/seller/dashboard?section=listings';
+            break;
+          case 'BIDDING_CANCELLED':
+            console.log('🔔 Routing to seller listings section');
+            window.location.href = '/seller/dashboard?section=listings';
+            break;
+          case 'MEETING_REQUEST_RECEIVED':
+          case 'MEETING_CONFIRMED':
+          case 'MEETING_RESCHEDULED':
+          case 'MEETING_CANCELLED':
+          case 'MEETING_COMPLETED':
+            console.log('🔔 Routing to seller meetings section');
+            window.location.href = '/seller/dashboard?section=meetings';
+            break;
+          default:
+            console.log('🔔 Routing to seller overview');
+            window.location.href = '/seller/dashboard?section=overview';
+        }
+      } else if (context === 'buyer') {
+        // Buyer dashboard routing
+        switch (notification.type) {
+          case 'BID_WON':
+          case 'BID_ACCEPTED':
+            console.log('🔔 Routing to buyer purchases section');
+            window.location.href = '/buyer/dashboard?section=purchases';
+            break;
+          case 'BID_OUTBID':
+          case 'BID_PLACED':
+          case 'BIDDING_ENDED':
+            console.log('🔔 Routing to buyer bids section');
+            window.location.href = '/buyer/dashboard?section=bids';
+            break;
+          case 'MEETING_REQUEST_SENT':
+          case 'MEETING_CONFIRMED':
+          case 'MEETING_RESCHEDULED':
+          case 'MEETING_CANCELLED':
+          case 'MEETING_COMPLETED':
+            console.log('🔔 Routing to buyer meetings section');
+            window.location.href = '/buyer/dashboard?section=meetings';
+            break;
+          default:
+            console.log('🔔 Routing to buyer overview');
+            window.location.href = '/buyer/dashboard?section=overview';
+        }
+      } else if (context === 'admin') {
+        // Admin dashboard routing
+        switch (notification.type) {
+          case 'USER_REGISTRATION':
+          case 'USER_VERIFICATION':
+            console.log('🔔 Routing to admin users section');
+            window.location.href = '/admin/dashboard?section=users';
+            break;
+          case 'NEW_LISTING':
+          case 'LISTING_APPROVED':
+          case 'LISTING_REJECTED':
+            console.log('🔔 Routing to admin listings section');
+            window.location.href = '/admin/dashboard?section=listings';
+            break;
+          case 'MEETING_SCHEDULED':
+          case 'MEETING_COMPLETED':
+            console.log('🔔 Routing to admin meetings section');
+            window.location.href = '/admin/dashboard?section=meetings';
+            break;
+          default:
+            console.log('🔔 Routing to admin overview');
+            window.location.href = '/admin/dashboard?section=overview';
+        }
+      } else {
+        // Fallback routing - marketplace or listing specific
+        if (notification.type === 'BID_ACCEPTED' || notification.type === 'BID_WON') {
+          console.log('🔔 Fallback: Routing to buyer purchases');
+          window.location.href = '/buyer/dashboard?section=purchases';
+        } else if (notification.listingId) {
+          console.log('🔔 Fallback: Routing to marketplace with listingId:', notification.listingId);
+          const marketplaceUrl = `/marketplace?viewGemstone=${notification.listingId}`;
+          window.location.href = marketplaceUrl;
+        } else {
+          console.log('🔔 Fallback: Routing to marketplace');
+          window.location.href = '/marketplace';
+        }
+      }
+    };
+    
+    // Execute routing
+    routeNotification();
   };
 
   const getNotificationIcon = (type: string) => {
@@ -270,6 +355,18 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({
         return <CheckCircle className="w-5 h-5 text-green-600" />;
       case 'BID_REJECTED':
         return <X className="w-5 h-5 text-gray-600" />;
+      // Meeting notification icons
+      case 'MEETING_REQUEST_RECEIVED':
+      case 'MEETING_REQUEST_SENT':
+        return <Clock className="w-5 h-5 text-blue-600" />;
+      case 'MEETING_CONFIRMED':
+        return <CheckCircle className="w-5 h-5 text-green-600" />;
+      case 'MEETING_RESCHEDULED':
+        return <Clock className="w-5 h-5 text-orange-600" />;
+      case 'MEETING_CANCELLED':
+        return <X className="w-5 h-5 text-red-600" />;
+      case 'MEETING_COMPLETED':
+        return <CheckCircle className="w-5 h-5 text-purple-600" />;
       default:
         return <Bell className="w-5 h-5 text-gray-600" />;
     }
@@ -301,6 +398,23 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({
         break;
       case 'BIDDING_ENDED':
         typeClasses = isRead ? "" : "bg-gray-50 border-l-gray-500";
+        break;
+      // Meeting notification styles
+      case 'MEETING_REQUEST_RECEIVED':
+      case 'MEETING_REQUEST_SENT':
+        typeClasses = isRead ? "" : "bg-blue-50 border-l-blue-500";
+        break;
+      case 'MEETING_CONFIRMED':
+        typeClasses = isRead ? "" : "bg-green-50 border-l-green-500";
+        break;
+      case 'MEETING_RESCHEDULED':
+        typeClasses = isRead ? "" : "bg-orange-50 border-l-orange-500";
+        break;
+      case 'MEETING_CANCELLED':
+        typeClasses = isRead ? "" : "bg-red-50 border-l-red-500";
+        break;
+      case 'MEETING_COMPLETED':
+        typeClasses = isRead ? "" : "bg-purple-50 border-l-purple-500";
         break;
       default:
         typeClasses = unreadClasses;

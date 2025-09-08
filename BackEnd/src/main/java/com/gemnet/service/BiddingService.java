@@ -37,6 +37,9 @@ public class BiddingService {
     @Autowired
     private UserRepository userRepository;
     
+    @Autowired
+    private EmailService emailService;
+    
     /**
      * Place a bid on a gem listing
      */
@@ -329,11 +332,25 @@ public class BiddingService {
     private List<String> getNotificationTypesForContext(String context) {
         switch (context.toLowerCase()) {
             case "seller":
-                // Seller-related notification types
-                return java.util.Arrays.asList("NEW_BID", "ITEM_SOLD", "BIDDING_CANCELLED");
+                // Seller-related notification types (bidding + meetings)
+                return java.util.Arrays.asList(
+                    "NEW_BID", "ITEM_SOLD", "BIDDING_CANCELLED",
+                    "MEETING_REQUEST_RECEIVED", "MEETING_CONFIRMED", "MEETING_RESCHEDULED", 
+                    "MEETING_CANCELLED", "MEETING_COMPLETED"
+                );
             case "buyer":
-                // Buyer-related notification types
-                return java.util.Arrays.asList("BID_WON", "BID_OUTBID", "BID_PLACED", "BIDDING_ENDED");
+                // Buyer-related notification types (bidding + meetings)  
+                return java.util.Arrays.asList(
+                    "BID_WON", "BID_OUTBID", "BID_PLACED", "BIDDING_ENDED",
+                    "MEETING_REQUEST_SENT", "MEETING_CONFIRMED", "MEETING_RESCHEDULED",
+                    "MEETING_CANCELLED", "MEETING_COMPLETED"
+                );
+            case "admin":
+                // Admin-related notification types
+                return java.util.Arrays.asList(
+                    "MEETING_REQUEST", "USER_REGISTRATION", "LISTING_PENDING", 
+                    "ADVERTISEMENT_PENDING", "SYSTEM_ALERT"
+                );
             default:
                 return null; // No filtering
         }
@@ -467,6 +484,15 @@ public class BiddingService {
     private void createNotification(String userId, String listingId, String bidId, String type,
                                   String title, String message, String triggerUserId, 
                                   String triggerUserName, String bidAmount, String gemName) {
+        createNotification(userId, listingId, bidId, type, title, message, triggerUserId, triggerUserName, bidAmount, gemName, null);
+    }
+
+    /**
+     * Enhanced helper method to create notifications with bidding countdown
+     */
+    private void createNotification(String userId, String listingId, String bidId, String type,
+                                  String title, String message, String triggerUserId, 
+                                  String triggerUserName, String bidAmount, String gemName, GemListing gemListing) {
         try {
             Notification notification = new Notification(
                 userId, listingId, bidId, type, title, message,
@@ -474,6 +500,24 @@ public class BiddingService {
             );
             notificationRepository.save(notification);
             System.out.println("✅ Notification created: " + type + " for user " + userId);
+            
+            // Send email notification with countdown information
+            try {
+                String details = "Gem: " + gemName + " | Amount: " + bidAmount + " | From: " + triggerUserName;
+                
+                // Extract bidding end time from gem listing if available
+                String biddingEndTime = null;
+                if (gemListing != null && gemListing.getBiddingEndTime() != null) {
+                    biddingEndTime = gemListing.getBiddingEndTime().toString();
+                }
+                
+                emailService.sendNotificationEmail(userId, type, title, message, details, biddingEndTime, gemName);
+                System.out.println("📧 Email notification sent for: " + type + " to user " + userId);
+            } catch (Exception e) {
+                System.err.println("⚠️ Failed to send email notification: " + e.getMessage());
+                // Don't fail the notification creation if email fails
+            }
+            
         } catch (Exception e) {
             System.err.println("❌ Error creating notification: " + e.getMessage());
             e.printStackTrace();
@@ -591,7 +635,8 @@ public class BiddingService {
                 newBidderId,
                 newBidderName,
                 newBidAmount,
-                gemName
+                gemName,
+                listing
             );
             
             // 2. Handle previous highest bidder (if exists)
@@ -612,7 +657,8 @@ public class BiddingService {
                     newBidderId,
                     newBidderName,
                     newBidAmount,
-                    gemName
+                    gemName,
+                    listing
                 );
             }
             
@@ -638,7 +684,8 @@ public class BiddingService {
                 newBidderId,
                 newBidderName,
                 newBidAmount,
-                gemName
+                gemName,
+                listing
             );
             
             // 4. Notify other bidders (not the current highest or the new bidder) about increased activity
@@ -662,7 +709,8 @@ public class BiddingService {
                         newBidderId,
                         newBidderName,
                         newBidAmount,
-                        gemName
+                        gemName,
+                        listing
                     );
                 }
             }
@@ -995,7 +1043,8 @@ public class BiddingService {
                 winningBidderId,
                 winningBidderName,
                 bidAmountFormatted,
-                gemName
+                gemName,
+                listing
             );
 
             // Notification to the seller - ITEM SOLD
@@ -1011,7 +1060,8 @@ public class BiddingService {
                 winningBidderId,
                 winningBidderName,
                 bidAmountFormatted,
-                gemName
+                gemName,
+                listing
             );
 
             // Also notify other bidders that the bidding has ended (if any)
@@ -1034,7 +1084,8 @@ public class BiddingService {
                     winningBidderId,
                     winningBidderName,
                     bidAmountFormatted,
-                    gemName
+                    gemName,
+                    listing
                 );
             }
 

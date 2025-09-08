@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Service for creating and managing system notifications to admins
@@ -20,6 +21,9 @@ public class NotificationService {
 
     @Autowired
     private UserRepository userRepository;
+    
+    @Autowired
+    private EmailService emailService;
 
     /**
      * Create admin notification for system events
@@ -47,9 +51,38 @@ public class NotificationService {
                 notificationRepository.save(notification);
                 System.out.println("✅ Admin notification created: " + type + " for admin " + admin.getEmail());
             }
+            
+            // Send admin email notifications
+            try {
+                String details = "Related: " + relatedName + " | Triggered by: " + getTriggeredByUserName(triggerUserId);
+                emailService.sendAdminNotificationEmail(type, title, message, details);
+                System.out.println("📧 Admin email notifications sent for: " + type);
+            } catch (Exception e) {
+                System.err.println("⚠️ Failed to send admin email notifications: " + e.getMessage());
+                // Don't fail the notification creation if email fails
+            }
+            
         } catch (Exception e) {
             System.err.println("❌ Error creating admin notification: " + e.getMessage());
             e.printStackTrace();
+        }
+    }
+    
+    /**
+     * Helper method to get user name by ID
+     */
+    private String getTriggeredByUserName(String userId) {
+        try {
+            if (userId != null) {
+                Optional<User> userOpt = userRepository.findById(userId);
+                if (userOpt.isPresent()) {
+                    User user = userOpt.get();
+                    return user.getFirstName() + " " + user.getLastName();
+                }
+            }
+            return "System";
+        } catch (Exception e) {
+            return "Unknown User";
         }
     }
 

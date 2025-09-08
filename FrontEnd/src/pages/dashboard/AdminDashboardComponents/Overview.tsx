@@ -1,15 +1,62 @@
-import React from 'react';
-import { Card, Row, Col, Button, Alert, List, Avatar, Tag } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Card, Row, Col, Button, Alert, List, Avatar, Tag, message } from 'antd';
 import { 
   UserOutlined, FileTextOutlined, DollarOutlined, 
   NotificationOutlined, BarChartOutlined 
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { AdminComponentProps, StatsCard, generateStats, pendingUsers, recentTransactions, formatLKR } from './shared';
+import { AdminComponentProps, StatsCard, pendingUsers, recentTransactions, formatLKR } from './shared';
 import NotificationSummary from '@/components/admin/NotificationSummary';
+import { api } from '@/services/api';
 
 const Overview: React.FC<AdminComponentProps> = ({ user, onTabChange }) => {
-  const stats = generateStats();
+  const [stats, setStats] = useState({
+    pendingApprovals: 0,
+    totalUsers: 125,
+    totalListings: 342,
+    totalRevenue: 48750,
+    commissionRate: 10,
+    totalCommission: 4875,
+    activeAdvertisements: 1
+  });
+  const [loading, setLoading] = useState(true);
+
+  // Fetch dashboard statistics on component mount
+  useEffect(() => {
+    const fetchDashboardStats = async () => {
+      try {
+        setLoading(true);
+        console.log('🔄 Fetching dashboard statistics...');
+        
+        const response = await api.admin.getDashboardStats();
+        
+        if (response.success && response.data) {
+          console.log('✅ Dashboard stats received:', response.data);
+          
+          // Update stats with dynamic data from API
+          setStats({
+            pendingApprovals: response.data.pendingApprovals || 0,
+            totalUsers: response.data.totalUsers || 0,
+            totalListings: response.data.totalListings || 0,
+            totalRevenue: response.data.totalRevenue || 0,
+            commissionRate: response.data.commissionRate || 10,
+            totalCommission: response.data.totalCommission || 0,
+            activeAdvertisements: response.data.activeAdvertisements || 0
+          });
+        } else {
+          console.error('❌ Failed to fetch dashboard stats:', response.message);
+          message.error('Failed to load dashboard statistics');
+        }
+      } catch (error) {
+        console.error('❌ Error fetching dashboard stats:', error);
+        message.error('Error loading dashboard statistics');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardStats();
+  }, []);
 
   return (
     <div className="space-y-6">
