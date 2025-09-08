@@ -16,15 +16,71 @@ import java.nio.file.Paths;
 
 @RestController
 @RequestMapping("/uploads")
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001", "http://localhost:3002"})
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:3001", "http://localhost:3002", "http://localhost:3003", "http://localhost:3004"})
 public class StaticResourceController {
 
     private final Path uploadsLocation;
 
     public StaticResourceController() {
-        this.uploadsLocation = Paths.get("uploads").toAbsolutePath().normalize();
+        // Try multiple possible paths for uploads directory
+        Path uploadsPath = null;
+        String[] possiblePaths = {
+            "uploads",              // Current directory
+            "../uploads",           // Parent directory
+            "./uploads",            // Explicit current directory
+            "BackEnd/../uploads",   // From BackEnd to parent
+            "../../uploads"         // Two levels up
+        };
+        
+        for (String pathStr : possiblePaths) {
+            Path testPath = Paths.get(pathStr).toAbsolutePath().normalize();
+            if (Files.exists(testPath) && Files.isDirectory(testPath)) {
+                uploadsPath = testPath;
+                System.out.println("✅ Found uploads directory at: " + testPath);
+                break;
+            } else {
+                System.out.println("⚠️ Checked path: " + testPath + " - " + (Files.exists(testPath) ? "exists but not directory" : "does not exist"));
+            }
+        }
+        
+        // If none of the standard paths work, try to find it dynamically
+        if (uploadsPath == null) {
+            try {
+                Path currentDir = Paths.get("").toAbsolutePath();
+                System.out.println("🔍 Current working directory: " + currentDir);
+                
+                // Look for uploads directory in current and parent directories
+                Path currentUploads = currentDir.resolve("uploads");
+                Path parentUploads = currentDir.getParent().resolve("uploads");
+                
+                if (Files.exists(currentUploads) && Files.isDirectory(currentUploads)) {
+                    uploadsPath = currentUploads;
+                    System.out.println("✅ Found uploads in current directory: " + uploadsPath);
+                } else if (Files.exists(parentUploads) && Files.isDirectory(parentUploads)) {
+                    uploadsPath = parentUploads;
+                    System.out.println("✅ Found uploads in parent directory: " + uploadsPath);
+                }
+            } catch (Exception e) {
+                System.err.println("❌ Error during dynamic path resolution: " + e.getMessage());
+            }
+        }
+        
+        // Final fallback - create uploads directory if it doesn't exist
+        if (uploadsPath == null) {
+            uploadsPath = Paths.get("uploads").toAbsolutePath().normalize();
+            try {
+                Files.createDirectories(uploadsPath);
+                System.out.println("📁 Created uploads directory: " + uploadsPath);
+            } catch (Exception e) {
+                System.err.println("❌ Failed to create uploads directory: " + e.getMessage());
+            }
+        }
+        
+        this.uploadsLocation = uploadsPath;
         System.out.println("📁 Static Resource Controller initialized");
-        System.out.println("📁 Uploads location: " + uploadsLocation.toString());
+        System.out.println("📁 Final uploads location: " + uploadsLocation.toString());
+        System.out.println("📁 Directory exists: " + Files.exists(uploadsLocation));
+        System.out.println("📁 Is directory: " + Files.isDirectory(uploadsLocation));
     }
 
     @GetMapping("/**")

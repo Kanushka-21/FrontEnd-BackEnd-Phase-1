@@ -268,10 +268,71 @@ public class MeetingController {
     }
     
     /**
-     * Get all meetings (admin only)
+     * Get all meetings (admin only) with detailed information
      */
     @GetMapping("/admin/all")
     public ResponseEntity<?> getAllMeetings() {
+        try {
+            System.out.println("🔄 [Admin] Getting all meetings with details...");
+            List<Map<String, Object>> meetings = meetingService.getAllMeetingsWithDetails();
+            System.out.println("✅ [Admin] Successfully retrieved " + meetings.size() + " meetings");
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("meetings", meetings);
+            response.put("count", meetings.size());
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            System.err.println("❌ [Admin] Error fetching meetings: " + e.getMessage());
+            e.printStackTrace();
+            
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "Error fetching meetings: " + e.getMessage());
+            errorResponse.put("error", e.getClass().getSimpleName());
+            
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+    
+    /**
+     * Admin mark meeting as completed and send notifications to both parties
+     */
+    @PutMapping("/admin/{meetingId}/complete")
+    public ResponseEntity<?> adminCompleteMeeting(@PathVariable String meetingId) {
+        try {
+            System.out.println("🔄 [Admin] Marking meeting as completed: " + meetingId);
+            
+            Map<String, Object> result = meetingService.adminCompleteMeeting(meetingId);
+            
+            if ((Boolean) result.get("success")) {
+                System.out.println("✅ [Admin] Meeting marked as completed successfully: " + meetingId);
+                return ResponseEntity.ok(result);
+            } else {
+                System.out.println("❌ [Admin] Failed to mark meeting as completed: " + result.get("message"));
+                return ResponseEntity.badRequest().body(result);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("❌ [Admin] Error marking meeting as completed: " + e.getMessage());
+            e.printStackTrace();
+            
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "Error marking meeting as completed: " + e.getMessage());
+            errorResponse.put("error", e.getClass().getSimpleName());
+            
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+    
+    /**
+     * Get all meetings summary (admin only) - legacy endpoint
+     */
+    @GetMapping("/admin/summary")
+    public ResponseEntity<?> getAllMeetingsSummary() {
         try {
             List<Meeting> meetings = meetingService.getAllMeetings();
             

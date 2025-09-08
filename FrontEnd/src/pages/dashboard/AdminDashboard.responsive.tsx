@@ -19,6 +19,7 @@ import dayjs from 'dayjs';
 import RoleAwareDashboardLayout from '@/components/layout/RoleAwareDashboardLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { api } from '@/services/api'; // Import the API functions
+import AdminMeetingDashboard from '@/components/admin/AdminMeetingDashboard';
 
 
 const { TabPane } = Tabs;
@@ -1014,72 +1015,12 @@ const AdminDashboard: React.FC = () => {
               <Divider />
               
               <div ref={meetingSectionRef}>
-                <h3 className="text-lg font-medium mb-4">Meeting Requests</h3>                <Table 
-                  dataSource={pendingMeetings}
-                  scroll={{ x: 'max-content' }}
-                  columns={[
-                    {
-                      title: 'Gemstone',
-                      key: 'gemstone',
-                      render: (_, record) => (
-                        <div className="flex items-center space-x-3">
-                          <img 
-                            src={record.image} 
-                            alt={record.gemstone}
-                            className="w-12 h-12 object-cover rounded-lg"
-                          />
-                          <span className="font-medium">{record.gemstone}</span>
-                        </div>
-                      ),
-                    },
-                    {
-                      title: 'Buyer',
-                      dataIndex: 'buyer',
-                      key: 'buyer',
-                    },
-                    {
-                      title: 'Seller',
-                      dataIndex: 'seller',
-                      key: 'seller',
-                    },
-                    {
-                      title: 'Requested Date',
-                      key: 'datetime',
-                      render: (_, record) => `${dayjs(record.requestedDate).format('MMM DD, YYYY')} at ${record.requestedTime}`
-                    },
-                    {
-                      title: 'Actions',
-                      key: 'actions',
-                      render: (_, record) => (
-                        <Space>
-                          <Button 
-                            size="small" 
-                            icon={<EyeOutlined />}
-                            onClick={() => handleViewMeeting(record)}
-                          >
-                            View
-                          </Button>
-                          <Button 
-                            size="small" 
-                            icon={<CheckOutlined />}
-                            onClick={() => handleApproveMeeting(record)}
-                            type="primary"
-                          >
-                            Approve
-                          </Button>
-                          <Button 
-                            size="small" 
-                            icon={<CloseOutlined />}
-                            danger
-                          >
-                            Reject
-                          </Button>
-                        </Space>
-                      )
-                    }
-                  ]}
-                  pagination={false}
-                />
+                <h3 className="text-lg font-medium mb-4">Meeting Management</h3>
+                
+                {/* Import our comprehensive Meeting Management Dashboard */}
+                <div className="mt-6">
+                  <AdminMeetingDashboard />
+                </div>
               </div>
             </div>
           </TabPane>
@@ -1157,6 +1098,13 @@ const AdminDashboard: React.FC = () => {
               ]}
               pagination={{ pageSize: 10 }}
             />
+          </TabPane>
+
+          <TabPane 
+            tab={<span className="flex items-center px-1"><Clock size={18} className="mr-2" /> Meeting Management</span>} 
+            key="meetings"
+          >
+            <AdminMeetingDashboard />
           </TabPane>
         </Tabs>
       </Card>      {/* User Details Modal */}

@@ -51,6 +51,7 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user }) => {
   const [confirmData, setConfirmData] = useState({
     sellerNotes: ''
   });
+  const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
 
   // Fetch meetings
   useEffect(() => {
@@ -119,25 +120,39 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user }) => {
     if (!selectedMeeting) return;
 
     try {
+      const sellerId = user.userId || user.id;
+      console.log('🔄 Confirming meeting with seller ID:', sellerId);
+      
       const response = await fetch(`http://localhost:9092/api/meetings/${selectedMeeting.id}/confirm`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          sellerId: sellerId,
           sellerNotes: confirmData.sellerNotes
         })
       });
 
       const data = await response.json();
+      console.log('📤 Meeting confirmation response:', data);
+      
       if (data.success) {
+        console.log('✅ Meeting confirmed successfully');
         await fetchMeetings();
         setShowConfirmModal(false);
         setSelectedMeeting(null);
         setConfirmData({ sellerNotes: '' });
+        
+        // Show success message
+        setMessage({ type: 'success', text: 'Meeting confirmed successfully! The buyer has been notified.' });
+      } else {
+        console.error('❌ Failed to confirm meeting:', data.message);
+        setMessage({ type: 'error', text: `Failed to confirm meeting: ${data.message}` });
       }
     } catch (error) {
-      console.error('Error confirming meeting:', error);
+      console.error('❌ Error confirming meeting:', error);
+      setMessage({ type: 'error', text: 'Error confirming meeting. Please try again.' });
     }
   };
 
@@ -146,26 +161,40 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user }) => {
     if (!selectedMeeting || !rescheduleData.newDateTime) return;
 
     try {
+      const userId = user.userId || user.id;
+      console.log('🔄 Rescheduling meeting with user ID:', userId);
+      
       const response = await fetch(`http://localhost:9092/api/meetings/${selectedMeeting.id}/reschedule`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          userId: userId,
           newDateTime: rescheduleData.newDateTime,
           notes: rescheduleData.notes
         })
       });
 
       const data = await response.json();
+      console.log('📤 Meeting reschedule response:', data);
+      
       if (data.success) {
+        console.log('✅ Meeting rescheduled successfully');
         await fetchMeetings();
         setShowRescheduleModal(false);
         setSelectedMeeting(null);
         setRescheduleData({ newDateTime: '', notes: '' });
+        
+        // Show success message
+        setMessage({ type: 'success', text: 'Meeting rescheduled successfully! The other party has been notified.' });
+      } else {
+        console.error('❌ Failed to reschedule meeting:', data.message);
+        setMessage({ type: 'error', text: `Failed to reschedule meeting: ${data.message}` });
       }
     } catch (error) {
-      console.error('Error rescheduling meeting:', error);
+      console.error('❌ Error rescheduling meeting:', error);
+      setMessage({ type: 'error', text: 'Error rescheduling meeting. Please try again.' });
     }
   };
 
@@ -174,16 +203,28 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user }) => {
     if (!confirm('Are you sure you want to cancel this meeting?')) return;
 
     try {
+      const userId = user.userId || user.id;
       const response = await fetch(`http://localhost:9092/api/meetings/${meetingId}/cancel`, {
-        method: 'PUT'
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: userId,
+          reason: 'Cancelled by user'
+        })
       });
 
       const data = await response.json();
       if (data.success) {
         await fetchMeetings();
+        setMessage({ type: 'success', text: 'Meeting cancelled successfully!' });
+      } else {
+        setMessage({ type: 'error', text: `Failed to cancel meeting: ${data.message}` });
       }
     } catch (error) {
       console.error('Error cancelling meeting:', error);
+      setMessage({ type: 'error', text: 'Error cancelling meeting. Please try again.' });
     }
   };
 
@@ -192,16 +233,28 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user }) => {
     if (!confirm('Mark this meeting as completed?')) return;
 
     try {
+      const userId = user.userId || user.id;
       const response = await fetch(`http://localhost:9092/api/meetings/${meetingId}/complete`, {
-        method: 'PUT'
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: userId
+        })
       });
 
       const data = await response.json();
       if (data.success) {
         await fetchMeetings();
+        // Use proper UI message instead of browser alert
+        setMessage({ type: 'success', text: 'Meeting marked as completed!' });
+      } else {
+        setMessage({ type: 'error', text: `Failed to complete meeting: ${data.message}` });
       }
     } catch (error) {
       console.error('Error completing meeting:', error);
+      setMessage({ type: 'error', text: 'Error completing meeting. Please try again.' });
     }
   };
 
@@ -221,6 +274,25 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user }) => {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-6xl mx-auto">
+        {/* Message Display */}
+        {message && (
+          <div className={`mb-6 p-4 rounded-lg border-l-4 ${
+            message.type === 'success' ? 'bg-green-50 border-green-400 text-green-700' :
+            message.type === 'error' ? 'bg-red-50 border-red-400 text-red-700' :
+            'bg-blue-50 border-blue-400 text-blue-700'
+          }`}>
+            <div className="flex items-center justify-between">
+              <span>{message.text}</span>
+              <button
+                onClick={() => setMessage(null)}
+                className="ml-3 text-gray-400 hover:text-gray-600"
+              >
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
           <div className="flex items-center justify-between mb-4">

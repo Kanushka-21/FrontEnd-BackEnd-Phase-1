@@ -329,11 +329,25 @@ public class BiddingService {
     private List<String> getNotificationTypesForContext(String context) {
         switch (context.toLowerCase()) {
             case "seller":
-                // Seller-related notification types
-                return java.util.Arrays.asList("NEW_BID", "ITEM_SOLD", "BIDDING_CANCELLED");
+                // Seller-related notification types (bidding + meetings)
+                return java.util.Arrays.asList(
+                    "NEW_BID", "ITEM_SOLD", "BIDDING_CANCELLED",
+                    "MEETING_REQUEST_RECEIVED", "MEETING_CONFIRMED", "MEETING_RESCHEDULED", 
+                    "MEETING_CANCELLED", "MEETING_COMPLETED"
+                );
             case "buyer":
-                // Buyer-related notification types
-                return java.util.Arrays.asList("BID_WON", "BID_OUTBID", "BID_PLACED", "BIDDING_ENDED");
+                // Buyer-related notification types (bidding + meetings)  
+                return java.util.Arrays.asList(
+                    "BID_WON", "BID_OUTBID", "BID_PLACED", "BIDDING_ENDED",
+                    "MEETING_REQUEST_SENT", "MEETING_CONFIRMED", "MEETING_RESCHEDULED",
+                    "MEETING_CANCELLED", "MEETING_COMPLETED"
+                );
+            case "admin":
+                // Admin-related notification types
+                return java.util.Arrays.asList(
+                    "MEETING_REQUEST", "USER_REGISTRATION", "LISTING_PENDING", 
+                    "ADVERTISEMENT_PENDING", "SYSTEM_ALERT"
+                );
             default:
                 return null; // No filtering
         }
