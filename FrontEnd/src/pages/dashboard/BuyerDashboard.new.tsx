@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLocation } from 'react-router-dom';
 import { 
   ShoppingBag, User, 
-  TrendingUp, Menu, Home, Calendar
+  TrendingUp, Menu, Home, Calendar, MessageCircle
 } from 'lucide-react';
 import RoleAwareDashboardLayout from '@/components/layout/RoleAwareDashboardLayout';
 import NotificationComponent from '@/components/ui/NotificationComponent';
@@ -19,6 +19,9 @@ import {
 import MeetingManager from '../../components/scheduling/MeetingManager';
 
 import { SidebarItem } from './BuyerDashboardComponents/shared';
+
+// Import feedback page
+import FeedbackForm from '../Feedback/FeedbackPage';
 
 const BuyerDashboard = () => {
   const { user, loading } = useAuth();
@@ -54,6 +57,7 @@ const BuyerDashboard = () => {
     { id: 'purchases', label: 'Purchases', icon: <ShoppingBag size={24} /> },
     { id: 'bids', label: 'My Bids', icon: <TrendingUp size={24} /> },
     { id: 'meetings', label: 'Meetings', icon: <Calendar size={24} /> },
+    { id: 'feedback', label: 'Feedback', icon: <MessageCircle size={24} /> },
     { id: 'profile', label: 'Profile', icon: <User size={24} /> }
   ];
 
@@ -68,6 +72,8 @@ const BuyerDashboard = () => {
         return <Bids />;
       case 'meetings':
         return <MeetingManager user={user} />;
+      case 'feedback':
+        return <FeedbackForm />;
       case 'profile':
         return <Profile user={user} />;
       default:

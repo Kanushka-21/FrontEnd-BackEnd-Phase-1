@@ -18,6 +18,9 @@ import AdminDashboard from '@/pages/dashboard/AdminDashboard';
 import SellerDashboard from '@/pages/dashboard/SellerDashboard.new';
 import BuyerDashboard from '@/pages/dashboard/BuyerDashboard.new';
 
+// Feedback Pages
+import { FeedbackPage } from '@/pages/Feedback';
+
 
 import DashboardLayout from '@/components/layout/DashboardLayout.new';
 
@@ -142,6 +145,16 @@ const AppRoutes: React.FC = () => {
             element={
               <ProtectedRoute>
                 <DashboardRedirect />
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* General Dashboard Routes - Available to all authenticated users */}
+          <Route
+            path="/dashboard/feedback"
+            element={
+              <ProtectedRoute>
+                <FeedbackPage />
               </ProtectedRoute>
             }
           />

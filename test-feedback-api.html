@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feedback API Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .success {
+            color: green;
+            font-weight: bold;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Feedback System API Test</h1>
+    <p>This page tests the feedback API endpoints to ensure they're working correctly after the backend fix.</p>
+
+    <div class="test-section">
+        <h2>📊 Backend Status Check</h2>
+        <button onclick="testBackendHealth()">Test Backend Health</button>
+        <div id="health-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>👥 Test User Login (Required for Feedback API)</h2>
+        <input type="email" id="login-email" placeholder="Email (try: admin@gemnet.com)" value="admin@gemnet.com">
+        <input type="password" id="login-password" placeholder="Password" value="admin123">
+        <button onclick="testLogin()">Login</button>
+        <div id="login-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>🎯 Test Feedback Recipients Endpoint</h2>
+        <p>This endpoint should return users that can receive feedback.</p>
+        <button onclick="testFeedbackRecipients()">Get Eligible Recipients</button>
+        <div id="recipients-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>📝 Test Submit Feedback</h2>
+        <select id="feedback-recipient">
+            <option value="">Select recipient (load recipients first)</option>
+        </select>
+        <select id="feedback-rating">
+            <option value="5">5 Stars - Excellent</option>
+            <option value="4">4 Stars - Good</option>
+            <option value="3">3 Stars - Average</option>
+            <option value="2">2 Stars - Poor</option>
+            <option value="1">1 Star - Terrible</option>
+        </select>
+        <textarea id="feedback-comment" placeholder="Enter your feedback comment..." rows="3">Great experience working together!</textarea>
+        <button onclick="testSubmitFeedback()">Submit Feedback</button>
+        <div id="submit-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>📋 Test Feedback History</h2>
+        <button onclick="testFeedbackHistory()">Get My Feedback History</button>
+        <div id="history-result"></div>
+    </div>
+
+    <script>
+        let authToken = '';
+        let currentUserId = '';
+        
+        const API_BASE = 'http://localhost:9092/api';
+
+        function logResult(elementId, message, isError = false) {
+            const element = document.getElementById(elementId);
+            const timestamp = new Date().toLocaleTimeString();
+            element.innerHTML = `<p class="${isError ? 'error' : 'success'}">[${timestamp}] ${message}</p>`;
+        }
+
+        function logData(elementId, data) {
+            const element = document.getElementById(elementId);
+            element.innerHTML += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+        }
+
+        async function testBackendHealth() {
+            try {
+                const response = await fetch(`${API_BASE}/auth/health`);
+                if (response.ok) {
+                    const data = await response.text();
+                    logResult('health-result', `✅ Backend is healthy! Response: ${data}`);
+                } else {
+                    logResult('health-result', `❌ Backend health check failed: ${response.status} ${response.statusText}`, true);
+                }
+            } catch (error) {
+                logResult('health-result', `❌ Connection failed: ${error.message}`, true);
+            }
+        }
+
+        async function testLogin() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            
+            try {
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    authToken = data.token;
+                    currentUserId = data.userId || data.id;
+                    logResult('login-result', `✅ Login successful! User ID: ${currentUserId}`);
+                    logData('login-result', data);
+                } else {
+                    const errorData = await response.text();
+                    logResult('login-result', `❌ Login failed: ${response.status} - ${errorData}`, true);
+                }
+            } catch (error) {
+                logResult('login-result', `❌ Login error: ${error.message}`, true);
+            }
+        }
+
+        async function testFeedbackRecipients() {
+            if (!authToken) {
+                logResult('recipients-result', '❌ Please login first!', true);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/feedbacks/recipients`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                if (response.ok) {
+                    const recipients = await response.json();
+                    logResult('recipients-result', `✅ Found ${recipients.length} eligible recipients`);
+                    logData('recipients-result', recipients);
+                    
+                    // Populate the recipient dropdown
+                    const select = document.getElementById('feedback-recipient');
+                    select.innerHTML = '<option value="">Select recipient</option>';
+                    recipients.forEach(recipient => {
+                        const option = document.createElement('option');
+                        option.value = recipient.id || recipient._id;
+                        option.textContent = `${recipient.firstName} ${recipient.lastName} (${recipient.email})`;
+                        select.appendChild(option);
+                    });
+                } else {
+                    const errorData = await response.text();
+                    logResult('recipients-result', `❌ Failed to get recipients: ${response.status} - ${errorData}`, true);
+                }
+            } catch (error) {
+                logResult('recipients-result', `❌ Recipients error: ${error.message}`, true);
+            }
+        }
+
+        async function testSubmitFeedback() {
+            if (!authToken) {
+                logResult('submit-result', '❌ Please login first!', true);
+                return;
+            }
+
+            const recipientId = document.getElementById('feedback-recipient').value;
+            const rating = parseInt(document.getElementById('feedback-rating').value);
+            const comment = document.getElementById('feedback-comment').value;
+
+            if (!recipientId) {
+                logResult('submit-result', '❌ Please select a recipient!', true);
+                return;
+            }
+
+            try {
+                const feedbackData = {
+                    recipientId: recipientId,
+                    rating: rating,
+                    comment: comment
+                };
+
+                const response = await fetch(`${API_BASE}/feedbacks`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(feedbackData)
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    logResult('submit-result', `✅ Feedback submitted successfully!`);
+                    logData('submit-result', result);
+                } else {
+                    const errorData = await response.text();
+                    logResult('submit-result', `❌ Failed to submit feedback: ${response.status} - ${errorData}`, true);
+                }
+            } catch (error) {
+                logResult('submit-result', `❌ Submit error: ${error.message}`, true);
+            }
+        }
+
+        async function testFeedbackHistory() {
+            if (!authToken) {
+                logResult('history-result', '❌ Please login first!', true);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/feedbacks/user/${currentUserId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                if (response.ok) {
+                    const history = await response.json();
+                    logResult('history-result', `✅ Found ${history.length} feedback records`);
+                    logData('history-result', history);
+                } else {
+                    const errorData = await response.text();
+                    logResult('history-result', `❌ Failed to get feedback history: ${response.status} - ${errorData}`, true);
+                }
+            } catch (error) {
+                logResult('history-result', `❌ History error: ${error.message}`, true);
+            }
+        }
+
+        // Run health check on page load
+        window.onload = () => {
+            testBackendHealth();
+        };
+    </script>
+</body>
+</html>

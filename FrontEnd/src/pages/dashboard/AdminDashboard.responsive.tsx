@@ -13,7 +13,7 @@ import {
 } from '@ant-design/icons';
 import {
   BarChart3, Users, Shield, Settings, 
-  Menu as MenuIcon, Package, Clock
+  Menu as MenuIcon, Package, Clock, MessageCircle
 } from 'lucide-react';
 import dayjs from 'dayjs';
 import RoleAwareDashboardLayout from '@/components/layout/RoleAwareDashboardLayout';
@@ -271,6 +271,7 @@ const AdminDashboard: React.FC = () => {
     { id: 'users', label: 'User Management', icon: <Users size={24} /> },
     { id: 'listings', label: 'Listing Management', icon: <Package size={24} /> },
     { id: 'meetings', label: 'Meeting Approvals', icon: <Clock size={24} /> },
+    { id: 'feedback', label: 'Submit Feedback', icon: <MessageCircle size={24} /> },
     { id: 'settings', label: 'System Settings', icon: <Settings size={24} /> }
   ];
   
@@ -540,6 +541,13 @@ const AdminDashboard: React.FC = () => {
   
   // Function to handle sidebar item click and scroll to appropriate section
   const handleSidebarItemClick = (itemId: string) => {
+    // Handle feedback navigation differently - redirect to feedback page
+    if (itemId === 'feedback') {
+      // Redirect to feedback page
+      window.location.href = '/dashboard/feedback';
+      return;
+    }
+    
     setActiveTab(itemId);
     
     // Wait for any state updates to be applied before scrolling

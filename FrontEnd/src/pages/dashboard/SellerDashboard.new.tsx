@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { 
   User, Menu, 
-  Home, Trophy, Calendar, Gem, Megaphone
+  Home, Trophy, Calendar, Gem, Megaphone, MessageCircle
 } from 'lucide-react';
 import RoleAwareDashboardLayout from '@/components/layout/RoleAwareDashboardLayout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -18,6 +18,9 @@ import {
 } from './SellerDashbaordComponents';
 
 import { SidebarItem } from './SellerDashbaordComponents/shared';
+
+// Import feedback page
+import FeedbackForm from '../Feedback/FeedbackPage';
 
 const SellerDashboard = () => {
   const { user } = useAuth();
@@ -36,6 +39,7 @@ const SellerDashboard = () => {
     { id: 'advertisements', label: 'Advertisements', icon: <Megaphone size={24} /> },
     { id: 'bids', label: 'Bids', icon: <Trophy size={24} /> },
     { id: 'meetings', label: 'Meetings', icon: <Calendar size={24} /> },
+    { id: 'feedback', label: 'Submit Feedback', icon: <MessageCircle size={24} /> },
     { id: 'profile', label: 'Profile', icon: <User size={24} /> }
   ];
   // Render content based on active tab
@@ -51,6 +55,8 @@ const SellerDashboard = () => {
         return <Bids user={user} />;
       case 'meetings':
         return <Meetings user={user} />;
+      case 'feedback':
+        return <FeedbackForm />;
       case 'profile':
         return <Profile user={user} />;
       default:
