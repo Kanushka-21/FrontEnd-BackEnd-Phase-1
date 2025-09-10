@@ -154,61 +154,42 @@ public class AdminService {
             System.out.println("🏠 AdminService - Getting homepage statistics");
             
             // ===== BASIC STATISTICS FOR HOMEPAGE =====
-            long approvedListings = gemListingRepository.countByListingStatus("APPROVED");
-            long verifiedUsers = userRepository.countByIsVerified(true);
-            long soldListings = gemListingRepository.countByListingStatus("SOLD");
-            long totalBids = bidRepository.count();
-            long totalUsers = userRepository.count();
+            // Get ALL listings (not just approved) to count certified vs uncertified
+            List<GemListing> allListings = gemListingRepository.findAll();
+            
+            // Count certified gems (listings with certificates)
+            long certifiedGems = allListings.stream()
+                .filter(listing -> listing.getIsCertified() != null && listing.getIsCertified())
+                .count();
+                
+            // Count uncertified gems (listings without certificates)  
+            long uncertifiedGems = allListings.stream()
+                .filter(listing -> listing.getIsCertified() == null || !listing.getIsCertified())
+                .count();
+            
+            // Get total count of all listings in database
             long totalListings = gemListingRepository.count();
-            
-            // ===== ADDITIONAL ENHANCED STATS =====
-            // Active bidding listings (approved and with active bidding)
-            long activeBiddingListings = 0;
-            try {
-                // Count approved listings with active bidding using available methods
-                List<GemListing> approvedListingsList = gemListingRepository.findByListingStatus("APPROVED");
-                activeBiddingListings = approvedListingsList.stream()
-                    .filter(listing -> listing.getBiddingActive() != null && listing.getBiddingActive())
-                    .count();
-            } catch (Exception e) {
-                System.out.println("⚠️ Warning: Could not get active bidding listings count: " + e.getMessage());
-            }
-            
-            // Recent activity (listings created in last 30 days)
-            // Note: You can enhance this with actual date filtering if needed
-            long recentListings = Math.min(approvedListings, 50); // Simplified for now
+            long activeTraders = userRepository.countByIsVerified(true);
+            long successfulSales = gemListingRepository.countByListingStatus("SOLD");
             
             // ===== PREPARE HOMEPAGE RESPONSE =====
             Map<String, Object> homepageStats = new HashMap<>();
             
             // Core homepage statistics
-            homepageStats.put("verifiedGems", approvedListings);
-            homepageStats.put("activeTraders", verifiedUsers);
-            homepageStats.put("successfulSales", soldListings);
-            
-            // Additional statistics for enhanced display
-            homepageStats.put("totalBids", totalBids);
-            homepageStats.put("totalUsers", totalUsers);
+            homepageStats.put("verifiedGems", certifiedGems);
+            homepageStats.put("uncertifiedGems", uncertifiedGems);
             homepageStats.put("totalListings", totalListings);
-            homepageStats.put("activeBiddingListings", activeBiddingListings);
-            homepageStats.put("recentListings", recentListings);
+            homepageStats.put("activeTraders", activeTraders);
+            homepageStats.put("successfulSales", successfulSales);
             
-            // Calculate percentages and ratios
-            double salesRate = totalListings > 0 ? ((double) soldListings / totalListings) * 100 : 0;
-            double verificationRate = totalUsers > 0 ? ((double) verifiedUsers / totalUsers) * 100 : 0;
-            
-            homepageStats.put("salesRate", Math.round(salesRate * 100.0) / 100.0);
-            homepageStats.put("verificationRate", Math.round(verificationRate * 100.0) / 100.0);
-            
-            // Platform health indicators
-            homepageStats.put("platformHealth", "excellent"); // Can be calculated based on activity
             homepageStats.put("lastUpdated", LocalDateTime.now());
             
             System.out.println("✅ Homepage stats retrieved: " + 
-                             "Verified Gems=" + approvedListings + 
-                             ", Active Traders=" + verifiedUsers + 
-                             ", Successful Sales=" + soldListings +
-                             ", Sales Rate=" + salesRate + "%");
+                             "Certified Gems=" + certifiedGems + 
+                             ", Uncertified Gems=" + uncertifiedGems + 
+                             ", Total Listings=" + totalListings +
+                             ", Active Traders=" + activeTraders + 
+                             ", Successful Sales=" + successfulSales);
             
             return ApiResponse.success("Homepage statistics retrieved successfully", homepageStats);
             

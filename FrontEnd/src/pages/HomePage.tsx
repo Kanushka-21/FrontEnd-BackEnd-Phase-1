@@ -4,7 +4,7 @@ import {
   Space, Statistic, Carousel, Spin
 } from 'antd';
 import { 
-  CheckCircleOutlined, UserOutlined, 
+  CheckCircleOutlined, UserOutlined, ClockCircleOutlined, AppstoreOutlined,
   SearchOutlined, UserAddOutlined,
   GlobalOutlined, ShopOutlined,
   StarFilled, SafetyOutlined, TrophyOutlined
@@ -278,28 +278,39 @@ const HomePage: React.FC = () => {
         // Update statistics state with enhanced information
         setStatistics([
           { 
-            title: 'Verified Gems', 
-            value: verifiedGems, 
+            title: 'Certified Gems', 
+            value: stats.verifiedGems || 0, 
             icon: <CheckCircleOutlined className="text-blue-500" />, 
             loading: false,
-            description: `${stats.activeBiddingListings || 0} currently in bidding`,
-            trend: verifiedGems > 0 ? 'up' : 'stable'
+            description: 'With certificates'
+          },
+          { 
+            title: 'Uncertified Gems', 
+            value: stats.uncertifiedGems || 0, 
+            icon: <ClockCircleOutlined className="text-orange-500" />, 
+            loading: false,
+            description: 'Without certificates'
+          },
+          { 
+            title: 'Total Listings', 
+            value: stats.totalListings || 0, 
+            icon: <AppstoreOutlined className="text-purple-500" />, 
+            loading: false,
+            description: 'All gems available'
           },
           { 
             title: 'Active Traders', 
-            value: activeTraders, 
+            value: stats.activeTraders || 0, 
             icon: <UserOutlined className="text-green-500" />, 
             loading: false,
-            description: `${Math.round(stats.verificationRate || 0)}% verification rate`,
-            trend: activeTraders > 0 ? 'up' : 'stable'
+            description: 'Verified community'
           },
           { 
             title: 'Successful Sales', 
-            value: successfulSales, 
-            icon: <TrophyOutlined className="text-orange-500" />, 
+            value: stats.successfulSales || 0, 
+            icon: <TrophyOutlined className="text-red-500" />, 
             loading: false,
-            description: `${Math.round(stats.salesRate || 0)}% success rate`,
-            trend: successfulSales > 0 ? 'up' : 'stable'
+            description: 'Completed deals'
           }
         ]);
         
@@ -454,28 +465,39 @@ const HomePage: React.FC = () => {
   // Homepage statistics state
   const [statistics, setStatistics] = useState([
     { 
-      title: 'Verified Gems', 
+      title: 'Certified Gems', 
       value: 0, 
       icon: <CheckCircleOutlined className="text-blue-500" />, 
       loading: true,
-      description: 'Loading...',
-      trend: 'stable' as const
+      description: 'With certificates'
+    },
+    { 
+      title: 'Uncertified Gems', 
+      value: 0, 
+      icon: <ClockCircleOutlined className="text-orange-500" />, 
+      loading: true,
+      description: 'Without certificates'
+    },
+    { 
+      title: 'Total Listings', 
+      value: 0, 
+      icon: <AppstoreOutlined className="text-purple-500" />, 
+      loading: true,
+      description: 'All gems available'
     },
     { 
       title: 'Active Traders', 
       value: 0, 
       icon: <UserOutlined className="text-green-500" />, 
       loading: true,
-      description: 'Loading...',
-      trend: 'stable' as const
+      description: 'Verified community'
     },
     { 
       title: 'Successful Sales', 
       value: 0, 
-      icon: <TrophyOutlined className="text-orange-500" />, 
+      icon: <TrophyOutlined className="text-red-500" />, 
       loading: true,
-      description: 'Loading...',
-      trend: 'stable' as const
+      description: 'Completed deals'
     }
   ]);  const testimonials = [
     {
@@ -807,15 +829,7 @@ const HomePage: React.FC = () => {
                         )}
                         <Text className="text-gray-600 font-medium text-sm md:text-base">{stat.title}</Text>
                         {!stat.loading && (
-                          <>
-                            <Text className="text-xs text-gray-500">{stat.description}</Text>
-                            <div className="flex items-center space-x-1">
-                              <Text className="text-xs text-gray-400">Real-time data</Text>
-                              {stat.trend === 'up' && <span className="text-green-500 text-xs">📈</span>}
-                              {stat.trend === 'down' && <span className="text-red-500 text-xs">📉</span>}
-                              {stat.trend === 'stable' && <span className="text-blue-500 text-xs">📊</span>}
-                            </div>
-                          </>
+                          <Text className="text-xs text-gray-500">{stat.description}</Text>
                         )}
                       </div>
                     </Card>
