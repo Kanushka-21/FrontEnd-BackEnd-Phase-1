@@ -82,6 +82,7 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
   const [editLoading, setEditLoading] = useState(false);
   const [advertisements, setAdvertisements] = useState<Advertisement[]>([]);
   const [viewingAd, setViewingAd] = useState<Advertisement | null>(null);
+  const [deletingAd, setDeletingAd] = useState<Advertisement | null>(null);
   const [formData, setFormData] = useState<AdvertisementFormData>({
     title: '',
     category: '',
@@ -298,42 +299,51 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
   };
 
   // Handle delete advertisement
-  const handleDelete = async (advertisement: Advertisement) => {
-    if (window.confirm(`Are you sure you want to delete "${advertisement.title}"? This action cannot be undone.`)) {
-      try {
-        setLoading(true);
-        const token = authUtils.getAuthToken();
-        
-        if (!token) {
-          toast.error('Please login to delete advertisements');
-          return;
-        }
+  const handleDelete = (advertisement: Advertisement) => {
+    setDeletingAd(advertisement);
+  };
 
-        const response = await axios.delete(`${API_BASE_URL}/api/advertisements/${advertisement.id}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
+  const closeDeleteModal = () => {
+    setDeletingAd(null);
+  };
 
-        if (response.data && (response.data.success || response.data.message)) {
-          toast.success('Advertisement deleted successfully');
-          fetchAdvertisements(); // Refresh the list
-        } else {
-          toast.error('Failed to delete advertisement');
-        }
-      } catch (error: any) {
-        console.error('Error deleting advertisement:', error);
-        if (error.response?.status === 404) {
-          toast.error('Advertisement not found');
-        } else if (error.response?.status === 403) {
-          toast.error('You are not authorized to delete this advertisement');
-        } else {
-          toast.error(error.response?.data?.message || 'Failed to delete advertisement');
-        }
-      } finally {
-        setLoading(false);
+  const confirmDelete = async () => {
+    if (!deletingAd) return;
+
+    try {
+      setLoading(true);
+      const token = authUtils.getAuthToken();
+      
+      if (!token) {
+        toast.error('Please login to delete advertisements');
+        return;
       }
+
+      const response = await axios.delete(`${API_BASE_URL}/api/advertisements/${deletingAd.id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.data && (response.data.success || response.data.message)) {
+        toast.success('Advertisement deleted successfully');
+        fetchAdvertisements(); // Refresh the list
+        setDeletingAd(null);
+      } else {
+        toast.error('Failed to delete advertisement');
+      }
+    } catch (error: any) {
+      console.error('Error deleting advertisement:', error);
+      if (error.response?.status === 404) {
+        toast.error('Advertisement not found');
+      } else if (error.response?.status === 403) {
+        toast.error('You are not authorized to delete this advertisement');
+      } else {
+        toast.error(error.response?.data?.message || 'Failed to delete advertisement');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -853,6 +863,86 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deletingAd && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            {/* Modal Header */}
+            <div className="flex items-center mb-4">
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                <Trash2 className="w-5 h-5 text-red-600" />
+              </div>
+              <div className="ml-3">
+                <h3 className="text-lg font-medium text-gray-900">Delete Advertisement</h3>
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="mb-6">
+              <p className="text-sm text-gray-500 mb-3">
+                Are you sure you want to delete this advertisement? This action cannot be undone.
+              </p>
+              
+              {/* Advertisement Preview */}
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-start space-x-3">
+                  {deletingAd.images && deletingAd.images.length > 0 ? (
+                    <img
+                      src={deletingAd.images[0]}
+                      alt={deletingAd.title}
+                      className="w-12 h-12 object-cover rounded-lg flex-shrink-0"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <div className="h-12 w-12 rounded-lg bg-gray-200 flex items-center justify-center flex-shrink-0">
+                      <FileText className="w-6 h-6 text-gray-400" />
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-gray-900 truncate">{deletingAd.title}</p>
+                    <p className="text-sm text-gray-500">{deletingAd.category}</p>
+                    <p className="text-sm text-gray-500">LKR {parseFloat(deletingAd.price).toLocaleString()}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={closeDeleteModal}
+                disabled={loading}
+                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                disabled={loading}
+                className="px-4 py-2 bg-red-600 text-white rounded-md text-sm font-medium hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+              >
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={16} />
+                    <span>Delete Advertisement</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>
