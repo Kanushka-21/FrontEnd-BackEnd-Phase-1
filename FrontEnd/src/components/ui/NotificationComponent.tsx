@@ -242,23 +242,23 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({
     
     // Enhanced notification routing based on context and type
     const routeNotification = () => {
-      console.log('🔔 Routing notification:', { type: notification.type, context });
+      console.log('🔔 Routing notification:', { type: notification.type, context, listingId: notification.listingId });
       
       // Context-aware routing based on user role
       if (context === 'seller') {
-        // Seller dashboard routing
+        // For seller notifications related to specific listings, navigate to marketplace with GemDetailsModal
         switch (notification.type) {
           case 'NEW_BID':
-            console.log('🔔 Routing to seller bids section');
-            window.location.href = '/seller/dashboard?section=bids';
-            break;
           case 'ITEM_SOLD':
-            console.log('🔔 Routing to seller listings section');
-            window.location.href = '/seller/dashboard?section=listings';
-            break;
           case 'BIDDING_CANCELLED':
-            console.log('🔔 Routing to seller listings section');
-            window.location.href = '/seller/dashboard?section=listings';
+          case 'BIDDING_ENDED':
+            if (notification.listingId) {
+              console.log('🔔 Routing seller to marketplace with listing:', notification.listingId);
+              window.location.href = `/marketplace?viewGemstone=${notification.listingId}`;
+            } else {
+              console.log('🔔 No listingId found, routing to seller bids section');
+              window.location.href = '/seller/dashboard?section=bids';
+            }
             break;
           case 'MEETING_REQUEST_RECEIVED':
           case 'MEETING_CONFIRMED':
@@ -269,22 +269,38 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({
             window.location.href = '/seller/dashboard?section=meetings';
             break;
           default:
-            console.log('🔔 Routing to seller overview');
-            window.location.href = '/seller/dashboard?section=overview';
+            // For other seller notifications, check if there's a listingId
+            if (notification.listingId) {
+              console.log('🔔 Default seller routing to marketplace with listing:', notification.listingId);
+              window.location.href = `/marketplace?viewGemstone=${notification.listingId}`;
+            } else {
+              console.log('🔔 Routing to seller overview');
+              window.location.href = '/seller/dashboard?section=overview';
+            }
         }
       } else if (context === 'buyer') {
-        // Buyer dashboard routing
+        // Buyer dashboard routing - also navigate to marketplace for listing-specific notifications
         switch (notification.type) {
           case 'BID_WON':
           case 'BID_ACCEPTED':
-            console.log('🔔 Routing to buyer purchases section');
-            window.location.href = '/buyer/dashboard?section=purchases';
+            if (notification.listingId) {
+              console.log('🔔 Routing buyer to marketplace with listing:', notification.listingId);
+              window.location.href = `/marketplace?viewGemstone=${notification.listingId}`;
+            } else {
+              console.log('🔔 Routing to buyer purchases section');
+              window.location.href = '/buyer/dashboard?section=purchases';
+            }
             break;
           case 'BID_OUTBID':
           case 'BID_PLACED':
           case 'BIDDING_ENDED':
-            console.log('🔔 Routing to buyer bids section');
-            window.location.href = '/buyer/dashboard?section=bids';
+            if (notification.listingId) {
+              console.log('🔔 Routing buyer to marketplace with listing:', notification.listingId);
+              window.location.href = `/marketplace?viewGemstone=${notification.listingId}`;
+            } else {
+              console.log('🔔 Routing to buyer bids section');
+              window.location.href = '/buyer/dashboard?section=bids';
+            }
             break;
           case 'MEETING_REQUEST_SENT':
           case 'MEETING_CONFIRMED':
@@ -295,8 +311,14 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({
             window.location.href = '/buyer/dashboard?section=meetings';
             break;
           default:
-            console.log('🔔 Routing to buyer overview');
-            window.location.href = '/buyer/dashboard?section=overview';
+            // For other buyer notifications, check if there's a listingId
+            if (notification.listingId) {
+              console.log('🔔 Default buyer routing to marketplace with listing:', notification.listingId);
+              window.location.href = `/marketplace?viewGemstone=${notification.listingId}`;
+            } else {
+              console.log('🔔 Routing to buyer overview');
+              window.location.href = '/buyer/dashboard?section=overview';
+            }
         }
       } else if (context === 'admin') {
         // Admin dashboard routing
@@ -322,14 +344,16 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({
             window.location.href = '/admin/dashboard?section=overview';
         }
       } else {
-        // Fallback routing - marketplace or listing specific
-        if (notification.type === 'BID_ACCEPTED' || notification.type === 'BID_WON') {
+        // Fallback routing - prioritize marketplace for listing-specific notifications
+        if (notification.listingId) {
+          console.log('🔔 Fallback: Routing to marketplace with listingId:', notification.listingId);
+          window.location.href = `/marketplace?viewGemstone=${notification.listingId}`;
+        } else if (notification.type === 'BID_ACCEPTED' || notification.type === 'BID_WON') {
           console.log('🔔 Fallback: Routing to buyer purchases');
           window.location.href = '/buyer/dashboard?section=purchases';
-        } else if (notification.listingId) {
-          console.log('🔔 Fallback: Routing to marketplace with listingId:', notification.listingId);
-          const marketplaceUrl = `/marketplace?viewGemstone=${notification.listingId}`;
-          window.location.href = marketplaceUrl;
+        } else if (notification.type === 'NEW_BID' || notification.type === 'BID_OUTBID') {
+          console.log('🔔 Fallback: Routing to marketplace');
+          window.location.href = '/marketplace';
         } else {
           console.log('🔔 Fallback: Routing to marketplace');
           window.location.href = '/marketplace';

@@ -147,6 +147,60 @@ public class AdminService {
     }
 
     /**
+     * Get homepage statistics (public-facing simplified stats)
+     */
+    public ApiResponse<Map<String, Object>> getHomepageStats() {
+        try {
+            System.out.println("🏠 AdminService - Getting homepage statistics");
+            
+            // ===== BASIC STATISTICS FOR HOMEPAGE =====
+            // Get ALL listings (not just approved) to count certified vs uncertified
+            List<GemListing> allListings = gemListingRepository.findAll();
+            
+            // Count certified gems (listings with certificates)
+            long certifiedGems = allListings.stream()
+                .filter(listing -> listing.getIsCertified() != null && listing.getIsCertified())
+                .count();
+                
+            // Count uncertified gems (listings without certificates)  
+            long uncertifiedGems = allListings.stream()
+                .filter(listing -> listing.getIsCertified() == null || !listing.getIsCertified())
+                .count();
+            
+            // Get total count of all listings in database
+            long totalListings = gemListingRepository.count();
+            long activeTraders = userRepository.countByIsVerified(true);
+            long successfulSales = gemListingRepository.countByListingStatus("SOLD");
+            
+            // ===== PREPARE HOMEPAGE RESPONSE =====
+            Map<String, Object> homepageStats = new HashMap<>();
+            
+            // Core homepage statistics
+            homepageStats.put("verifiedGems", certifiedGems);
+            homepageStats.put("uncertifiedGems", uncertifiedGems);
+            homepageStats.put("totalListings", totalListings);
+            homepageStats.put("activeTraders", activeTraders);
+            homepageStats.put("successfulSales", successfulSales);
+            
+            homepageStats.put("lastUpdated", LocalDateTime.now());
+            
+            System.out.println("✅ Homepage stats retrieved: " + 
+                             "Certified Gems=" + certifiedGems + 
+                             ", Uncertified Gems=" + uncertifiedGems + 
+                             ", Total Listings=" + totalListings +
+                             ", Active Traders=" + activeTraders + 
+                             ", Successful Sales=" + successfulSales);
+            
+            return ApiResponse.success("Homepage statistics retrieved successfully", homepageStats);
+            
+        } catch (Exception e) {
+            System.err.println("❌ AdminService - Error getting homepage stats: " + e.getMessage());
+            e.printStackTrace();
+            return ApiResponse.error("Failed to retrieve homepage statistics: " + e.getMessage());
+        }
+    }
+
+    /**
      * Get admin dashboard statistics
      */
     public ApiResponse<Map<String, Object>> getDashboardStats() {

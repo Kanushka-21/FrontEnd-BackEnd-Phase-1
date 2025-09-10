@@ -978,6 +978,28 @@ const extendedAPI = {
         console.error('Error deleting feedback:', error);
         return { success: false, message: apiUtils.formatErrorMessage(error) };
       }
+    },
+
+    // Get homepage statistics (public endpoint)
+    getHomepageStats: async (): Promise<ApiResponse<any>> => {
+      try {
+        const response = await api.get('/api/admin/homepage-stats');
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching homepage stats:', error);
+        return { success: false, message: apiUtils.formatErrorMessage(error) };
+      }
+    },
+
+    // Get public homepage statistics (no auth required)
+    getPublicHomepageStats: async (): Promise<ApiResponse<any>> => {
+      try {
+        const response = await api.get('/api/public/homepage-stats');
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching public homepage stats:', error);
+        return { success: false, message: apiUtils.formatErrorMessage(error) };
+      }
     }
   },
 
@@ -1127,6 +1149,17 @@ const extendedAPI = {
         return response.data;
       } catch (error) {
         console.error('Error fetching user bids:', error);
+        return { success: false, message: apiUtils.formatErrorMessage(error) };
+      }
+    },
+
+    // Get seller's received bids
+    getSellerReceivedBids: async (sellerId: string, page: number = 0, size: number = 10): Promise<ApiResponse<any>> => {
+      try {
+        const response = await api.get(`/api/bidding/seller/${sellerId}/received-bids?page=${page}&size=${size}`);
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching seller received bids:', error);
         return { success: false, message: apiUtils.formatErrorMessage(error) };
       }
     }

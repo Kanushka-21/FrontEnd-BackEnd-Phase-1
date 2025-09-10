@@ -4,7 +4,7 @@ import {
   Space, Statistic, Carousel, Spin
 } from 'antd';
 import { 
-  CheckCircleOutlined, UserOutlined, 
+  CheckCircleOutlined, UserOutlined, ClockCircleOutlined, AppstoreOutlined,
   SearchOutlined, UserAddOutlined,
   GlobalOutlined, ShopOutlined,
   StarFilled, SafetyOutlined, TrophyOutlined
@@ -252,7 +252,85 @@ const HomePage: React.FC = () => {
     };
   };
 
-  // Function to fetch top 4 most recently bidded gemstones
+  // Function to fetch homepage statistics from backend
+  const fetchHomepageStats = async () => {
+    try {
+      console.log('📊 Fetching homepage statistics...');
+      
+      // Try public endpoint first, then fallback to admin endpoint
+      let response = await api.admin.getPublicHomepageStats();
+      
+      if (!response.success) {
+        console.log('🔄 Public endpoint failed, trying admin endpoint...');
+        response = await api.admin.getHomepageStats();
+      }
+      
+      if (response.success && response.data) {
+        console.log('✅ Homepage stats received:', response.data);
+        
+        const stats = response.data;
+        
+        // Use the dedicated homepage statistics
+        const verifiedGems = stats.verifiedGems || 0; // Approved gemstone listings
+        const activeTraders = stats.activeTraders || 0; // Verified users who can trade
+        const successfulSales = stats.successfulSales || 0; // Successfully sold gemstones
+        
+        // Update statistics state with enhanced information
+        setStatistics([
+          { 
+            title: 'Certified Gems', 
+            value: stats.verifiedGems || 0, 
+            icon: <CheckCircleOutlined className="text-blue-500" />, 
+            loading: false,
+            description: 'With certificates'
+          },
+          { 
+            title: 'Uncertified Gems', 
+            value: stats.uncertifiedGems || 0, 
+            icon: <ClockCircleOutlined className="text-orange-500" />, 
+            loading: false,
+            description: 'Without certificates'
+          },
+          { 
+            title: 'Total Listings', 
+            value: stats.totalListings || 0, 
+            icon: <AppstoreOutlined className="text-purple-500" />, 
+            loading: false,
+            description: 'All gems available'
+          },
+          { 
+            title: 'Active Traders', 
+            value: stats.activeTraders || 0, 
+            icon: <UserOutlined className="text-green-500" />, 
+            loading: false,
+            description: 'Verified community'
+          },
+          { 
+            title: 'Successful Sales', 
+            value: stats.successfulSales || 0, 
+            icon: <TrophyOutlined className="text-red-500" />, 
+            loading: false,
+            description: 'Completed deals'
+          }
+        ]);
+        
+        console.log(`✅ Homepage statistics updated: Gems=${verifiedGems}, Traders=${activeTraders}, Sales=${successfulSales}`);
+        console.log(`📈 Additional stats: Total Bids=${stats.totalBids}, Active Bidding=${stats.activeBiddingListings}, Sales Rate=${stats.salesRate}%`);
+      } else {
+        console.error('❌ Failed to fetch homepage stats:', response.message);
+        // Keep loading state as false but show 0 values
+        setStatistics(prevStats => 
+          prevStats.map(stat => ({ ...stat, loading: false }))
+        );
+      }
+    } catch (error) {
+      console.error('❌ Error fetching homepage statistics:', error);
+      // Set loading to false and keep current values
+      setStatistics(prevStats => 
+        prevStats.map(stat => ({ ...stat, loading: false }))
+      );
+    }
+  };
   const fetchFeaturedGemstones = async () => {
     setFeaturedLoading(true);
     setFeaturedError(null);
@@ -335,8 +413,9 @@ const HomePage: React.FC = () => {
 
   // Fetch featured gemstones on component mount
   useEffect(() => {
-    console.log('🚀 HomePage mounted, fetching featured gemstones...');
+    console.log('🚀 HomePage mounted, fetching featured gemstones and statistics...');
     fetchFeaturedGemstones();
+    fetchHomepageStats();
   }, []);
 
   // Add a second useEffect to log when featured gemstones change
@@ -383,11 +462,44 @@ const HomePage: React.FC = () => {
     // Re-open the advertisement popup when button is clicked
     setShouldReopenPopup(true);
   };
-  const statistics = [
-    { title: 'Verified Gems', value: 2847, icon: <CheckCircleOutlined className="text-blue-500" /> },
-    { title: 'Active Traders', value: 1230, icon: <UserOutlined className="text-green-500" /> },
-    { title: 'Successful Sales', value: 892, icon: <TrophyOutlined className="text-orange-500" /> }
-  ];  const testimonials = [
+  // Homepage statistics state
+  const [statistics, setStatistics] = useState([
+    { 
+      title: 'Certified Gems', 
+      value: 0, 
+      icon: <CheckCircleOutlined className="text-blue-500" />, 
+      loading: true,
+      description: 'With certificates'
+    },
+    { 
+      title: 'Uncertified Gems', 
+      value: 0, 
+      icon: <ClockCircleOutlined className="text-orange-500" />, 
+      loading: true,
+      description: 'Without certificates'
+    },
+    { 
+      title: 'Total Listings', 
+      value: 0, 
+      icon: <AppstoreOutlined className="text-purple-500" />, 
+      loading: true,
+      description: 'All gems available'
+    },
+    { 
+      title: 'Active Traders', 
+      value: 0, 
+      icon: <UserOutlined className="text-green-500" />, 
+      loading: true,
+      description: 'Verified community'
+    },
+    { 
+      title: 'Successful Sales', 
+      value: 0, 
+      icon: <TrophyOutlined className="text-red-500" />, 
+      loading: true,
+      description: 'Completed deals'
+    }
+  ]);  const testimonials = [
     {
       name: 'Sunil Jayasinghe',
       role: 'Gemstone Dealer',
@@ -670,6 +782,26 @@ const HomePage: React.FC = () => {
         {/* Statistics Section */}
         <section className="py-6 xxs:py-8 xs:py-10 md:py-16 bg-white overflow-x-hidden w-full max-w-[100vw]">
           <div className="max-w-7xl mx-auto px-2 xxs:px-3 xs:px-4 sm:px-6 lg:px-12">
+            {/* Statistics Header */}
+            <div className="text-center mb-6 md:mb-8">
+              <Title level={3} className="!text-xl md:!text-2xl !font-bold !text-gray-800 !mb-2">
+                Live Platform Statistics
+              </Title>
+              <Text className="text-gray-600 text-sm md:text-base">
+                Real-time data from our gemstone marketplace
+              </Text>
+              <div className="mt-3">
+                <Button 
+                  size="small" 
+                  onClick={fetchHomepageStats}
+                  className="text-blue-500 border-blue-500 hover:bg-blue-50"
+                  icon={<CheckCircleOutlined />}
+                >
+                  🔄 Refresh Statistics
+                </Button>
+              </div>
+            </div>
+            
             <Row gutter={[4, 12]} xxs:gutter={[6, 14]} xs:gutter={[8, 16]} sm:gutter={[16, 16]} align="middle" justify="center">
               {statistics.map((stat, index) => (
                 <Col xs={24} sm={8} key={index}>
@@ -682,16 +814,23 @@ const HomePage: React.FC = () => {
                     <Card className="text-center border-0 shadow-lg hover:shadow-xl transition-all duration-300 h-full py-3 px-2 md:py-5 md:px-4">
                       <div className="flex flex-col items-center space-y-2 md:space-y-3">
                         <div className="text-3xl md:text-4xl">{stat.icon}</div>
-                        <Statistic 
-                          value={stat.value} 
-                          className="!mb-0"
-                          valueStyle={{
-                            fontSize: '1.5rem', 
-                            fontWeight: 'bold',
-                            color: '#1f2937'
-                          }}
-                        />
+                        {stat.loading ? (
+                          <Spin size="small" />
+                        ) : (
+                          <Statistic 
+                            value={stat.value} 
+                            className="!mb-0"
+                            valueStyle={{
+                              fontSize: '1.5rem', 
+                              fontWeight: 'bold',
+                              color: '#1f2937'
+                            }}
+                          />
+                        )}
                         <Text className="text-gray-600 font-medium text-sm md:text-base">{stat.title}</Text>
+                        {!stat.loading && (
+                          <Text className="text-xs text-gray-500">{stat.description}</Text>
+                        )}
                       </div>
                     </Card>
                   </motion.div>

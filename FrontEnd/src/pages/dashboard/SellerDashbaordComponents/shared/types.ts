@@ -39,6 +39,30 @@ export interface Bid {
   status: 'pending' | 'accepted' | 'rejected';
 }
 
+// Enhanced Bid interface for dynamic API data
+export interface EnhancedBid {
+  bidId: string;
+  listingId: string;
+  bidAmount: number;
+  currency: string;
+  bidTime: string;
+  status: string;
+  message?: string;
+  bidderName: string;
+  bidderEmail: string;
+  gemName: string;
+  gemSpecies: string;
+  listingPrice: number;
+  images: string[];
+  biddingActive: boolean;
+  biddingEndTime: string;
+  remainingTimeSeconds: number;
+  currentHighestBid: number;
+  isCurrentlyWinning: boolean;
+  currentHighestBidder?: string;
+  totalBidsForListing: number;
+}
+
 export interface Meeting {
   id: string;
   gemstone: string;
