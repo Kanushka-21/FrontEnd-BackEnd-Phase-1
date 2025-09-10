@@ -275,6 +275,37 @@ public class BiddingController {
     }
     
     /**
+     * Get all bids received by a seller for their listings
+     */
+    @GetMapping("/seller/{sellerId}/received-bids")
+    @Operation(summary = "Get seller received bids", description = "Get all bids received by a seller for their listings")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getSellerReceivedBids(
+            @PathVariable String sellerId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        
+        System.out.println("🏪 Get seller received bids request for seller: " + sellerId);
+        
+        try {
+            ApiResponse<Map<String, Object>> response = biddingService.getSellerReceivedBids(sellerId, page, size);
+            
+            if (response.isSuccess()) {
+                System.out.println("✅ Seller received bids retrieved successfully");
+                return ResponseEntity.ok(response);
+            } else {
+                System.err.println("❌ Failed to get seller received bids: " + response.getMessage());
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("❌ Error in get seller received bids endpoint: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError()
+                .body(new ApiResponse<>(false, "Failed to get seller received bids: " + e.getMessage(), null));
+        }
+    }
+    
+    /**
      * Utility endpoint to activate countdown for all listings that have bids but no active countdown
      */
     @PostMapping("/utility/activate-countdown")

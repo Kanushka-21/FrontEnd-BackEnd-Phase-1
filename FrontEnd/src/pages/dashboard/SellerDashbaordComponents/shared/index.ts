@@ -90,37 +90,6 @@ export const mockListings = [
   }
 ];
 
-// Mock bids data for seller dashboard
-export const mockBids = [
-  {
-    id: '1',
-    gemstone: 'Blue Sapphire - Ceylon',
-    image: 'https://via.placeholder.com/50',
-    buyer: 'John Anderson',
-    amount: 475000,
-    date: '2024-01-25',
-    status: 'pending' as const
-  },
-  {
-    id: '2',
-    gemstone: 'Ruby - Pigeon Blood',
-    image: 'https://via.placeholder.com/50',
-    buyer: 'Sarah Johnson',
-    amount: 780000,
-    date: '2024-01-24',
-    status: 'accepted' as const
-  },
-  {
-    id: '3',
-    gemstone: 'Padparadscha Sapphire',
-    image: 'https://via.placeholder.com/50',
-    buyer: 'Michael Chen',
-    amount: 950000,
-    date: '2024-01-23',
-    status: 'pending' as const
-  }
-];
-
 // Mock meetings data for seller dashboard
 export const mockMeetings = [
   {

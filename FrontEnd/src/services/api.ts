@@ -1151,6 +1151,17 @@ const extendedAPI = {
         console.error('Error fetching user bids:', error);
         return { success: false, message: apiUtils.formatErrorMessage(error) };
       }
+    },
+
+    // Get seller's received bids
+    getSellerReceivedBids: async (sellerId: string, page: number = 0, size: number = 10): Promise<ApiResponse<any>> => {
+      try {
+        const response = await api.get(`/api/bidding/seller/${sellerId}/received-bids?page=${page}&size=${size}`);
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching seller received bids:', error);
+        return { success: false, message: apiUtils.formatErrorMessage(error) };
+      }
     }
   },
 

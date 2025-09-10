@@ -613,6 +613,108 @@ public class BiddingService {
     }
     
     /**
+     * Get all bids received by a seller for their listings
+     */
+    public ApiResponse<Map<String, Object>> getSellerReceivedBids(String sellerId, int page, int size) {
+        try {
+            // Get all bids for this seller's listings
+            List<Bid> sellerBids = bidRepository.findBySellerIdOrderByBidTimeDesc(sellerId);
+            
+            // Apply pagination
+            int start = page * size;
+            int end = Math.min(start + size, sellerBids.size());
+            List<Bid> paginatedBids = sellerBids.subList(start, end);
+            
+            // Get enhanced bid information with listing details
+            List<Map<String, Object>> enhancedBids = new ArrayList<>();
+            
+            for (Bid bid : paginatedBids) {
+                Map<String, Object> bidInfo = new HashMap<>();
+                bidInfo.put("bidId", bid.getId());
+                bidInfo.put("listingId", bid.getListingId());
+                bidInfo.put("bidAmount", bid.getBidAmount());
+                bidInfo.put("currency", bid.getCurrency());
+                bidInfo.put("bidTime", bid.getBidTime());
+                bidInfo.put("status", bid.getStatus());
+                bidInfo.put("message", bid.getMessage());
+                bidInfo.put("bidderName", bid.getBidderName());
+                bidInfo.put("bidderEmail", bid.getBidderEmail());
+                
+                // Get listing details
+                Optional<GemListing> listingOpt = gemListingRepository.findById(bid.getListingId());
+                if (listingOpt.isPresent()) {
+                    GemListing listing = listingOpt.get();
+                    bidInfo.put("gemName", listing.getGemName());
+                    bidInfo.put("gemSpecies", listing.getSpecies());
+                    bidInfo.put("listingPrice", listing.getPrice());
+                    bidInfo.put("images", listing.getImages());
+                    bidInfo.put("biddingActive", listing.getBiddingActive());
+                    bidInfo.put("biddingEndTime", listing.getBiddingEndTime());
+                    
+                    // Calculate remaining time for countdown
+                    if (Boolean.TRUE.equals(listing.getBiddingActive()) && listing.getBiddingEndTime() != null) {
+                        LocalDateTime now = LocalDateTime.now();
+                        LocalDateTime endTime = listing.getBiddingEndTime();
+                        if (endTime.isAfter(now)) {
+                            long remainingSeconds = java.time.Duration.between(now, endTime).getSeconds();
+                            bidInfo.put("remainingTimeSeconds", remainingSeconds);
+                        } else {
+                            bidInfo.put("remainingTimeSeconds", 0);
+                        }
+                    } else {
+                        bidInfo.put("remainingTimeSeconds", 0);
+                    }
+                    
+                    // Get current highest bid for this listing
+                    Optional<Bid> currentHighest = bidRepository
+                        .findTopByListingIdAndStatusOrderByBidAmountDesc(bid.getListingId(), "ACTIVE");
+                    
+                    if (currentHighest.isPresent()) {
+                        bidInfo.put("currentHighestBid", currentHighest.get().getBidAmount());
+                        bidInfo.put("isCurrentlyWinning", currentHighest.get().getId().equals(bid.getId()));
+                        bidInfo.put("currentHighestBidder", currentHighest.get().getBidderName());
+                    } else {
+                        bidInfo.put("currentHighestBid", listing.getPrice());
+                        bidInfo.put("isCurrentlyWinning", false);
+                        bidInfo.put("currentHighestBidder", null);
+                    }
+                    
+                    // Get total bids count for this listing
+                    long totalBidsForListing = bidRepository.countByListingId(bid.getListingId());
+                    bidInfo.put("totalBidsForListing", totalBidsForListing);
+                }
+                
+                enhancedBids.add(bidInfo);
+            }
+            
+            // Prepare response
+            Map<String, Object> response = new HashMap<>();
+            response.put("bids", enhancedBids);
+            response.put("totalElements", sellerBids.size());
+            response.put("totalPages", (int) Math.ceil((double) sellerBids.size() / size));
+            response.put("currentPage", page);
+            response.put("pageSize", size);
+            
+            // Calculate statistics
+            long activeBids = sellerBids.stream().filter(bid -> "ACTIVE".equals(bid.getStatus())).count();
+            long totalListingsWithBids = sellerBids.stream()
+                .map(Bid::getListingId)
+                .collect(Collectors.toSet())
+                .size();
+            
+            response.put("activeBids", activeBids);
+            response.put("totalListingsWithBids", totalListingsWithBids);
+            
+            return new ApiResponse<>(true, "Seller received bids retrieved successfully", response);
+            
+        } catch (Exception e) {
+            System.err.println("Error getting seller received bids: " + e.getMessage());
+            e.printStackTrace();
+            return new ApiResponse<>(false, "Failed to get seller received bids: " + e.getMessage(), null);
+        }
+    }
+    
+    /**
      * Handle all notifications for a new bid - covers all user scenarios
      */
     private void handleBidNotifications(Bid newBid, GemListing listing, Bid previousHighestBid) {
