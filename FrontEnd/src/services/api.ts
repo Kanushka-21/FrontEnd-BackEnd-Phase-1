@@ -956,6 +956,28 @@ const extendedAPI = {
         console.error('Error fetching listing details:', error);
         return { success: false, message: apiUtils.formatErrorMessage(error) };
       }
+    },
+
+    // Get all feedbacks for admin management
+    getAllFeedbacks: async (page: number = 0, size: number = 10): Promise<ApiResponse<any>> => {
+      try {
+        const response = await api.get(`/api/admin/feedbacks?page=${page}&size=${size}`);
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching admin feedbacks:', error);
+        return { success: false, message: apiUtils.formatErrorMessage(error) };
+      }
+    },
+
+    // Delete feedback by ID
+    deleteFeedback: async (feedbackId: string): Promise<ApiResponse<string>> => {
+      try {
+        const response = await api.delete(`/api/admin/feedbacks/${feedbackId}`);
+        return response.data;
+      } catch (error) {
+        console.error('Error deleting feedback:', error);
+        return { success: false, message: apiUtils.formatErrorMessage(error) };
+      }
     }
   },
 

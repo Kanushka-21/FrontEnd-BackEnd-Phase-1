@@ -1,0 +1,30 @@
+/* Custom styles for Feedback Management */
+.feedback-table .ant-table-thead > tr > th {
+  background-color: #fafafa;
+  font-weight: 600;
+}
+
+.feedback-table .ant-table-tbody > tr:hover > td {
+  background-color: #f0f9ff;
+}
+
+.feedback-table .ant-rate {
+  font-size: 14px;
+}
+
+.feedback-table .ant-tag {
+  margin: 2px 0;
+}
+
+/* Responsive adjustments for feedback table */
+@media (max-width: 768px) {
+  .feedback-table .ant-table-container {
+    overflow-x: auto;
+  }
+  
+  .feedback-table .ant-table-thead > tr > th,
+  .feedback-table .ant-table-tbody > tr > td {
+    min-width: 120px;
+    white-space: nowrap;
+  }
+}

@@ -8,6 +8,7 @@ export { default as Meetings } from './Meetings';
 export { default as Analytics } from './Analytics';
 export { default as SystemSettings } from './SystemSettings';
 export { default as SecurityAudit } from './SecurityAudit';
+export { default as FeedbackManagement } from './FeedbackManagement';
 
 // Export shared components and utilities
 export * from './shared';

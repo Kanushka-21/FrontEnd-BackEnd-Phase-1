@@ -16,11 +16,9 @@ import {
   SystemSettings,
   ModalState,
   AdvertisementsManagement,
+  FeedbackManagement,
   formatLKR
 } from './AdminDashboardComponents';
-
-// Import feedback page
-import FeedbackForm from '../Feedback/FeedbackPage';
 
 const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -114,7 +112,7 @@ const AdminDashboard: React.FC = () => {
       case 'meetings':
         return <Meetings actionHandlers={actionHandlers} />;
       case 'feedback':
-        return <FeedbackForm />;
+        return <FeedbackManagement user={user} onTabChange={setActiveTab} />;
       case 'settings':
         return <SystemSettings />;
       default:

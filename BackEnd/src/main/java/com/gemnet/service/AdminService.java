@@ -4,15 +4,19 @@ import com.gemnet.dto.ApiResponse;
 import com.gemnet.model.GemListing;
 import com.gemnet.model.Notification;
 import com.gemnet.model.User;
+import com.gemnet.model.Feedback;
 import com.gemnet.repository.GemListingRepository;
 import com.gemnet.repository.NotificationRepository;
 import com.gemnet.repository.UserRepository;
 import com.gemnet.repository.AdvertisementRepository;
 import com.gemnet.repository.MeetingRepository;
 import com.gemnet.repository.BidRepository;
+import com.gemnet.repository.FeedbackRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -21,6 +25,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Service for admin operations
@@ -45,6 +50,9 @@ public class AdminService {
 
     @Autowired
     private BidRepository bidRepository;
+
+    @Autowired
+    private FeedbackRepository feedbackRepository;
 
     /**
      * Get pending gemstone listings for admin approval
@@ -386,5 +394,106 @@ public class AdminService {
             buyerId
         );
         System.out.println("🤝 Admin notified of new meeting request: " + buyerName + " & " + sellerName);
+    }
+
+    /**
+     * Get all feedbacks for admin management
+     */
+    public ApiResponse<Map<String, Object>> getAllFeedbacks(int page, int size) {
+        try {
+            System.out.println("💬 AdminService - Getting all feedbacks with pagination");
+            
+            // Create pageable with sorting by creation date (newest first)
+            Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+            
+            // Get paginated feedbacks
+            Page<Feedback> feedbackPage = feedbackRepository.findAll(pageable);
+            
+            // Convert to response format with user details
+            List<Map<String, Object>> feedbackList = feedbackPage.getContent().stream()
+                .map(feedback -> {
+                    Map<String, Object> feedbackMap = new HashMap<>();
+                    feedbackMap.put("id", feedback.getId());
+                    feedbackMap.put("name", feedback.getName());
+                    feedbackMap.put("title", feedback.getTitle());
+                    feedbackMap.put("message", feedback.getMessage());
+                    feedbackMap.put("rating", feedback.getRating());
+                    feedbackMap.put("fromRole", feedback.getFromRole());
+                    feedbackMap.put("toRole", feedback.getToRole());
+                    feedbackMap.put("createdAt", feedback.getCreatedAt());
+                    feedbackMap.put("isApproved", feedback.getIsApproved());
+                    feedbackMap.put("transactionId", feedback.getTransactionId());
+                    
+                    // Get user details for fromUserId and toUserId
+                    try {
+                        Optional<User> fromUser = userRepository.findById(feedback.getFromUserId());
+                        Optional<User> toUser = userRepository.findById(feedback.getToUserId());
+                        
+                        if (fromUser.isPresent()) {
+                            feedbackMap.put("fromUserName", fromUser.get().getFirstName() + " " + fromUser.get().getLastName());
+                            feedbackMap.put("fromUserEmail", fromUser.get().getEmail());
+                        }
+                        
+                        if (toUser.isPresent()) {
+                            feedbackMap.put("toUserName", toUser.get().getFirstName() + " " + toUser.get().getLastName());
+                            feedbackMap.put("toUserEmail", toUser.get().getEmail());
+                        }
+                    } catch (Exception e) {
+                        System.err.println("⚠️ Warning: Could not fetch user details for feedback " + feedback.getId());
+                    }
+                    
+                    return feedbackMap;
+                })
+                .collect(Collectors.toList());
+            
+            // Prepare response
+            Map<String, Object> response = new HashMap<>();
+            response.put("feedbacks", feedbackList);
+            response.put("totalElements", feedbackPage.getTotalElements());
+            response.put("totalPages", feedbackPage.getTotalPages());
+            response.put("currentPage", page);
+            response.put("pageSize", size);
+            response.put("hasNext", feedbackPage.hasNext());
+            response.put("hasPrevious", feedbackPage.hasPrevious());
+            
+            System.out.println("✅ Successfully retrieved " + feedbackList.size() + " feedbacks for admin");
+            return ApiResponse.success("Feedbacks retrieved successfully", response);
+            
+        } catch (Exception e) {
+            System.err.println("❌ AdminService - Error getting all feedbacks: " + e.getMessage());
+            e.printStackTrace();
+            return ApiResponse.error("Failed to retrieve feedbacks: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Delete feedback by ID
+     */
+    public ApiResponse<String> deleteFeedback(String feedbackId) {
+        try {
+            System.out.println("🗑️ AdminService - Deleting feedback: " + feedbackId);
+            
+            // Check if feedback exists
+            Optional<Feedback> feedbackOpt = feedbackRepository.findById(feedbackId);
+            if (!feedbackOpt.isPresent()) {
+                System.err.println("❌ Feedback not found: " + feedbackId);
+                return ApiResponse.error("Feedback not found");
+            }
+            
+            Feedback feedback = feedbackOpt.get();
+            String feedbackInfo = feedback.getName() + " (Rating: " + feedback.getRating() + "/5)";
+            
+            // Delete the feedback
+            feedbackRepository.deleteById(feedbackId);
+            
+            System.out.println("✅ Feedback deleted successfully: " + feedbackInfo);
+            return ApiResponse.success("Feedback deleted successfully", 
+                "Deleted feedback: " + feedbackInfo);
+            
+        } catch (Exception e) {
+            System.err.println("❌ AdminService - Error deleting feedback: " + e.getMessage());
+            e.printStackTrace();
+            return ApiResponse.error("Failed to delete feedback: " + e.getMessage());
+        }
     }
 }
