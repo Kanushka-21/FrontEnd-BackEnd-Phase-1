@@ -16,6 +16,7 @@ import RoleAwareHeader from '@/components/layout/RoleAwareHeader';
 import GemstoneCard from '@/components/ui/GemstoneCard';
 import HomepageAdPopup from '@/components/ui/HomepageAdPopup';
 import ViewAdsButton from '@/components/ui/ViewAdsButton';
+import FeedbackSlideshow from '@/components/FeedbackSlideshow';
 import { api } from '@/services/api';
 import { advertisementService, Advertisement } from '@/services/advertisementService';
 import '@/styles/advertisement-popup.css';
@@ -1007,50 +1008,15 @@ const HomePage: React.FC = () => {
           </div>
         </section>
 
-        {/* Testimonials */}
+        {/* Dynamic Testimonials */}
         <section className="py-12 md:py-20 bg-gray-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8 }}
-              viewport={{ once: true }}
-              className="text-center mb-8 md:mb-16"
-            >              <Title level={2} className="!text-2xl sm:!text-3xl lg:!text-4xl !font-bold !text-gray-800 !mb-3 md:!mb-4">
-                What Our Members Say
-              </Title>
-              <Paragraph className="!text-base md:!text-lg !text-gray-600 max-w-2xl mx-auto">
-                Join thousands of satisfied members in our growing gemstone community
-              </Paragraph>
-            </motion.div>
-
-            <Row gutter={[16, 24]}>
-              {testimonials.map((testimonial, index) => (
-                <Col xs={24} sm={12} md={8} key={index}>
-                  <motion.div
-                    initial={{ opacity: 0, y: 30 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.6, delay: index * 0.1 }}
-                    viewport={{ once: true }}
-                  >                    <Card className="h-full border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-blue-50 to-transparent">
-                      <div className="flex flex-col items-center text-center space-y-3 md:space-y-4 pt-2">
-                        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                          <UserOutlined className="text-blue-600 text-lg" />
-                        </div>                        <div>
-                          <Title level={4} className="!mb-0 md:!mb-1 !text-lg md:!text-xl">{testimonial.name}</Title>
-                          <Text className="text-gray-600 text-sm md:text-base">{testimonial.role}</Text>
-                        </div>
-                        <Rate disabled defaultValue={testimonial.rating} className="text-yellow-500 text-sm md:text-base" />                        <div className="bg-white p-4 rounded-lg border border-blue-100 mt-2">
-                          <Paragraph className="!text-gray-700 italic text-sm md:text-base leading-relaxed mb-0">
-                            "{testimonial.comment}"
-                          </Paragraph>
-                        </div>
-                      </div>
-                    </Card>
-                  </motion.div>
-                </Col>
-              ))}
-            </Row>
+            <FeedbackSlideshow 
+              autoplay={true}
+              showTitle={true}
+              limit={20}
+              className=""
+            />
           </div>
         </section>
 

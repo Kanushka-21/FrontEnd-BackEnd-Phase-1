@@ -4,7 +4,7 @@ import { useNotifications, NotificationBadge } from '@/contexts/NotificationCont
 import { Modal, Divider, Alert } from 'antd';
 import dayjs from 'dayjs';
 import RoleAwareDashboardLayout from '@/components/layout/RoleAwareDashboardLayout';
-import { BarChart3, Users, Package, Clock, Settings, Menu as MenuIcon, Shield, Bell, Search } from 'lucide-react';
+import { BarChart3, Users, Package, Clock, Settings, Menu as MenuIcon, MessageCircle, Search } from 'lucide-react';
 import AdminNotificationComponent from '@/components/ui/AdminNotificationComponent';
 
 // Import modular components
@@ -16,6 +16,7 @@ import {
   SystemSettings,
   ModalState,
   AdvertisementsManagement,
+  FeedbackManagement,
   formatLKR
 } from './AdminDashboardComponents';
 
@@ -68,6 +69,12 @@ const AdminDashboard: React.FC = () => {
       notificationCount: notifications.meetingRequests
     },
     { 
+      id: 'feedback', 
+      label: 'User Feedback', 
+      icon: <MessageCircle size={24} />,
+      notificationCount: 0
+    },
+    { 
       id: 'settings', 
       label: 'System Settings', 
       icon: <Settings size={24} />,
@@ -104,6 +111,8 @@ const AdminDashboard: React.FC = () => {
         return <AdvertisementsManagement actionHandlers={actionHandlers} />;
       case 'meetings':
         return <Meetings actionHandlers={actionHandlers} />;
+      case 'feedback':
+        return <FeedbackManagement user={user} onTabChange={setActiveTab} />;
       case 'settings':
         return <SystemSettings />;
       default:

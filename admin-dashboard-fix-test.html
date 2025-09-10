@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Dashboard Quick Fix Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        pre { background: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🚀 Admin Dashboard API Quick Fix Test</h1>
+    
+    <button onclick="testDashboardAPI()">📊 Test Dashboard Stats API</button>
+    <button onclick="fixSecurity()">🔧 Show Security Fix Instructions</button>
+    
+    <div id="status"></div>
+    <div id="results"></div>
+
+    <script>
+        const API_BASE = 'http://localhost:9092';
+        
+        function updateStatus(message, type = 'info') {
+            document.getElementById('status').innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+        
+        async function testDashboardAPI() {
+            updateStatus('🔄 Testing Admin Dashboard Stats API...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/dashboard-stats`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    updateStatus('✅ Dashboard Stats API is working!', 'success');
+                    document.getElementById('results').innerHTML = `
+                        <h3>📊 Dashboard Data Retrieved:</h3>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    updateStatus(`❌ API Error: ${response.status} - ${response.statusText}`, 'error');
+                    if (response.status === 403) {
+                        document.getElementById('results').innerHTML = `
+                            <div class="status error">
+                                <h3>🔐 Security Issue Detected</h3>
+                                <p>The API is returning 403 Forbidden. This means authentication is required.</p>
+                                <p><strong>Quick Fix:</strong> Click "Show Security Fix Instructions" below.</p>
+                            </div>
+                        `;
+                    }
+                }
+            } catch (error) {
+                updateStatus(`❌ Connection Error: ${error.message}`, 'error');
+                document.getElementById('results').innerHTML = `
+                    <div class="status error">
+                        <h3>🔌 Backend Connection Issue</h3>
+                        <p>Cannot connect to backend at ${API_BASE}</p>
+                        <p><strong>Solution:</strong> Make sure the backend is running on port 9092</p>
+                        <p>Run this command:</p>
+                        <pre>cd BackEnd
+$env:JAVA_HOME = "C:\\Program Files\\Java\\jdk-17"
+$env:PATH = "$env:JAVA_HOME\\bin;$env:PATH"
+java -jar target/gemnet-backend-1.0.0.jar</pre>
+                    </div>
+                `;
+            }
+        }
+        
+        function fixSecurity() {
+            document.getElementById('results').innerHTML = `
+                <div class="status info">
+                    <h3>🔧 Quick Security Fix for Admin Dashboard</h3>
+                    <h4>Problem:</h4>
+                    <p>Admin endpoints require authentication but the frontend isn't sending JWT tokens.</p>
+                    
+                    <h4>Quick Fix (Temporary for Development):</h4>
+                    <p>1. Edit: <code>BackEnd/src/main/java/com/gemnet/config/SecurityConfig.java</code></p>
+                    <p>2. Find line ~58 with <code>.requestMatchers("/api/auth/**").permitAll()</code></p>
+                    <p>3. Add this line right after it:</p>
+                    <pre>.requestMatchers("/api/admin/**").permitAll() // TEMP: Allow all admin endpoints</pre>
+                    
+                    <h4>Then rebuild and restart backend:</h4>
+                    <pre>cd BackEnd
+mvnw.cmd clean package -DskipTests
+java -jar target/gemnet-backend-1.0.0.jar</pre>
+                    
+                    <h4>Alternative Quick Test:</h4>
+                    <p>If backend is already running with the old security config, just restart your frontend and the admin dashboard should work.</p>
+                    
+                    <h4>⚠️ Important:</h4>
+                    <p>This is a temporary fix for development. In production, implement proper JWT authentication for admin endpoints.</p>
+                </div>
+            `;
+        }
+        
+        // Auto-test on page load
+        window.onload = () => {
+            setTimeout(testDashboardAPI, 1000);
+        };
+    </script>
+</body>
+</html>

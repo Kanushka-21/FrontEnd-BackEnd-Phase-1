@@ -439,6 +439,74 @@ public class AdminController {
     }
 
     /**
+     * Get all feedbacks for admin management
+     */
+    @GetMapping("/feedbacks")
+    @Operation(summary = "Get all feedbacks", 
+               description = "Retrieve all feedbacks for admin management")
+    @CrossOrigin(origins = "*", allowedHeaders = "*", methods = {RequestMethod.GET})
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getAllFeedbacks(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        
+        System.out.println("💬 Admin - Get all feedbacks request received");
+        System.out.println("📄 Page: " + page + ", Size: " + size);
+        
+        try {
+            // Get all feedbacks from feedback service
+            ApiResponse<Map<String, Object>> serviceResponse = adminService.getAllFeedbacks(page, size);
+            
+            if (serviceResponse.isSuccess()) {
+                System.out.println("✅ Successfully retrieved feedbacks");
+                return ResponseEntity.ok(serviceResponse);
+            } else {
+                System.err.println("❌ Service error: " + serviceResponse.getMessage());
+                return ResponseEntity.status(500).body(serviceResponse);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("❌ Get all feedbacks error: " + e.getMessage());
+            e.printStackTrace();
+            
+            return ResponseEntity.status(500)
+                .body(ApiResponse.error("Failed to retrieve feedbacks: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Delete feedback by ID
+     */
+    @DeleteMapping("/feedbacks/{feedbackId}")
+    @Operation(summary = "Delete feedback", 
+               description = "Delete a specific feedback from the system")
+    @CrossOrigin(origins = "*", allowedHeaders = "*", methods = {RequestMethod.DELETE})
+    public ResponseEntity<ApiResponse<String>> deleteFeedback(@PathVariable String feedbackId) {
+        
+        System.out.println("🗑️ Admin - Delete feedback request received");
+        System.out.println("🆔 Feedback ID: " + feedbackId);
+        
+        try {
+            // Delete feedback via service
+            ApiResponse<String> serviceResponse = adminService.deleteFeedback(feedbackId);
+            
+            if (serviceResponse.isSuccess()) {
+                System.out.println("✅ Feedback deleted successfully");
+                return ResponseEntity.ok(serviceResponse);
+            } else {
+                System.err.println("❌ Service error: " + serviceResponse.getMessage());
+                return ResponseEntity.status(500).body(serviceResponse);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("❌ Delete feedback error: " + e.getMessage());
+            e.printStackTrace();
+            
+            return ResponseEntity.status(500)
+                .body(ApiResponse.error("Failed to delete feedback: " + e.getMessage()));
+        }
+    }
+
+    /**
      * Helper method to create mock notification
      */
     private Map<String, Object> createMockNotification(String id, String type, String title, 

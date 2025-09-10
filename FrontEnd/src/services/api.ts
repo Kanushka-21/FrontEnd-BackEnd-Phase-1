@@ -202,6 +202,64 @@ export const authAPI = {
   },
 };
 
+// Feedback API
+export const feedbackAPI = {
+  // Get current user info for feedback form
+  getUserInfo: async (): Promise<ApiResponse<any>> => {
+    try {
+      const response = await api.get('/api/feedbacks/user-info');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching user info:', error);
+      return { success: false, message: apiUtils.formatErrorMessage(error) };
+    }
+  },
+
+  // Get eligible recipients for feedback
+  getEligibleRecipients: async (): Promise<ApiResponse<any[]>> => {
+    try {
+      const response = await api.get('/api/feedbacks/recipients');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching eligible recipients:', error);
+      return { success: false, message: apiUtils.formatErrorMessage(error) };
+    }
+  },
+
+  // Submit new feedback
+  submitFeedback: async (feedbackData: any): Promise<ApiResponse<any>> => {
+    try {
+      const response = await api.post('/api/feedbacks', feedbackData);
+      return response.data;
+    } catch (error) {
+      console.error('Error submitting feedback:', error);
+      return { success: false, message: apiUtils.formatErrorMessage(error) };
+    }
+  },
+
+  // Get feedbacks for homepage display
+  getFeedbacksForHomepage: async (limit: number = 20): Promise<ApiResponse<any[]>> => {
+    try {
+      const response = await api.get(`/api/feedbacks?limit=${limit}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching feedbacks for homepage:', error);
+      return { success: false, message: apiUtils.formatErrorMessage(error) };
+    }
+  },
+
+  // Get feedbacks for a specific user
+  getFeedbacksForUser: async (userId: string): Promise<ApiResponse<any>> => {
+    try {
+      const response = await api.get(`/api/feedbacks/user/${userId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching user feedbacks:', error);
+      return { success: false, message: apiUtils.formatErrorMessage(error) };
+    }
+  },
+};
+
 // Test API (for development/debugging)
 export const testAPI = {
   // Complete NIC verification test
@@ -426,6 +484,9 @@ export const apiUtils = {
 const extendedAPI = {
   // Auth methods
   ...authAPI,
+
+  // Feedback methods
+  ...feedbackAPI,
 
   // Gemstone methods
   ...gemstonesAPI,
@@ -893,6 +954,28 @@ const extendedAPI = {
         return response.data;
       } catch (error) {
         console.error('Error fetching listing details:', error);
+        return { success: false, message: apiUtils.formatErrorMessage(error) };
+      }
+    },
+
+    // Get all feedbacks for admin management
+    getAllFeedbacks: async (page: number = 0, size: number = 10): Promise<ApiResponse<any>> => {
+      try {
+        const response = await api.get(`/api/admin/feedbacks?page=${page}&size=${size}`);
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching admin feedbacks:', error);
+        return { success: false, message: apiUtils.formatErrorMessage(error) };
+      }
+    },
+
+    // Delete feedback by ID
+    deleteFeedback: async (feedbackId: string): Promise<ApiResponse<string>> => {
+      try {
+        const response = await api.delete(`/api/admin/feedbacks/${feedbackId}`);
+        return response.data;
+      } catch (error) {
+        console.error('Error deleting feedback:', error);
         return { success: false, message: apiUtils.formatErrorMessage(error) };
       }
     }

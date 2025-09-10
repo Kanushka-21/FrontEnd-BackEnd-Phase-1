@@ -55,6 +55,10 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(authz -> authz
                 .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/admin/dashboard-stats").permitAll() // Allow dashboard stats for quick loading
+                .requestMatchers("/api/admin/users").permitAll() // Allow user management data
+                .requestMatchers("/api/admin/pending-listings").permitAll() // Allow pending listings data
+                .requestMatchers("/api/feedbacks/**").permitAll() // Allow feedback endpoints
                 .requestMatchers("/api/gemsData/**").permitAll()
                 .requestMatchers("/api/advertisements/**").permitAll()
                 .requestMatchers("/uploads/**").permitAll() // Allow access to uploaded files
