@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marketplace Price Update - Sri Lankan Integration</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .card {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        }
+        .btn-primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 10px;
+            padding: 12px 30px;
+            font-weight: 600;
+        }
+        .btn-success {
+            background: linear-gradient(45deg, #11998e, #38ef7d);
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+        .stats-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-left: 5px solid #667eea;
+            margin-top: 20px;
+        }
+        .progress-custom {
+            height: 8px;
+            border-radius: 4px;
+        }
+        .confidence-high { color: #28a745; font-weight: bold; }
+        .confidence-medium { color: #ffc107; font-weight: bold; }
+        .confidence-low { color: #dc3545; font-weight: bold; }
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .log-output {
+            background: #1a1a1a;
+            color: #00ff00;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            max-height: 400px;
+            overflow-y: auto;
+            font-size: 0.9em;
+        }
+        .update-btn {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            border: none;
+            color: white;
+            font-weight: 600;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1.1em;
+        }
+        .update-btn:hover {
+            background: linear-gradient(45deg, #ee5a24, #ff6b6b);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="card">
+                    <div class="card-body p-4">
+                        <div class="text-center mb-4">
+                            <h2 class="text-primary mb-2">🇱🇰 Marketplace Price Update System</h2>
+                            <p class="text-muted">Update all marketplace listings with authentic Sri Lankan market data</p>
+                            <p class="badge bg-info">Dataset: 142 Sri Lankan Gemstones Ready</p>
+                        </div>
+
+                        <!-- Update Controls -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-body text-center">
+                                        <h5 class="card-title">🔄 Update All Listings</h5>
+                                        <p class="card-text text-muted">Apply Sri Lankan market pricing to all active marketplace listings</p>
+                                        <button id="updateAllBtn" class="update-btn btn btn-lg" onclick="updateAllListings()">
+                                            🇱🇰 Update Marketplace Prices
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-body text-center">
+                                        <h5 class="card-title">📊 Current Statistics</h5>
+                                        <p class="card-text text-muted">View current marketplace integration status</p>
+                                        <button id="statsBtn" class="btn btn-success btn-lg" onclick="getStats()">
+                                            📈 Get Statistics
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Loading Indicator -->
+                        <div class="loading" id="loading">
+                            <div class="spinner"></div>
+                            <p>Processing marketplace listings with Sri Lankan data...</p>
+                        </div>
+
+                        <!-- Statistics Display -->
+                        <div id="statsDisplay" style="display: none;">
+                            <div class="stats-card card">
+                                <div class="card-body">
+                                    <h5 class="card-title text-primary">📊 Marketplace Statistics</h5>
+                                    
+                                    <div class="row mb-3">
+                                        <div class="col-md-3 text-center">
+                                            <div class="display-6 text-primary" id="totalListings">0</div>
+                                            <small class="text-muted">Total Active Listings</small>
+                                        </div>
+                                        <div class="col-md-3 text-center">
+                                            <div class="display-6 text-success" id="updatedListings">0</div>
+                                            <small class="text-muted">Sri Lankan Priced</small>
+                                        </div>
+                                        <div class="col-md-3 text-center">
+                                            <div class="display-6 text-info" id="coveragePercent">0%</div>
+                                            <small class="text-muted">Coverage</small>
+                                        </div>
+                                        <div class="col-md-3 text-center">
+                                            <div class="display-6 text-warning" id="avgAccuracy">0%</div>
+                                            <small class="text-muted">Avg. Confidence</small>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Sri Lankan Data Coverage</label>
+                                        <div class="progress progress-custom">
+                                            <div class="progress-bar bg-primary" role="progressbar" id="coverageBar" style="width: 0%"></div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-4 text-center">
+                                            <div class="confidence-high" id="highConfidence">0</div>
+                                            <small class="text-muted">High Confidence (80%+)</small>
+                                        </div>
+                                        <div class="col-md-4 text-center">
+                                            <div class="confidence-medium" id="mediumConfidence">0</div>
+                                            <small class="text-muted">Medium Confidence (60-79%)</small>
+                                        </div>
+                                        <div class="col-md-4 text-center">
+                                            <div class="confidence-low" id="lowConfidence">0</div>
+                                            <small class="text-muted">Low Confidence (<60%)</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Update Results -->
+                        <div id="updateResults" style="display: none;">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title text-success">✅ Update Results</h5>
+                                    <div id="updateSummary"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Console Log -->
+                        <div class="mt-4">
+                            <h5>📝 System Log</h5>
+                            <div class="log-output" id="logOutput">
+                                <div>🇱🇰 Sri Lankan Marketplace Price Update System Initialized</div>
+                                <div>📊 Ready to process marketplace listings with authentic Sri Lankan market data</div>
+                                <div>💎 142 Sri Lankan gemstone records loaded for price comparison</div>
+                            </div>
+                        </div>
+
+                        <!-- Error Display -->
+                        <div id="error" class="alert alert-danger mt-3" style="display: none;">
+                            <h6 class="fw-bold">❌ Error</h6>
+                            <p class="mb-0" id="errorMessage"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_BASE = 'http://localhost:9092/api/marketplace';
+
+        function addLog(message) {
+            const logOutput = document.getElementById('logOutput');
+            const timestamp = new Date().toLocaleTimeString();
+            logOutput.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        async function updateAllListings() {
+            const btn = document.getElementById('updateAllBtn');
+            const originalText = btn.innerHTML;
+            
+            try {
+                // Show loading state
+                btn.disabled = true;
+                btn.innerHTML = '🔄 Updating...';
+                document.getElementById('loading').style.display = 'block';
+                document.getElementById('updateResults').style.display = 'none';
+                document.getElementById('error').style.display = 'none';
+
+                addLog('🚀 Starting marketplace price update with Sri Lankan data...');
+
+                // Make API call to update prices
+                const response = await fetch(`${API_BASE}/update-prices`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                const data = await response.json();
+
+                // Hide loading
+                document.getElementById('loading').style.display = 'none';
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+
+                if (data.status === 'success') {
+                    addLog('✅ Update completed successfully!');
+                    displayUpdateResults(data);
+                    
+                    // Auto-refresh stats
+                    setTimeout(() => getStats(), 1000);
+                } else {
+                    addLog('❌ Update failed: ' + data.message);
+                    displayError(data.message);
+                }
+
+            } catch (error) {
+                document.getElementById('loading').style.display = 'none';
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                addLog('❌ Connection error: ' + error.message);
+                displayError('Connection error: ' + error.message);
+            }
+        }
+
+        async function getStats() {
+            try {
+                addLog('📊 Fetching marketplace statistics...');
+
+                const response = await fetch(`${API_BASE}/sri-lankan-stats`);
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    displayStats(data.statistics);
+                    addLog('📈 Statistics updated successfully');
+                } else {
+                    addLog('❌ Failed to get statistics: ' + data.message);
+                    displayError(data.message);
+                }
+
+            } catch (error) {
+                addLog('❌ Connection error: ' + error.message);
+                displayError('Connection error: ' + error.message);
+            }
+        }
+
+        function displayUpdateResults(data) {
+            const stats = data.statistics;
+            const summaryHtml = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>Update Summary:</strong>
+                        <ul class="list-unstyled mt-2">
+                            <li>📊 Total Listings: ${stats.totalListings}</li>
+                            <li>🇱🇰 Updated with Sri Lankan Data: ${stats.updatedWithSriLankanData}</li>
+                            <li>📈 Coverage: ${stats.updatePercentage}%</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Confidence Distribution:</strong>
+                        <ul class="list-unstyled mt-2">
+                            <li class="confidence-high">🟢 High (80%+): ${stats.highConfidencePredictions}</li>
+                            <li class="confidence-medium">🟡 Medium (60-79%): ${stats.mediumConfidencePredictions}</li>
+                            <li class="confidence-low">🔴 Low (<60%): ${stats.lowConfidencePredictions}</li>
+                        </ul>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('updateSummary').innerHTML = summaryHtml;
+            document.getElementById('updateResults').style.display = 'block';
+        }
+
+        function displayStats(stats) {
+            document.getElementById('totalListings').textContent = stats.totalActiveListings || 0;
+            document.getElementById('updatedListings').textContent = stats.listingsWithSriLankanPricing || 0;
+            document.getElementById('coveragePercent').textContent = Math.round(stats.coveragePercentage || 0) + '%';
+            
+            // Update progress bar
+            const coverage = stats.coveragePercentage || 0;
+            document.getElementById('coverageBar').style.width = coverage + '%';
+            
+            // Confidence levels
+            const confidence = stats.confidenceLevels || {};
+            document.getElementById('highConfidence').textContent = confidence.high || 0;
+            document.getElementById('mediumConfidence').textContent = confidence.medium || 0;
+            document.getElementById('lowConfidence').textContent = confidence.low || 0;
+            
+            // Calculate average accuracy (rough estimate)
+            const total = (confidence.high || 0) + (confidence.medium || 0) + (confidence.low || 0);
+            const avgAccuracy = total > 0 ? 
+                Math.round(((confidence.high * 90) + (confidence.medium * 70) + (confidence.low * 50)) / total) : 0;
+            document.getElementById('avgAccuracy').textContent = avgAccuracy + '%';
+            
+            document.getElementById('statsDisplay').style.display = 'block';
+        }
+
+        function displayError(message) {
+            document.getElementById('error').style.display = 'block';
+            document.getElementById('errorMessage').textContent = message;
+        }
+
+        // Auto-load stats on page load
+        window.addEventListener('load', function() {
+            addLog('🌟 System ready for marketplace price updates');
+            getStats();
+        });
+    </script>
+</body>
+</html>

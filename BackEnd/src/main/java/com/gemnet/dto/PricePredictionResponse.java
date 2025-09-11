@@ -14,6 +14,15 @@ public class PricePredictionResponse {
     private Double confidenceScore;
     private String status;
     private String message;
+    private String predictionMethod;
+    private Double modelAccuracy;
+    
+    // New fields for Sri Lankan market integration
+    private String methodUsed;
+    private Integer dataPoints;
+    private String marketInsights;
+    private Double accuracyScore;
+    private Double confidence;
     
     // Default constructor
     public PricePredictionResponse() {
@@ -105,6 +114,66 @@ public class PricePredictionResponse {
     
     public void setMessage(String message) {
         this.message = message;
+    }
+    
+    public String getPredictionMethod() {
+        return predictionMethod;
+    }
+    
+    public void setPredictionMethod(String predictionMethod) {
+        this.predictionMethod = predictionMethod;
+    }
+    
+    public Double getModelAccuracy() {
+        return modelAccuracy;
+    }
+    
+    public void setModelAccuracy(Double modelAccuracy) {
+        this.modelAccuracy = modelAccuracy;
+    }
+    
+    public String getMethodUsed() {
+        return methodUsed;
+    }
+    
+    public void setMethodUsed(String methodUsed) {
+        this.methodUsed = methodUsed;
+    }
+    
+    public Integer getDataPoints() {
+        return dataPoints;
+    }
+    
+    public void setDataPoints(Integer dataPoints) {
+        this.dataPoints = dataPoints;
+    }
+    
+    public String getMarketInsights() {
+        return marketInsights;
+    }
+    
+    public void setMarketInsights(String marketInsights) {
+        this.marketInsights = marketInsights;
+    }
+    
+    public Double getAccuracyScore() {
+        return accuracyScore;
+    }
+    
+    public void setAccuracyScore(Double accuracyScore) {
+        this.accuracyScore = accuracyScore;
+    }
+    
+    public Double getConfidence() {
+        return confidence;
+    }
+    
+    public void setConfidence(Double confidence) {
+        this.confidence = confidence;
+    }
+    
+    public boolean isSuccess() {
+        return "SUCCESS".equals(status);
     }
     
     @Override

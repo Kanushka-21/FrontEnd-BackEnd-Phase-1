@@ -9,7 +9,6 @@ import org.springframework.data.mongodb.core.index.Indexed;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.Positive;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -124,6 +123,13 @@ public class GemListing {
     private String winningBidderId;           // User ID of the winning bidder
     private BigDecimal finalPrice;            // Final winning bid amount
     private String sellerId;                  // User ID of the seller (same as userId but more explicit)
+    
+    // Sri Lankan Market Integration Fields
+    private String pricingMethod;             // Method used for pricing (e.g., "Sri Lankan Market Analysis")
+    private Double pricingConfidence;         // Confidence score (0.0 to 1.0) from Sri Lankan market data
+    private String marketInsights;            // Market insights from Sri Lankan dataset
+    private Integer dataPointsUsed;           // Number of Sri Lankan gemstones used for comparison
+    private LocalDateTime lastPriceUpdate;    // When the price was last updated with Sri Lankan data
     
     // Constructors
     public GemListing() {
@@ -481,6 +487,47 @@ public class GemListing {
     
     public void setSellerId(String sellerId) {
         this.sellerId = sellerId;
+    }
+    
+    // Sri Lankan Market Integration Getters and Setters
+    public String getPricingMethod() {
+        return pricingMethod;
+    }
+    
+    public void setPricingMethod(String pricingMethod) {
+        this.pricingMethod = pricingMethod;
+    }
+    
+    public Double getPricingConfidence() {
+        return pricingConfidence;
+    }
+    
+    public void setPricingConfidence(Double pricingConfidence) {
+        this.pricingConfidence = pricingConfidence;
+    }
+    
+    public String getMarketInsights() {
+        return marketInsights;
+    }
+    
+    public void setMarketInsights(String marketInsights) {
+        this.marketInsights = marketInsights;
+    }
+    
+    public Integer getDataPointsUsed() {
+        return dataPointsUsed;
+    }
+    
+    public void setDataPointsUsed(Integer dataPointsUsed) {
+        this.dataPointsUsed = dataPointsUsed;
+    }
+    
+    public LocalDateTime getLastPriceUpdate() {
+        return lastPriceUpdate;
+    }
+    
+    public void setLastPriceUpdate(LocalDateTime lastPriceUpdate) {
+        this.lastPriceUpdate = lastPriceUpdate;
     }
     
     // Helper methods

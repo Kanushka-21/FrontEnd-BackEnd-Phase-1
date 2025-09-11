@@ -58,7 +58,7 @@ public class Advertisement {
     }
     
     public Advertisement(String title, String category, String description, String price, 
-                        String contactInfo, String userId, List<String> images) {
+                        String mobileNo, String email, String userId, List<String> images) {
         this();
         this.title = title;
         this.category = category;

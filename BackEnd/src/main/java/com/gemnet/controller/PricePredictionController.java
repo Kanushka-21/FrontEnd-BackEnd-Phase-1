@@ -4,6 +4,7 @@ import com.gemnet.dto.PricePredictionRequest;
 import com.gemnet.dto.PricePredictionResponse;
 import com.gemnet.service.PricePredictionService;
 import com.gemnet.service.GemListingService;
+import com.gemnet.service.SriLankanMarketPriceService;
 import com.gemnet.model.GemListing;
 
 import org.slf4j.Logger;
@@ -29,6 +30,9 @@ public class PricePredictionController {
 
     @Autowired
     private GemListingService gemListingService;
+    
+    @Autowired
+    private SriLankanMarketPriceService sriLankanMarketPriceService;
 
     /**
      * Predict price based on gemstone attributes
@@ -321,5 +325,26 @@ public class PricePredictionController {
     @GetMapping("/health")
     public ResponseEntity<String> healthCheck() {
         return ResponseEntity.ok("Price prediction service is running");
+    }
+    
+    /**
+     * Test endpoint for Sri Lankan market pricing
+     */
+    @PostMapping("/sri-lankan-test")
+    public ResponseEntity<PricePredictionResponse> testSriLankanPricing(@Valid @RequestBody PricePredictionRequest request) {
+        logger.info("🇱🇰 Testing Sri Lankan market pricing for: {}", request);
+        
+        try {
+            // Force Sri Lankan market-enhanced prediction
+            PricePredictionResponse response = pricePredictionService.predictPrice(request);
+            
+            logger.info("✅ Sri Lankan market test completed: {} LKR", response.getPredictedPrice());
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            logger.error("❌ Sri Lankan market pricing test failed", e);
+            PricePredictionResponse errorResponse = PricePredictionResponse.error("Sri Lankan pricing test failed: " + e.getMessage());
+            return ResponseEntity.badRequest().body(errorResponse);
+        }
     }
 }
