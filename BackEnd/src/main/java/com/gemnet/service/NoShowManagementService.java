@@ -740,10 +740,17 @@ public class NoShowManagementService {
                 return response;
             }
             
-            // Update user status
+            // Update user status - fully restore account
             user.setAccountStatus("ACTIVE");
             user.setBlockingReason(null);
             user.setBlockedAt(null);
+            user.setIsActive(true); // Ensure account is active for login
+            
+            // Restore verification status if it was changed
+            if (!"VERIFIED".equals(user.getVerificationStatus())) {
+                user.setVerificationStatus("VERIFIED");
+                logger.info("🔄 Restored verification status to VERIFIED for unblocked user {}", userId);
+            }
             
             // Reduce no-show count by 1 as administrative grace when unblocking
             int currentNoShowCount = user.getNoShowCount();

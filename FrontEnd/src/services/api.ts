@@ -17,7 +17,7 @@ const API_BASE_URL = 'http://localhost:9092';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000, // 10 seconds default timeout - reduced from 30s
+  timeout: 15000, // 15 seconds for general requests
   headers: {
     'Content-Type': 'application/json',
   },
@@ -97,7 +97,7 @@ export const authAPI = {
   // Register new user
   register: async (userData: UserRegistrationRequest): Promise<ApiResponse<string>> => {
     const response: AxiosResponse<ApiResponse<string>> = await api.post('/api/auth/register', userData, {
-      timeout: 30000 // 30 seconds for registration only
+      timeout: 25000 // 25 seconds for registration only
     });
     return response.data;
   },

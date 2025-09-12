@@ -304,9 +304,13 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
 
       const data = await response.json();
       if (data.success) {
-        await fetchMeetings();
+        // First close modal and reset state
         setShowAttendanceModal(false);
         setSelectedMeeting(null);
+        setAttendanceData({ attended: true, reason: '' });
+        
+        // Then fetch meetings and show message
+        await fetchMeetings();
         setMessage({ 
           type: 'success', 
           text: attended ? 'Attendance marked successfully!' : 'No-show reported successfully!' 
