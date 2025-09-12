@@ -45,6 +45,8 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
   const [updatingMeeting, setUpdatingMeeting] = useState<string | null>(null);
+  const [showCompleteConfirmModal, setShowCompleteConfirmModal] = useState(false);
+  const [meetingToComplete, setMeetingToComplete] = useState<Meeting | null>(null);
 
   // Get proper image URL
   const getImageUrl = (imageUrl?: string, gemName?: string) => {
@@ -258,6 +260,10 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
         
         // Refresh meetings to get updated data
         fetchAllMeetings();
+        
+        // Close confirmation modal
+        setShowCompleteConfirmModal(false);
+        setMeetingToComplete(null);
       } else {
         throw new Error(data.message || 'Failed to update meeting status');
       }
@@ -271,6 +277,19 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
       setTimeout(() => setMessage(null), 5000);
     } finally {
       setUpdatingMeeting(null);
+    }
+  };
+
+  // Show confirmation modal before completing meeting
+  const handleCompleteButtonClick = (meeting: Meeting) => {
+    setMeetingToComplete(meeting);
+    setShowCompleteConfirmModal(true);
+  };
+
+  // Confirm completion action
+  const confirmCompletion = async () => {
+    if (meetingToComplete) {
+      await markAsCompleted(meetingToComplete.id);
     }
   };
 
@@ -596,7 +615,7 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
                             {/* Mark as Completed Button for Confirmed Meetings */}
                             {meeting.status === 'CONFIRMED' && (
                               <button
-                                onClick={() => markAsCompleted(meeting.id)}
+                                onClick={() => handleCompleteButtonClick(meeting)}
                                 disabled={updatingMeeting === meeting.id}
                                 className="flex items-center space-x-1 px-2 py-1 bg-green-100 text-green-700 rounded-md hover:bg-green-200 transition-colors text-xs disabled:opacity-50 disabled:cursor-not-allowed"
                               >
@@ -634,7 +653,7 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
                     {/* Mark as Completed Button in Modal */}
                     {selectedMeeting.status === 'CONFIRMED' && (
                       <button
-                        onClick={() => markAsCompleted(selectedMeeting.id)}
+                        onClick={() => handleCompleteButtonClick(selectedMeeting)}
                         disabled={updatingMeeting === selectedMeeting.id}
                         className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
@@ -914,6 +933,108 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
                       </div>
                     </div>
                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Confirmation Modal for Completing Meeting */}
+        {showCompleteConfirmModal && meetingToComplete && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl max-w-md w-full shadow-2xl">
+              <div className="p-6">
+                {/* Modal Header */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center">
+                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                      <Check className="w-5 h-5 text-green-600" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900">Complete Meeting</h3>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowCompleteConfirmModal(false);
+                      setMeetingToComplete(null);
+                    }}
+                    className="text-gray-400 hover:text-gray-600 p-1"
+                  >
+                    <XCircle className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Modal Content */}
+                <div className="mb-6">
+                  <p className="text-gray-700 mb-4">
+                    Are you sure you want to mark this meeting as completed?
+                  </p>
+                  
+                  {/* Meeting Details Summary */}
+                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <div className="flex items-center space-x-3 mb-3">
+                      <img
+                        src={getImageUrl(meetingToComplete.primaryImageUrl, meetingToComplete.gemName)}
+                        alt={meetingToComplete.gemName || 'Gem'}
+                        className="w-12 h-12 rounded-lg object-cover border border-gray-200"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = getImageUrl(undefined, meetingToComplete.gemName);
+                        }}
+                      />
+                      <div>
+                        <p className="font-medium text-gray-900">{meetingToComplete.gemName}</p>
+                        <p className="text-sm text-gray-600">
+                          {meetingToComplete.buyerName} ↔ {meetingToComplete.sellerName}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="text-sm text-gray-600">
+                      <p><span className="font-medium">Meeting ID:</span> {meetingToComplete.id.slice(-8)}</p>
+                      <p><span className="font-medium">Location:</span> {meetingToComplete.location}</p>
+                      <p><span className="font-medium">Final Price:</span> LKR {meetingToComplete.finalPrice?.toLocaleString()}</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <div className="flex items-start">
+                      <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5 mr-2 flex-shrink-0" />
+                      <div className="text-sm text-yellow-800">
+                        <p className="font-medium mb-1">Important:</p>
+                        <p>Once marked as completed, both parties will be notified and this action cannot be undone. Please ensure the meeting has actually taken place and all requirements have been fulfilled.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Modal Actions */}
+                <div className="flex justify-end space-x-3">
+                  <button
+                    onClick={() => {
+                      setShowCompleteConfirmModal(false);
+                      setMeetingToComplete(null);
+                    }}
+                    className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmCompletion}
+                    disabled={updatingMeeting === meetingToComplete.id}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                  >
+                    {updatingMeeting === meetingToComplete.id ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <span>Completing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-4 h-4" />
+                        <span>Yes, Complete Meeting</span>
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
             </div>
