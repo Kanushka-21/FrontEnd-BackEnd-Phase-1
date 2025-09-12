@@ -360,7 +360,7 @@ public class BiddingService {
                 return java.util.Arrays.asList(
                     "BID_WON", "BID_OUTBID", "BID_PLACED", "BIDDING_ENDED",
                     "MEETING_REQUEST_SENT", "MEETING_CONFIRMED", "MEETING_RESCHEDULED",
-                    "MEETING_CANCELLED", "MEETING_COMPLETED"
+                    "MEETING_CANCELLED", "MEETING_COMPLETED", "COMMISSION_NOTIFICATION"
                 );
             case "admin":
                 // Admin-related notification types

@@ -254,9 +254,9 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
       if (data.success) {
         setMessage({ 
           type: 'success', 
-          text: 'Meeting marked as completed successfully. Notifications sent to both parties.' 
+          text: 'Meeting completed successfully! Both parties have been notified. Commission details (6%) have been sent to the buyer.' 
         });
-        setTimeout(() => setMessage(null), 5000);
+        setTimeout(() => setMessage(null), 8000);
         
         // Refresh meetings to get updated data
         fetchAllMeetings();
@@ -1003,7 +1003,7 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
                       <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5 mr-2 flex-shrink-0" />
                       <div className="text-sm text-yellow-800">
                         <p className="font-medium mb-1">Important:</p>
-                        <p>Once marked as completed, both parties will be notified and this action cannot be undone. Please ensure the meeting has actually taken place and all requirements have been fulfilled.</p>
+                        <p>Once marked as completed, both parties will be notified and this action cannot be undone. The buyer will also receive commission details (6%, negotiable). Please ensure the meeting has actually taken place and all requirements have been fulfilled.</p>
                       </div>
                     </div>
                   </div>

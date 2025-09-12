@@ -969,6 +969,18 @@ public class MeetingService {
                 return response;
             }
             
+            // Calculate commission (6% of final price, can be negotiated later)
+            Double finalPrice = meeting.getFinalPrice();
+            Double commissionRate = 0.06; // 6% commission rate
+            Double commissionAmount = 0.0;
+            
+            if (finalPrice != null && finalPrice > 0) {
+                commissionAmount = finalPrice * commissionRate;
+                meeting.setCommissionAmount(commissionAmount);
+                logger.info("💰 [MeetingService] Commission calculated: LKR {} (6% of LKR {})", 
+                           commissionAmount, finalPrice);
+            }
+            
             // Update meeting status to COMPLETED
             meeting.setStatus("COMPLETED");
             meeting.setUpdatedAt(LocalDateTime.now());
@@ -1038,6 +1050,48 @@ public class MeetingService {
                 logger.info("✅ [MeetingService] Notification sent to seller: {}", sellerId);
             } catch (Exception e) {
                 logger.error("❌ [MeetingService] Failed to send notification to seller {}: {}", sellerId, e.getMessage());
+            }
+            
+            // Send commission notification to buyer (after both parties have confirmed and admin completed the meeting)
+            if (commissionAmount > 0) {
+                try {
+                    String commissionTitle = "💰 Commission Details - " + gemName;
+                    String commissionMessage = String.format(
+                        "Dear %s,\n\n" +
+                        "Your meeting for %s has been completed and approved by administration. " +
+                        "Please note the following commission details:\n\n" +
+                        "📊 Transaction Summary:\n" +
+                        "• Item: %s\n" +
+                        "• Final Price: LKR %,.2f\n" +
+                        "• Commission Rate: 6%% (negotiable)\n" +
+                        "• Commission Amount: LKR %,.2f\n\n" +
+                        "The commission is applied as per GemNet's standard terms and conditions. " +
+                        "If you wish to discuss or negotiate the commission rate, please contact our administration team.\n\n" +
+                        "Thank you for choosing GemNet for your gemstone transactions!",
+                        buyerName,
+                        gemName,
+                        gemName,
+                        finalPrice,
+                        commissionAmount
+                    );
+                    
+                    createMeetingNotification(
+                        buyerId,
+                        meetingId,
+                        gemName,
+                        "COMMISSION_NOTIFICATION",
+                        commissionTitle,
+                        commissionMessage,
+                        "admin",
+                        "Admin"
+                    );
+                    
+                    logger.info("💰 [MeetingService] Commission notification sent to buyer: {} (LKR {})", 
+                               buyerId, commissionAmount);
+                } catch (Exception e) {
+                    logger.error("❌ [MeetingService] Failed to send commission notification to buyer {}: {}", 
+                                buyerId, e.getMessage());
+                }
             }
             
             response.put("success", true);
