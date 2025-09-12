@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buyer Meeting Request Confirmation Test</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/lucide-react@latest/dist/umd/lucide-react.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f9fafb;
+        }
+        .test-container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .test-section {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { 
+            Calendar, MapPin, Clock, User, MessageSquare, Phone, Mail, ArrowLeft, 
+            CheckCircle, XCircle, Package, AlertCircle 
+        } = lucide;
+
+        // Mock purchase data
+        const mockPurchase = {
+            id: 'purchase-12345',
+            sellerId: 'seller-001',
+            gemName: 'Ceylon Blue Sapphire',
+            gemType: 'Sapphire',
+            finalPrice: 45000,
+            purchaseDate: '2025-09-10T10:30:00Z',
+            imageUrl: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=300&h=200&fit=crop'
+        };
+
+        // Mock seller data
+        const mockSeller = {
+            fullName: 'John Perera',
+            email: 'john.perera@example.com',
+            phoneNumber: '+94 77 123 4567',
+            location: 'Colombo, Sri Lanka',
+            isVerified: true
+        };
+
+        // Mock user data
+        const mockUser = {
+            userId: 'buyer-001',
+            firstName: 'Sarah',
+            lastName: 'Smith',
+            email: 'sarah.smith@example.com'
+        };
+
+        const BuyerMeetingRequestTest = () => {
+            const [formData, setFormData] = useState({
+                proposedDate: '',
+                proposedTime: '',
+                location: '',
+                meetingType: 'PHYSICAL',
+                buyerNotes: ''
+            });
+            const [showConfirmModal, setShowConfirmModal] = useState(false);
+            const [confirmationData, setConfirmationData] = useState(null);
+            const [submitting, setSubmitting] = useState(false);
+            const [errors, setErrors] = useState({});
+            const [message, setMessage] = useState(null);
+
+            // Validation
+            const validateForm = () => {
+                const newErrors = {};
+                
+                if (!formData.proposedDate) {
+                    newErrors.proposedDate = 'Date is required';
+                }
+                
+                if (!formData.proposedTime) {
+                    newErrors.proposedTime = 'Time is required';
+                }
+                
+                if (!formData.location.trim()) {
+                    newErrors.location = 'Location is required';
+                }
+                
+                setErrors(newErrors);
+                return Object.keys(newErrors).length === 0;
+            };
+
+            // Handle form submission - show confirmation modal first
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                
+                if (!validateForm()) {
+                    return;
+                }
+
+                // Prepare confirmation data
+                const proposedDateTime = `${formData.proposedDate}T${formData.proposedTime}:00`;
+                const confirmData = {
+                    ...formData,
+                    proposedDateTime,
+                    sellerInfo: mockSeller,
+                    purchase: mockPurchase
+                };
+                
+                setConfirmationData(confirmData);
+                setShowConfirmModal(true);
+            };
+
+            // Simulate meeting request submission
+            const confirmSubmission = async () => {
+                setSubmitting(true);
+                setShowConfirmModal(false);
+
+                try {
+                    // Simulate API delay
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    
+                    console.log('Meeting request sent:', confirmationData);
+                    
+                    setMessage({ 
+                        type: 'success', 
+                        text: 'Meeting request sent successfully! The seller will be notified via email.' 
+                    });
+                    
+                    // Reset form
+                    setFormData({
+                        proposedDate: '',
+                        proposedTime: '',
+                        location: '',
+                        meetingType: 'PHYSICAL',
+                        buyerNotes: ''
+                    });
+                    
+                } catch (error) {
+                    setMessage({ 
+                        type: 'error', 
+                        text: 'Failed to send meeting request. Please try again.' 
+                    });
+                } finally {
+                    setSubmitting(false);
+                    setTimeout(() => setMessage(null), 5000);
+                }
+            };
+
+            const handleInputChange = (e) => {
+                const { name, value } = e.target;
+                setFormData(prev => ({
+                    ...prev,
+                    [name]: value
+                }));
+                
+                // Clear errors when user starts typing
+                if (errors[name]) {
+                    setErrors(prev => ({
+                        ...prev,
+                        [name]: undefined
+                    }));
+                }
+            };
+
+            return (
+                <div className="test-container">
+                    <div className="test-section">
+                        <h1 className="text-2xl font-bold text-gray-900 mb-6">
+                            Buyer Meeting Request Confirmation Test
+                        </h1>
+                        
+                        {/* Message Display */}
+                        {message && (
+                            <div className={`mb-6 p-4 rounded-lg border-l-4 ${
+                                message.type === 'success' ? 'bg-green-50 border-green-400 text-green-700' :
+                                message.type === 'error' ? 'bg-red-50 border-red-400 text-red-700' :
+                                'bg-blue-50 border-blue-400 text-blue-700'
+                            }`}>
+                                <div className="flex items-center justify-between">
+                                    <span>{message.text}</span>
+                                    <button
+                                        onClick={() => setMessage(null)}
+                                        className="ml-3 text-gray-400 hover:text-gray-600"
+                                    >
+                                        <XCircle className="w-5 h-5" />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        <p className="text-gray-600 mb-8">
+                            This test demonstrates the confirmation modal that appears when a buyer fills out and submits 
+                            a meeting request form. Fill out the form below and click "Send Meeting Request" to see the 
+                            confirmation dialog in action.
+                        </p>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {/* Purchase Summary */}
+                            <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
+                                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                                    <Package className="w-5 h-5 text-blue-600 mr-2" />
+                                    Purchase Details
+                                </h3>
+                                
+                                <div className="flex items-center space-x-4 mb-4">
+                                    <img
+                                        src={mockPurchase.imageUrl}
+                                        alt={mockPurchase.gemName}
+                                        className="w-16 h-16 rounded-lg object-cover border border-gray-200"
+                                    />
+                                    <div>
+                                        <h4 className="font-medium text-gray-900">{mockPurchase.gemName}</h4>
+                                        <p className="text-sm text-gray-600">{mockPurchase.gemType}</p>
+                                        <p className="text-sm font-medium text-green-600">
+                                            LKR {mockPurchase.finalPrice.toLocaleString()}
+                                        </p>
+                                    </div>
+                                </div>
+                                
+                                <div className="space-y-2 text-sm">
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-600">Purchase ID:</span>
+                                        <span className="font-mono text-gray-900">{mockPurchase.id.substring(0, 12)}...</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-600">Seller:</span>
+                                        <span className="text-gray-900">{mockSeller.fullName}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-600">Purchase Date:</span>
+                                        <span className="text-gray-900">
+                                            {new Date(mockPurchase.purchaseDate).toLocaleDateString()}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Meeting Request Form */}
+                            <div className="bg-white rounded-lg p-6 border border-gray-200">
+                                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                                    <Calendar className="w-5 h-5 text-blue-600 mr-2" />
+                                    Schedule Meeting
+                                </h3>
+                                
+                                <form onSubmit={handleSubmit} className="space-y-4">
+                                    {/* Date */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Preferred Date
+                                        </label>
+                                        <input
+                                            type="date"
+                                            name="proposedDate"
+                                            value={formData.proposedDate}
+                                            onChange={handleInputChange}
+                                            min={new Date().toISOString().split('T')[0]}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        />
+                                        {errors.proposedDate && (
+                                            <p className="text-red-600 text-xs mt-1">{errors.proposedDate}</p>
+                                        )}
+                                    </div>
+
+                                    {/* Time */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Preferred Time
+                                        </label>
+                                        <input
+                                            type="time"
+                                            name="proposedTime"
+                                            value={formData.proposedTime}
+                                            onChange={handleInputChange}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        />
+                                        {errors.proposedTime && (
+                                            <p className="text-red-600 text-xs mt-1">{errors.proposedTime}</p>
+                                        )}
+                                    </div>
+
+                                    {/* Location */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Meeting Location
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="location"
+                                            value={formData.location}
+                                            onChange={handleInputChange}
+                                            placeholder="e.g., GemNet Office, Colombo"
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        />
+                                        {errors.location && (
+                                            <p className="text-red-600 text-xs mt-1">{errors.location}</p>
+                                        )}
+                                    </div>
+
+                                    {/* Meeting Type */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Meeting Type
+                                        </label>
+                                        <select
+                                            name="meetingType"
+                                            value={formData.meetingType}
+                                            onChange={handleInputChange}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        >
+                                            <option value="PHYSICAL">Physical Meeting</option>
+                                            <option value="VIRTUAL">Virtual Meeting</option>
+                                        </select>
+                                    </div>
+
+                                    {/* Notes */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Additional Notes (Optional)
+                                        </label>
+                                        <textarea
+                                            name="buyerNotes"
+                                            value={formData.buyerNotes}
+                                            onChange={handleInputChange}
+                                            rows={3}
+                                            placeholder="Any special requirements or additional information..."
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        />
+                                    </div>
+
+                                    {/* Submit Button */}
+                                    <button
+                                        type="submit"
+                                        disabled={submitting}
+                                        className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                                    >
+                                        {submitting ? (
+                                            <>
+                                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                                <span>Sending Request...</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <CheckCircle className="w-4 h-4" />
+                                                <span>Send Meeting Request</span>
+                                            </>
+                                        )}
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Confirmation Modal for Meeting Request */}
+                    {showConfirmModal && confirmationData && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                            <div className="bg-white rounded-xl max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto">
+                                <div className="p-6">
+                                    {/* Modal Header */}
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div className="flex items-center">
+                                            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                                                <CheckCircle className="w-5 h-5 text-blue-600" />
+                                            </div>
+                                            <h3 className="text-lg font-semibold text-gray-900">Confirm Meeting Request</h3>
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                setShowConfirmModal(false);
+                                                setConfirmationData(null);
+                                            }}
+                                            className="text-gray-400 hover:text-gray-600 p-1"
+                                        >
+                                            <XCircle className="w-5 h-5" />
+                                        </button>
+                                    </div>
+
+                                    {/* Modal Content */}
+                                    <div className="mb-6">
+                                        <p className="text-gray-700 mb-4">
+                                            Please review your meeting request details before sending to the seller.
+                                        </p>
+                                        
+                                        {/* Meeting Details Summary */}
+                                        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 mb-4">
+                                            <h4 className="font-medium text-gray-900 mb-3 flex items-center">
+                                                <Calendar className="w-4 h-4 mr-2 text-blue-600" />
+                                                Meeting Details
+                                            </h4>
+                                            
+                                            <div className="space-y-2 text-sm">
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Date:</span>
+                                                    <span className="font-medium text-gray-900">
+                                                        {new Date(confirmationData.proposedDate).toLocaleDateString('en-GB', {
+                                                            weekday: 'long',
+                                                            year: 'numeric',
+                                                            month: 'long',
+                                                            day: 'numeric'
+                                                        })}
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Time:</span>
+                                                    <span className="font-medium text-gray-900">{confirmationData.proposedTime}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Location:</span>
+                                                    <span className="font-medium text-gray-900">{confirmationData.location}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Meeting Type:</span>
+                                                    <span className="font-medium text-gray-900">{confirmationData.meetingType}</span>
+                                                </div>
+                                                {confirmationData.buyerNotes && (
+                                                    <div className="pt-2 border-t border-gray-200">
+                                                        <span className="text-gray-600">Your Notes:</span>
+                                                        <p className="font-medium text-gray-900 mt-1">{confirmationData.buyerNotes}</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Purchase & Seller Info */}
+                                        <div className="bg-blue-50 rounded-lg p-4 border border-blue-200 mb-4">
+                                            <h4 className="font-medium text-gray-900 mb-3 flex items-center">
+                                                <User className="w-4 h-4 mr-2 text-blue-600" />
+                                                Purchase & Seller Information
+                                            </h4>
+                                            
+                                            <div className="space-y-2 text-sm">
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Gem:</span>
+                                                    <span className="font-medium text-gray-900">{confirmationData.purchase.gemName}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Type:</span>
+                                                    <span className="font-medium text-gray-900">{confirmationData.purchase.gemType}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Final Price:</span>
+                                                    <span className="font-medium text-green-600">
+                                                        LKR {confirmationData.purchase.finalPrice?.toLocaleString() || 'N/A'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Seller:</span>
+                                                    <span className="font-medium text-gray-900">
+                                                        {confirmationData.sellerInfo?.fullName || 'Seller'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Important Warning */}
+                                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                                            <div className="flex items-start">
+                                                <MessageSquare className="w-5 h-5 text-yellow-600 mt-0.5 mr-2 flex-shrink-0" />
+                                                <div className="text-sm text-yellow-800">
+                                                    <p className="font-medium mb-2">Important Commitment:</p>
+                                                    <ul className="space-y-1">
+                                                        <li>• This request will be sent directly to the seller</li>
+                                                        <li>• You are committing to attend if the seller confirms</li>
+                                                        <li>• No-shows may affect your account standing</li>
+                                                        <li>• Please ensure your availability before confirming</li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Modal Actions */}
+                                    <div className="flex justify-end space-x-3">
+                                        <button
+                                            onClick={() => {
+                                                setShowConfirmModal(false);
+                                                setConfirmationData(null);
+                                            }}
+                                            className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={confirmSubmission}
+                                            disabled={submitting}
+                                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                                        >
+                                            {submitting ? (
+                                                <>
+                                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                                    <span>Sending Request...</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <CheckCircle className="w-4 h-4" />
+                                                    <span>Yes, Send Meeting Request</span>
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        ReactDOM.render(<BuyerMeetingRequestTest />, document.getElementById('root'));
+    </script>
+</body>
+</html>
