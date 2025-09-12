@@ -543,6 +543,14 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
                                 {meeting.meetingType || 'MEETING'}
                               </span>
                             </div>
+                            
+                            {/* Additional IDs */}
+                            <div className="space-y-1 text-xs text-gray-400 mt-2">
+                              {meeting.purchaseId && (
+                                <div>Purchase: {meeting.purchaseId.slice(-8)}</div>
+                              )}
+                              <div>Meeting: {meeting.id.slice(-8)}</div>
+                            </div>
                           </div>
                         </td>
 
@@ -707,8 +715,8 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
                               </span>
                             </div>
                             <div className="text-xs space-y-1 text-gray-500">
-                              <p>Meeting ID: <span className="font-mono">{selectedMeeting.id}</span></p>
-                              <p>Purchase ID: <span className="font-mono">{selectedMeeting.purchaseId}</span></p>
+                              <p>Purchase: <span className="font-mono">{selectedMeeting.purchaseId?.slice(-8) || 'N/A'}</span></p>
+                              <p>Meeting: <span className="font-mono">{selectedMeeting.id?.slice(-8) || 'N/A'}</span></p>
                             </div>
                           </div>
                         </div>

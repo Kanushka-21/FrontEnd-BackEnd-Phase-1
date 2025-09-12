@@ -13,15 +13,26 @@ import {
   FileText,
   Eye,
   Save,
-  AlertCircle
+  AlertCircle,
+  Package,
+  DollarSign
 } from 'lucide-react';
 
 interface Meeting {
   id: string;
   meetingDisplayId?: string;
+  purchaseId?: string;
   gemName: string;
   gemType: string;
   gemCertificateNumber?: string;
+  primaryImageUrl?: string;
+  finalPrice?: number;
+  gem?: {
+    id?: string;
+    name?: string;
+    images?: string[];
+    primaryImageUrl?: string;
+  };
   buyerId: string;
   buyerName: string;
   buyerEmail: string;
@@ -33,11 +44,18 @@ interface Meeting {
   meetingDate: string;
   meetingTime: string;
   meetingLocation: string;
+  meetingType?: string;
+  proposedDateTime?: string;
+  confirmedDateTime?: string;
   status: string;
   buyerAttended?: boolean;
   sellerAttended?: boolean;
   adminVerified?: boolean;
   adminNotes?: string;
+  buyerNotes?: string;
+  sellerNotes?: string;
+  createdAt?: string;
+  updatedAt?: string;
   buyerReasonSubmission?: {
     reason: string;
     submittedAt: string;
@@ -67,6 +85,44 @@ const MeetingAttendanceManagement: React.FC<MeetingAttendanceManagementProps> = 
     sellerAttended: false,
     adminNotes: ''
   });
+
+  // Get proper image URL - using the exact same logic as AdminMeetingDashboard
+  const getImageUrl = (imageUrl?: string, gemName?: string) => {
+    if (imageUrl) {
+      // If it's already a full URL, return as is
+      if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+        return imageUrl;
+      }
+      // If it's a relative path, prepend the backend URL
+      if (imageUrl.startsWith('/uploads/') || imageUrl.startsWith('uploads/')) {
+        return `http://localhost:9092/${imageUrl.startsWith('/') ? imageUrl.slice(1) : imageUrl}`;
+      }
+      // If it's just a filename, assume it's in gem-images
+      return `http://localhost:9092/uploads/gem-images/${imageUrl}`;
+    }
+    
+    // Fallback images based on gem type
+    const gemType = gemName?.toLowerCase() || '';
+    if (gemType.includes('ruby')) {
+      return 'https://images.unsplash.com/photo-1506792006437-256b665541e2?w=300&h=200&fit=crop';
+    } else if (gemType.includes('sapphire')) {
+      return 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=300&h=200&fit=crop';
+    } else if (gemType.includes('emerald')) {
+      return 'https://images.unsplash.com/photo-1544829099-b9a0c5303bea?w=300&h=200&fit=crop';
+    } else {
+      return 'https://images.unsplash.com/photo-1506792006437-256b665541e2?w=300&h=200&fit=crop';
+    }
+  };
+
+  // Format currency
+  const formatCurrency = (amount?: number) => {
+    if (!amount) return 'N/A';
+    return new Intl.NumberFormat('en-LK', {
+      style: 'currency',
+      currency: 'LKR'
+    }).format(amount);
+  };
+
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [pendingAttendanceAction, setPendingAttendanceAction] = useState<any>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
@@ -376,12 +432,68 @@ const MeetingAttendanceManagement: React.FC<MeetingAttendanceManagementProps> = 
                     return (
                       <tr key={meeting.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4">
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">
-                              {meeting.meetingDisplayId || meeting.id.slice(0, 8)}
+                          <div className="flex items-start space-x-3">
+                            {/* Gem Image */}
+                            <div className="flex-shrink-0">
+                              <img
+                                src={getImageUrl(meeting.primaryImageUrl, meeting.gemName)}
+                                alt={meeting.gemName || 'Gem'}
+                                className="w-16 h-16 rounded-lg object-cover border border-gray-200"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.src = getImageUrl(undefined, meeting.gemName);
+                                }}
+                              />
                             </div>
-                            <div className="text-sm text-gray-600">{meeting.gemName}</div>
-                            <div className="text-xs text-gray-400">{meeting.gemType}</div>
+                            
+                            {/* Meeting Information */}
+                            <div className="flex-1 min-w-0">
+                              <div className="space-y-1">
+                                {/* Meeting ID */}
+                                <div className="flex items-center space-x-2">
+                                  <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
+                                    {meeting.meetingDisplayId || `GEM-${meeting.id.slice(-8)}`}
+                                  </span>
+                                  {meeting.status && (
+                                    <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${
+                                      meeting.status === 'CONFIRMED' ? 'bg-green-100 text-green-800' :
+                                      meeting.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                                      meeting.status === 'COMPLETED' ? 'bg-blue-100 text-blue-800' :
+                                      'bg-gray-100 text-gray-800'
+                                    }`}>
+                                      {meeting.status}
+                                    </span>
+                                  )}
+                                </div>
+                                
+                                {/* Gem Details */}
+                                <div>
+                                  <div className="text-sm font-medium text-gray-900">{meeting.gemName}</div>
+                                  <div className="text-xs text-gray-500">{meeting.gemType}</div>
+                                  {meeting.gemCertificateNumber && (
+                                    <div className="text-xs text-gray-400">Cert: {meeting.gemCertificateNumber}</div>
+                                  )}
+                                </div>
+                                
+                                {/* Price Information */}
+                                {meeting.finalPrice && (
+                                  <div className="flex items-center space-x-1">
+                                    <DollarSign className="w-3 h-3 text-green-600" />
+                                    <span className="text-sm font-semibold text-green-600">
+                                      {formatCurrency(meeting.finalPrice)}
+                                    </span>
+                                  </div>
+                                )}
+                                
+                                {/* Additional IDs */}
+                                <div className="space-y-1 text-xs text-gray-400">
+                                  {meeting.purchaseId && (
+                                    <div>Purchase: {meeting.purchaseId.slice(-8)}</div>
+                                  )}
+                                  <div>Meeting: {meeting.id.slice(-8)}</div>
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         </td>
                         
@@ -398,18 +510,67 @@ const MeetingAttendanceManagement: React.FC<MeetingAttendanceManagementProps> = 
                         </td>
                         
                         <td className="px-6 py-4">
-                          <div className="space-y-1">
-                            <div className="flex items-center text-sm text-gray-900">
-                              <Calendar className="w-4 h-4 text-gray-400 mr-2" />
-                              {new Date(meeting.meetingDate).toLocaleDateString()}
+                          <div className="space-y-2">
+                            {/* Date and Time */}
+                            <div>
+                              <div className="flex items-center text-sm text-gray-900">
+                                <Calendar className="w-4 h-4 text-gray-400 mr-2" />
+                                <span className="font-medium">
+                                  {meeting.confirmedDateTime ? (
+                                    new Date(meeting.confirmedDateTime).toLocaleDateString('en-GB', {
+                                      weekday: 'short',
+                                      year: 'numeric',
+                                      month: 'short',
+                                      day: 'numeric'
+                                    })
+                                  ) : meeting.proposedDateTime ? (
+                                    new Date(meeting.proposedDateTime).toLocaleDateString('en-GB', {
+                                      weekday: 'short',
+                                      year: 'numeric',
+                                      month: 'short',
+                                      day: 'numeric'
+                                    })
+                                  ) : meeting.meetingDate ? (
+                                    new Date(meeting.meetingDate).toLocaleDateString('en-GB', {
+                                      weekday: 'short',
+                                      year: 'numeric',
+                                      month: 'short',
+                                      day: 'numeric'
+                                    })
+                                  ) : 'Date TBD'}
+                                </span>
+                              </div>
+                              <div className="flex items-center text-sm text-gray-600 mt-1">
+                                <Clock className="w-4 h-4 text-gray-400 mr-2" />
+                                <span>
+                                  {meeting.confirmedDateTime ? (
+                                    new Date(meeting.confirmedDateTime).toLocaleTimeString('en-GB', {
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })
+                                  ) : meeting.proposedDateTime ? (
+                                    new Date(meeting.proposedDateTime).toLocaleTimeString('en-GB', {
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })
+                                  ) : meeting.meetingTime || 'Time TBD'}
+                                </span>
+                              </div>
                             </div>
-                            <div className="flex items-center text-sm text-gray-600">
-                              <Clock className="w-4 h-4 text-gray-400 mr-2" />
-                              {meeting.meetingTime}
-                            </div>
-                            <div className="flex items-center text-sm text-gray-500">
-                              <MapPin className="w-4 h-4 text-gray-400 mr-2" />
-                              {meeting.meetingLocation}
+                            
+                            {/* Location and Type */}
+                            <div>
+                              <div className="flex items-center text-sm text-gray-500">
+                                <MapPin className="w-4 h-4 text-gray-400 mr-2" />
+                                <span>{meeting.meetingLocation || 'Location TBD'}</span>
+                              </div>
+                              {meeting.meetingType && (
+                                <div className="mt-1">
+                                  <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800">
+                                    {meeting.meetingType}
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </td>
@@ -526,7 +687,7 @@ const MeetingAttendanceManagement: React.FC<MeetingAttendanceManagementProps> = 
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
                         <span className="font-medium text-gray-700">Meeting ID:</span>
-                        <span className="ml-2">{selectedMeeting.meetingDisplayId || selectedMeeting.id.slice(0, 8)}</span>
+                        <span className="ml-2">{selectedMeeting.meetingDisplayId || `GEM-2025-${selectedMeeting.id.slice(-3)}`}</span>
                       </div>
                       <div>
                         <span className="font-medium text-gray-700">Gem:</span>
@@ -534,11 +695,41 @@ const MeetingAttendanceManagement: React.FC<MeetingAttendanceManagementProps> = 
                       </div>
                       <div>
                         <span className="font-medium text-gray-700">Date:</span>
-                        <span className="ml-2">{new Date(selectedMeeting.meetingDate).toLocaleDateString()}</span>
+                        <span className="ml-2">{
+                          (() => {
+                            // Try different date sources
+                            const confirmedDateTime = selectedMeeting.confirmedDateTime ? new Date(selectedMeeting.confirmedDateTime) : null;
+                            const proposedDateTime = selectedMeeting.proposedDateTime ? new Date(selectedMeeting.proposedDateTime) : null;
+                            const meetingDate = selectedMeeting.meetingDate ? new Date(selectedMeeting.meetingDate) : null;
+                            
+                            const validDate = confirmedDateTime && !isNaN(confirmedDateTime.getTime()) ? confirmedDateTime :
+                                            proposedDateTime && !isNaN(proposedDateTime.getTime()) ? proposedDateTime :
+                                            meetingDate && !isNaN(meetingDate.getTime()) ? meetingDate : null;
+                            
+                            return validDate ? validDate.toLocaleDateString('en-GB') : 'TBD';
+                          })()
+                        }</span>
                       </div>
                       <div>
                         <span className="font-medium text-gray-700">Time:</span>
-                        <span className="ml-2">{selectedMeeting.meetingTime}</span>
+                        <span className="ml-2">{
+                          (() => {
+                            // Try different time sources
+                            const confirmedDateTime = selectedMeeting.confirmedDateTime ? new Date(selectedMeeting.confirmedDateTime) : null;
+                            const proposedDateTime = selectedMeeting.proposedDateTime ? new Date(selectedMeeting.proposedDateTime) : null;
+                            const meetingTime = selectedMeeting.meetingTime;
+                            
+                            if (confirmedDateTime && !isNaN(confirmedDateTime.getTime())) {
+                              return confirmedDateTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+                            } else if (proposedDateTime && !isNaN(proposedDateTime.getTime())) {
+                              return proposedDateTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+                            } else if (meetingTime) {
+                              return meetingTime;
+                            } else {
+                              return 'TBD';
+                            }
+                          })()
+                        }</span>
                       </div>
                     </div>
                   </div>
