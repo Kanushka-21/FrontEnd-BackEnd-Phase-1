@@ -46,10 +46,20 @@ export const useRegistration = () => {
   const registerUser = async (userData: UserRegistrationRequest): Promise<string | null> => {
     try {
       setLoading(true);
+      console.log('🔄 Starting registration API call...');
+      console.log('🔄 User data:', userData);
+      
       const response = await authAPI.register(userData);
+      
+      console.log('📨 Full API response:', response);
+      console.log('📨 Response success:', response.success);
+      console.log('📨 Response message:', response.message);
+      console.log('📨 Response data:', response.data);
       
       if (response.success && response.data) {
         const userId = response.data;
+        console.log('✅ Registration successful, userId:', userId);
+        
         const newProgress = {
           ...progress,
           currentStep: RegistrationStep.FACE_VERIFICATION,
@@ -61,10 +71,12 @@ export const useRegistration = () => {
         toast.success('Registration successful! Please proceed to face verification.');
         return userId;
       } else {
+        console.log('❌ Registration failed - success:', response.success, 'data:', response.data);
         toast.error(response.message || 'Registration failed');
         return null;
       }
     } catch (error) {
+      console.error('❌ Registration error caught:', error);
       const errorMessage = apiUtils.formatErrorMessage(error);
       toast.error(errorMessage);
       return null;

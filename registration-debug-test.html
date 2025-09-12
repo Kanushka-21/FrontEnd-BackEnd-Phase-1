@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registration Debug Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <h1>Registration Debug Test</h1>
+    <button onclick="testRegistration()">Test Registration API</button>
+    <div id="result"></div>
+
+    <script>
+        async function testRegistration() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Testing...';
+            
+            try {
+                console.log('Starting registration test...');
+                
+                const testData = {
+                    firstName: 'Test',
+                    lastName: 'User',
+                    email: 'test' + Date.now() + '@example.com',
+                    password: 'TestPassword123!',
+                    phoneNumber: '+94701234567',
+                    address: 'Test Address, Colombo',
+                    dateOfBirth: '1990-01-01',
+                    nicNumber: '199012345' + String(Date.now()).slice(-3) + 'V',
+                    userRole: 'buyer'
+                };
+                
+                console.log('Test data:', testData);
+                
+                const response = await axios.post('http://localhost:9092/api/auth/register', testData, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+                
+                console.log('Full response:', response);
+                console.log('Response data:', response.data);
+                console.log('Response success:', response.data.success);
+                console.log('Response message:', response.data.message);
+                console.log('Response userId:', response.data.data);
+                
+                if (response.data.success && response.data.data) {
+                    resultDiv.innerHTML = `
+                        <div style="color: green;">
+                            <h3>✅ Registration Successful!</h3>
+                            <p><strong>User ID:</strong> ${response.data.data}</p>
+                            <p><strong>Message:</strong> ${response.data.message}</p>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div style="color: red;">
+                            <h3>❌ Registration Failed</h3>
+                            <p><strong>Success:</strong> ${response.data.success}</p>
+                            <p><strong>Message:</strong> ${response.data.message}</p>
+                            <p><strong>Data:</strong> ${response.data.data}</p>
+                        </div>
+                    `;
+                }
+                
+            } catch (error) {
+                console.error('Registration error:', error);
+                resultDiv.innerHTML = `
+                    <div style="color: red;">
+                        <h3>❌ Error occurred</h3>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                        <p><strong>Response:</strong> ${error.response ? JSON.stringify(error.response.data) : 'No response'}</p>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -20,6 +20,7 @@ import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 @Service
@@ -44,6 +45,9 @@ public class BiddingService {
      * Place a bid on a gem listing
      */
     public ApiResponse<Map<String, Object>> placeBid(BidRequestDto bidRequest) {
+        long startTime = System.currentTimeMillis();
+        System.out.println("🚀 Starting bid placement for listing: " + bidRequest.getListingId());
+        
         try {
             // Check user verification status first
             Optional<User> userOpt = userRepository.findById(bidRequest.getBidderId());
@@ -138,8 +142,15 @@ public class BiddingService {
                 System.out.println("   End time: " + endTime);
             }
             
-            // Handle notifications for all affected users
-            handleBidNotifications(savedBid, listing, currentHighestBid.orElse(null));
+            // Handle notifications for all affected users (asynchronously to avoid blocking)
+            CompletableFuture.runAsync(() -> {
+                try {
+                    handleBidNotifications(savedBid, listing, currentHighestBid.orElse(null));
+                } catch (Exception e) {
+                    System.err.println("❌ Error handling bid notifications asynchronously: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            });
             
             // Prepare response
             Map<String, Object> response = new HashMap<>();
@@ -178,10 +189,16 @@ public class BiddingService {
                 response.put("remainingTimeSeconds", 0);
             }
             
+            long endTime = System.currentTimeMillis();
+            long duration = endTime - startTime;
+            System.out.println("⚡ Bid placement completed in " + duration + "ms for listing: " + bidRequest.getListingId());
+            
             return new ApiResponse<>(true, "Bid placed successfully", response);
             
         } catch (Exception e) {
-            System.err.println("Error placing bid: " + e.getMessage());
+            long endTime = System.currentTimeMillis();
+            long duration = endTime - startTime;
+            System.err.println("❌ Error placing bid after " + duration + "ms: " + e.getMessage());
             e.printStackTrace();
             return new ApiResponse<>(false, "Failed to place bid: " + e.getMessage(), null);
         }
@@ -501,22 +518,24 @@ public class BiddingService {
             notificationRepository.save(notification);
             System.out.println("✅ Notification created: " + type + " for user " + userId);
             
-            // Send email notification with countdown information
-            try {
-                String details = "Gem: " + gemName + " | Amount: " + bidAmount + " | From: " + triggerUserName;
-                
-                // Extract bidding end time from gem listing if available
-                String biddingEndTime = null;
-                if (gemListing != null && gemListing.getBiddingEndTime() != null) {
-                    biddingEndTime = gemListing.getBiddingEndTime().toString();
+            // Send email notification with countdown information (asynchronously)
+            CompletableFuture.runAsync(() -> {
+                try {
+                    String details = "Gem: " + gemName + " | Amount: " + bidAmount + " | From: " + triggerUserName;
+                    
+                    // Extract bidding end time from gem listing if available
+                    String biddingEndTime = null;
+                    if (gemListing != null && gemListing.getBiddingEndTime() != null) {
+                        biddingEndTime = gemListing.getBiddingEndTime().toString();
+                    }
+                    
+                    emailService.sendNotificationEmail(userId, type, title, message, details, biddingEndTime, gemName);
+                    System.out.println("📧 Email notification sent for: " + type + " to user " + userId);
+                } catch (Exception e) {
+                    System.err.println("⚠️ Failed to send email notification: " + e.getMessage());
+                    // Don't fail the notification creation if email fails
                 }
-                
-                emailService.sendNotificationEmail(userId, type, title, message, details, biddingEndTime, gemName);
-                System.out.println("📧 Email notification sent for: " + type + " to user " + userId);
-            } catch (Exception e) {
-                System.err.println("⚠️ Failed to send email notification: " + e.getMessage());
-                // Don't fail the notification creation if email fails
-            }
+            });
             
         } catch (Exception e) {
             System.err.println("❌ Error creating notification: " + e.getMessage());
@@ -791,31 +810,42 @@ public class BiddingService {
             );
             
             // 4. Notify other bidders (not the current highest or the new bidder) about increased activity
+            // Optimize query by excluding both IDs at database level
+            List<String> excludeIds = new ArrayList<>();
+            excludeIds.add(newBidderId);
+            if (previousHighestBid != null) {
+                excludeIds.add(previousHighestBid.getBidderId());
+            }
+            
             List<Bid> otherActiveBids = bidRepository.findByListingIdAndStatusAndBidderIdNotIn(
                 listingId, 
                 "ACTIVE", 
-                List.of(newBidderId, previousHighestBid != null ? previousHighestBid.getBidderId() : "")
+                excludeIds
             );
             
-            for (Bid otherBid : otherActiveBids) {
-                // Only notify if this bidder hasn't been outbid yet
-                if (!otherBid.getBidderId().equals(newBidderId)) {
-                    createNotification(
-                        otherBid.getBidderId(),
-                        listingId,
-                        newBid.getId(),
-                        "BID_ACTIVITY",
-                        "Bidding activity on " + gemName,
-                        "New bid activity on " + gemName + ". Current highest bid: LKR " + newBidAmount + 
-                        " (Total bids: " + totalBids + ")",
-                        newBidderId,
-                        newBidderName,
-                        newBidAmount,
-                        gemName,
-                        listing
-                    );
+            // Create notifications for other bidders asynchronously
+            CompletableFuture.runAsync(() -> {
+                for (Bid otherBid : otherActiveBids) {
+                    try {
+                        createNotification(
+                            otherBid.getBidderId(),
+                            listingId,
+                            newBid.getId(),
+                            "BID_ACTIVITY",
+                            "Bidding activity on " + gemName,
+                            "New bid activity on " + gemName + ". Current highest bid: LKR " + newBidAmount + 
+                            " (Total bids: " + totalBids + ")",
+                            newBidderId,
+                            newBidderName,
+                            newBidAmount,
+                            gemName,
+                            listing
+                        );
+                    } catch (Exception e) {
+                        System.err.println("❌ Error creating notification for bidder " + otherBid.getBidderId() + ": " + e.getMessage());
+                    }
                 }
-            }
+            });
             
             System.out.println("✅ All notifications created for bid: " + newBid.getId());
             

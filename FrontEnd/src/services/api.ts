@@ -96,7 +96,9 @@ export const authAPI = {
 
   // Register new user
   register: async (userData: UserRegistrationRequest): Promise<ApiResponse<string>> => {
-    const response: AxiosResponse<ApiResponse<string>> = await api.post('/api/auth/register', userData);
+    const response: AxiosResponse<ApiResponse<string>> = await api.post('/api/auth/register', userData, {
+      timeout: 30000 // 30 seconds for registration only
+    });
     return response.data;
   },
 
@@ -1090,7 +1092,10 @@ const extendedAPI = {
       bidType?: string;
     }): Promise<ApiResponse<any>> => {
       try {
-        const response = await api.post('/api/bidding/place-bid', bidRequest);
+        // Use extended timeout for bid placement due to complex notification processing
+        const response = await api.post('/api/bidding/place-bid', bidRequest, {
+          timeout: 30000 // 30 seconds for bid placement
+        });
         return response.data;
       } catch (error) {
         console.error('Error placing bid:', error);
