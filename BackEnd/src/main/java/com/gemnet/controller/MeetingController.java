@@ -124,12 +124,12 @@ public class MeetingController {
     @GetMapping("/user/{userId}")
     public ResponseEntity<?> getMeetingsForUser(@PathVariable String userId) {
         try {
-            List<Meeting> meetings = meetingService.getMeetingsForUser(userId);
+            List<Map<String, Object>> enrichedMeetings = meetingService.getEnrichedMeetingsForUser(userId);
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
-            response.put("meetings", meetings);
-            response.put("count", meetings.size());
+            response.put("meetings", enrichedMeetings);
+            response.put("count", enrichedMeetings.size());
             
             return ResponseEntity.ok(response);
             
