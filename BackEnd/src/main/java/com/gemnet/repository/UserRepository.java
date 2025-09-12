@@ -74,4 +74,10 @@ public interface UserRepository extends MongoRepository<User, String> {
     
     // Count by verification and active status
     long countByIsVerifiedAndIsActive(boolean isVerified, boolean isActive);
+    
+    // Find users by account status (for no-show management)
+    List<User> findByAccountStatus(String accountStatus);
+    
+    // Count users by account status
+    long countByAccountStatus(String accountStatus);
 }

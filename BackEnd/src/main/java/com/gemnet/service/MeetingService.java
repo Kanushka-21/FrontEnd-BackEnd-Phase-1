@@ -43,6 +43,12 @@ public class MeetingService {
     @Autowired
     private EmailService emailService;
     
+    @Autowired
+    private NoShowManagementService noShowManagementService;
+    
+    @Autowired
+    private MeetingReminderService meetingReminderService;
+    
     /**
      * Helper method to create meeting-related notifications for buyers and sellers
      */
@@ -202,6 +208,10 @@ public class MeetingService {
             meeting.setSellerEmail(seller.getEmail());
             meeting.setBuyerPhone(buyer.getPhoneNumber());
             meeting.setSellerPhone(seller.getPhoneNumber());
+            
+            // Generate human-readable meeting ID
+            String displayId = meetingReminderService.generateMeetingDisplayId(meeting);
+            meeting.setMeetingDisplayId(displayId);
             meeting.setStatus("PENDING");
             
             // Calculate commission (5% by default)
@@ -305,6 +315,13 @@ public class MeetingService {
      */
     public Optional<Meeting> getMeetingById(String meetingId) {
         return meetingRepository.findById(meetingId);
+    }
+    
+    /**
+     * Get meeting by display ID
+     */
+    public Optional<Meeting> getMeetingByDisplayId(String displayId) {
+        return meetingRepository.findByMeetingDisplayId(displayId);
     }
     
     /**

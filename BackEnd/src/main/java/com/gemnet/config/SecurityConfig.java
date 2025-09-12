@@ -54,6 +54,8 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(authz -> authz
+                .requestMatchers("/", "/health", "/status").permitAll() // Allow basic health endpoints
+                .requestMatchers("/api/health", "/api/status").permitAll() // Allow API health endpoints
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/admin/dashboard-stats").permitAll() // Allow dashboard stats for quick loading
                 .requestMatchers("/api/admin/users").permitAll() // Allow user management data

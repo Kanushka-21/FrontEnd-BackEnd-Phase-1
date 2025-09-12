@@ -718,6 +718,430 @@ public class EmailService {
     }
 
     /**
+     * Send warning email to user with no-show count
+     */
+    @Async
+    public void sendWarningEmail(String userId, String userEmail, String userName, int noShowCount) {
+        if (!emailEnabled) {
+            logger.info("📧 Email service disabled - would send warning email to user {}", userId);
+            return;
+        }
+
+        try {
+            String subject = "⚠️ Account Warning - No-Show Alert - GemNet";
+            String htmlContent = createWarningEmailTemplate(userName, noShowCount);
+            sendHtmlEmail(userEmail, subject, htmlContent);
+            logger.info("📧 Warning email sent to user {}: {} ({})", userName, userId, userEmail);
+        } catch (Exception e) {
+            logger.error("❌ Failed to send warning email to user {}: {}", userId, e.getMessage());
+        }
+    }
+
+    /**
+     * Send blocking email to user
+     */
+    @Async
+    public void sendBlockingEmail(String userId, String userEmail, String userName, String reason) {
+        if (!emailEnabled) {
+            logger.info("📧 Email service disabled - would send blocking email to user {}", userId);
+            return;
+        }
+
+        try {
+            String subject = "🚫 Account Blocked - GemNet";
+            String htmlContent = createBlockingEmailTemplate(userName, reason);
+            sendHtmlEmail(userEmail, subject, htmlContent);
+            logger.info("📧 Blocking email sent to user {}: {} ({})", userName, userId, userEmail);
+        } catch (Exception e) {
+            logger.error("❌ Failed to send blocking email to user {}: {}", userId, e.getMessage());
+        }
+    }
+
+    /**
+     * Send meeting reminder email
+     */
+    @Async
+    public void sendMeetingReminderEmail(String userId, String userEmail, String userName, 
+                                       String meetingDisplayId, String gemName, String dateTime, 
+                                       String location, String otherPartyName, String hoursUntil) {
+        if (!emailEnabled) {
+            logger.info("📧 Email service disabled - would send meeting reminder to user {}", userId);
+            return;
+        }
+
+        try {
+            String subject = "⏰ Meeting Reminder - " + hoursUntil + " Hours Until Meeting - GemNet";
+            String htmlContent = createMeetingReminderEmailTemplate(userName, meetingDisplayId, gemName, 
+                                                                   dateTime, location, otherPartyName, hoursUntil);
+            sendHtmlEmail(userEmail, subject, htmlContent);
+            logger.info("📧 Meeting reminder ({} hours) sent to user {}: {} ({})", hoursUntil, userName, userId, userEmail);
+        } catch (Exception e) {
+            logger.error("❌ Failed to send meeting reminder to user {}: {}", userId, e.getMessage());
+        }
+    }
+
+    /**
+     * Send admin meeting reminder email
+     */
+    @Async
+    public void sendAdminMeetingReminderEmail(String meetingDisplayId, String gemName, String dateTime, 
+                                            String location, String buyerName, String sellerName) {
+        if (!emailEnabled) {
+            logger.info("📧 Email service disabled - would send admin meeting reminder for {}", meetingDisplayId);
+            return;
+        }
+
+        try {
+            List<User> adminUsers = userRepository.findByUserRole("ADMIN");
+            if (adminUsers.isEmpty()) {
+                logger.warn("⚠️ No admin users found for meeting reminder: {}", meetingDisplayId);
+                return;
+            }
+
+            String subject = "🤝 Meeting Verification Required - " + meetingDisplayId + " - GemNet";
+            
+            for (User admin : adminUsers) {
+                if (admin.getEmail() != null && !admin.getEmail().isEmpty()) {
+                    String htmlContent = createAdminMeetingReminderTemplate(getUserName(admin), meetingDisplayId, 
+                                                                           gemName, dateTime, location, buyerName, sellerName);
+                    sendHtmlEmail(admin.getEmail(), subject, htmlContent);
+                    logger.info("📧 Admin meeting reminder sent to {}: {} ({})", getUserName(admin), admin.getId(), admin.getEmail());
+                }
+            }
+        } catch (Exception e) {
+            logger.error("❌ Failed to send admin meeting reminder for {}: {}", meetingDisplayId, e.getMessage());
+        }
+    }
+
+    /**
+     * Create warning email template
+     */
+    private String createWarningEmailTemplate(String userName, int noShowCount) {
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("MMM dd, yyyy 'at' HH:mm"));
+        String warningLevel = noShowCount == 1 ? "First Warning" : "Final Warning";
+        String warningColor = noShowCount == 1 ? "#ffc107" : "#dc3545";
+
+        return "<!DOCTYPE html>" +
+               "<html lang='en'>" +
+               "<head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'><title>Account Warning - GemNet</title></head>" +
+               "<body style='font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f4f4f4;'>" +
+               "<div style='max-width: 600px; margin: 0 auto; background-color: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); overflow: hidden;'>" +
+               
+               "<div style='background: linear-gradient(135deg, " + warningColor + " 0%, #ffc107 100%); color: white; padding: 30px; text-align: center;'>" +
+               "<h1>⚠️ Account Warning</h1>" +
+               "<p>" + warningLevel + " - Attendance Issue</p>" +
+               "</div>" +
+               
+               "<div style='padding: 30px;'>" +
+               "<h2>Hello <strong>" + userName + "</strong>,</h2>" +
+               "<p>We're writing to inform you about an attendance issue with your GemNet account.</p>" +
+               
+               "<div style='background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin: 20px 0;'>" +
+               "<h3 style='margin-top: 0; color: #856404;'>📊 Account Status Update</h3>" +
+               "<p style='color: #856404;'><strong>No-Show Count:</strong> " + noShowCount + " out of 2 allowed</p>" +
+               "<p style='color: #856404;'><strong>Warning Level:</strong> " + warningLevel + "</p>" +
+               "<p style='color: #856404;'><strong>Date:</strong> " + timestamp + "</p>" +
+               "</div>" +
+               
+               "<div style='background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 8px; padding: 20px; margin: 20px 0;'>" +
+               "<h4 style='margin-top: 0; color: #721c24;'>🚨 Important Notice</h4>" +
+               "<p style='color: #721c24;'>You have missed a confirmed meeting without providing adequate notice. " +
+               (noShowCount == 1 ? 
+                   "This is your first warning. One more no-show will result in account blocking." :
+                   "This is your final warning. Any additional no-shows will result in permanent account suspension.") +
+               "</p>" +
+               "</div>" +
+               
+               "<h3>🎯 What You Need to Do:</h3>" +
+               "<ul style='color: #333; line-height: 1.6;'>" +
+               "<li><strong>Be Punctual:</strong> Always attend confirmed meetings on time</li>" +
+               "<li><strong>Communicate:</strong> Contact the other party if you need to reschedule</li>" +
+               "<li><strong>Submit Reasons:</strong> If you miss a meeting due to an emergency, submit a valid reason through the platform</li>" +
+               "<li><strong>Check Schedule:</strong> Regularly review your meeting schedule and set reminders</li>" +
+               "</ul>" +
+               
+               "<div style='background: #d1ecf1; border-radius: 8px; padding: 20px; margin: 20px 0;'>" +
+               "<h4 style='margin-top: 0; color: #0c5460;'>📝 How to Avoid Future No-Shows</h4>" +
+               "<ul style='color: #0c5460; margin: 10px 0;'>" +
+               "<li>Set calendar reminders for all confirmed meetings</li>" +
+               "<li>Enable email and SMS notifications in your account settings</li>" +
+               "<li>Plan your schedule carefully before confirming meetings</li>" +
+               "<li>Communicate early if you anticipate any conflicts</li>" +
+               "</ul>" +
+               "</div>" +
+               
+               "<div style='background: #fff2cc; border: 2px solid #d6b656; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;'>" +
+               "<h4 style='margin-top: 0; color: #996515;'>⚡ Next No-Show Consequence</h4>" +
+               "<p style='color: #996515; font-size: 16px; font-weight: bold; margin-bottom: 0;'>" + 
+               "Account " + (noShowCount == 1 ? "Blocking" : "Permanent Suspension") + "</p>" +
+               "</div>" +
+               
+               "<p>We value your participation in the GemNet community and want to ensure a reliable experience for all users. " +
+               "Please take this warning seriously and make every effort to attend your confirmed meetings.</p>" +
+               
+               "<p>If you have any questions or concerns, please contact our support team immediately.</p>" +
+               "</div>" +
+               
+               "<div style='background: #f8f9fa; padding: 20px; text-align: center; color: #6c757d; font-size: 14px;'>" +
+               "<p><strong>Support Contact:</strong></p>" +
+               "<p>Email: support@gemnet.com | Phone: +94 11 234 5678</p>" +
+               "<p>This is an automated warning from GemNet. Please do not reply to this email.</p>" +
+               "<p>&copy; 2025 GemNet. All rights reserved.</p>" +
+               "</div>" +
+               "</div>" +
+               "</body></html>";
+    }
+
+    /**
+     * Create blocking email template
+     */
+    private String createBlockingEmailTemplate(String userName, String reason) {
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("MMM dd, yyyy 'at' HH:mm"));
+
+        return "<!DOCTYPE html>" +
+               "<html lang='en'>" +
+               "<head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'><title>Account Blocked - GemNet</title></head>" +
+               "<body style='font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f4f4f4;'>" +
+               "<div style='max-width: 600px; margin: 0 auto; background-color: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); overflow: hidden;'>" +
+               
+               "<div style='background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; padding: 30px; text-align: center;'>" +
+               "<h1>🚫 Account Blocked</h1>" +
+               "<p>Access Suspended Due to Policy Violation</p>" +
+               "</div>" +
+               
+               "<div style='padding: 30px;'>" +
+               "<h2>Dear <strong>" + userName + "</strong>,</h2>" +
+               "<p>We regret to inform you that your GemNet account has been blocked due to repeated attendance issues.</p>" +
+               
+               "<div style='background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 8px; padding: 20px; margin: 20px 0;'>" +
+               "<h3 style='margin-top: 0; color: #721c24;'>🚨 Account Status</h3>" +
+               "<p style='color: #721c24;'><strong>Status:</strong> BLOCKED</p>" +
+               "<p style='color: #721c24;'><strong>Reason:</strong> " + reason + "</p>" +
+               "<p style='color: #721c24;'><strong>Blocked Date:</strong> " + timestamp + "</p>" +
+               "</div>" +
+               
+               "<div style='background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin: 20px 0;'>" +
+               "<h4 style='margin-top: 0; color: #856404;'>🔒 What This Means</h4>" +
+               "<ul style='color: #856404; margin: 10px 0;'>" +
+               "<li>You cannot log in to your GemNet account</li>" +
+               "<li>All active bids and listings have been suspended</li>" +
+               "<li>You cannot participate in new auctions or meetings</li>" +
+               "<li>Your profile is no longer visible to other users</li>" +
+               "</ul>" +
+               "</div>" +
+               
+               "<h3>📞 Account Appeal Process</h3>" +
+               "<p>If you believe this blocking was made in error, or if you have valid reasons for your absences, you may appeal this decision:</p>" +
+               
+               "<div style='background: #d1ecf1; border-radius: 8px; padding: 20px; margin: 20px 0;'>" +
+               "<h4 style='margin-top: 0; color: #0c5460;'>🔄 How to Appeal</h4>" +
+               "<ol style='color: #0c5460; margin: 10px 0;'>" +
+               "<li><strong>Contact Support:</strong> Email support@gemnet.com with your appeal</li>" +
+               "<li><strong>Provide Documentation:</strong> Include any supporting evidence for your absences</li>" +
+               "<li><strong>Explain Circumstances:</strong> Detail any extenuating circumstances</li>" +
+               "<li><strong>Wait for Review:</strong> Appeals are typically reviewed within 5-7 business days</li>" +
+               "</ol>" +
+               "</div>" +
+               
+               "<div style='background: #ffe6e6; border: 2px solid #ff9999; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;'>" +
+               "<h4 style='margin-top: 0; color: #cc0000;'>⚠️ Important Note</h4>" +
+               "<p style='color: #cc0000; margin-bottom: 0;'>Creating new accounts to bypass this block is strictly prohibited and will result in permanent IP blocking.</p>" +
+               "</div>" +
+               
+               "<h3>📋 For Future Reference</h3>" +
+               "<p>If your account is reinstated, please note that our attendance policy requires:</p>" +
+               "<ul style='color: #333; line-height: 1.6;'>" +
+               "<li>Attendance at all confirmed meetings</li>" +
+               "<li>24-hour advance notice for cancellations</li>" +
+               "<li>Valid documentation for emergency absences</li>" +
+               "<li>Respect for other users' time and commitments</li>" +
+               "</ul>" +
+               
+               "<p>We appreciate your understanding and hope to resolve this matter promptly.</p>" +
+               "</div>" +
+               
+               "<div style='background: #343a40; color: white; padding: 20px; text-align: center;'>" +
+               "<h4 style='margin-top: 0;'>📞 Support Information</h4>" +
+               "<p style='margin: 10px 0;'><strong>Email:</strong> support@gemnet.com</p>" +
+               "<p style='margin: 10px 0;'><strong>Phone:</strong> +94 11 234 5678</p>" +
+               "<p style='margin: 10px 0;'><strong>Hours:</strong> Monday - Friday, 9:00 AM - 6:00 PM (IST)</p>" +
+               "<p style='margin: 20px 0 0 0; font-size: 14px; opacity: 0.7;'>" +
+               "This is an automated notification from GemNet. Please do not reply to this email.<br>" +
+               "&copy; 2025 GemNet. All rights reserved." +
+               "</p>" +
+               "</div>" +
+               "</div>" +
+               "</body></html>";
+    }
+
+    /**
+     * Create meeting reminder email template
+     */
+    private String createMeetingReminderEmailTemplate(String userName, String meetingDisplayId, String gemName, 
+                                                    String dateTime, String location, String otherPartyName, String hoursUntil) {
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("MMM dd, yyyy 'at' HH:mm"));
+        String urgencyColor = hoursUntil.equals("6") ? "#dc3545" : "#ffc107";
+        String urgencyText = hoursUntil.equals("6") ? "URGENT" : "REMINDER";
+
+        return "<!DOCTYPE html>" +
+               "<html lang='en'>" +
+               "<head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'><title>Meeting Reminder - GemNet</title></head>" +
+               "<body style='font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f4f4f4;'>" +
+               "<div style='max-width: 600px; margin: 0 auto; background-color: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); overflow: hidden;'>" +
+               
+               "<div style='background: linear-gradient(135deg, " + urgencyColor + " 0%, #ffc107 100%); color: white; padding: 30px; text-align: center;'>" +
+               "<h1>⏰ Meeting Reminder</h1>" +
+               "<p>" + urgencyText + " - " + hoursUntil + " Hours Until Meeting</p>" +
+               "</div>" +
+               
+               "<div style='padding: 30px;'>" +
+               "<h2>Hello <strong>" + userName + "</strong>,</h2>" +
+               "<p>This is a " + (hoursUntil.equals("6") ? "final" : "friendly") + " reminder about your upcoming meeting on GemNet.</p>" +
+               
+               "<div style='background: #e3f2fd; border-left: 4px solid #2196f3; padding: 20px; border-radius: 5px; margin: 20px 0;'>" +
+               "<h3 style='margin-top: 0; color: #1976d2;'>🤝 Meeting Details</h3>" +
+               "<p style='color: #1976d2; margin: 5px 0;'><strong>📋 Meeting ID:</strong> " + meetingDisplayId + "</p>" +
+               "<p style='color: #1976d2; margin: 5px 0;'><strong>💎 Gemstone:</strong> " + gemName + "</p>" +
+               "<p style='color: #1976d2; margin: 5px 0;'><strong>🕐 Date & Time:</strong> " + dateTime + "</p>" +
+               "<p style='color: #1976d2; margin: 5px 0;'><strong>📍 Location:</strong> " + location + "</p>" +
+               "<p style='color: #1976d2; margin: 5px 0;'><strong>👤 Meeting With:</strong> " + otherPartyName + "</p>" +
+               "</div>" +
+               
+               "<div style='background: " + (hoursUntil.equals("6") ? "#f8d7da" : "#fff3cd") + "; border: 1px solid " + 
+               (hoursUntil.equals("6") ? "#f5c6cb" : "#ffeaa7") + "; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;'>" +
+               "<h3 style='margin-top: 0; color: " + (hoursUntil.equals("6") ? "#721c24" : "#856404") + ";'>⏰ Time Remaining</h3>" +
+               "<p style='font-size: 24px; font-weight: bold; color: " + urgencyColor + "; margin: 10px 0;'>" + hoursUntil + " HOURS</p>" +
+               "<p style='color: " + (hoursUntil.equals("6") ? "#721c24" : "#856404") + "; margin-bottom: 0;'>" +
+               (hoursUntil.equals("6") ? "⚠️ FINAL REMINDER - Please confirm your attendance!" : "📅 Don't forget to prepare for your meeting!") +
+               "</p>" +
+               "</div>" +
+               
+               "<h3>✅ Pre-Meeting Checklist</h3>" +
+               "<ul style='color: #333; line-height: 1.8;'>" +
+               "<li><strong>📍 Confirm Location:</strong> Double-check the meeting address and plan your route</li>" +
+               "<li><strong>🚗 Plan Transportation:</strong> Account for traffic and arrive 10 minutes early</li>" +
+               "<li><strong>📋 Prepare Questions:</strong> List any questions about the gemstone</li>" +
+               "<li><strong>💰 Bring Payment:</strong> If purchasing, ensure you have the agreed payment method</li>" +
+               "<li><strong>📱 Contact Information:</strong> Save the other party's contact details</li>" +
+               "</ul>" +
+               
+               "<div style='background: #d4edda; border: 1px solid #c3e6cb; border-radius: 8px; padding: 20px; margin: 20px 0;'>" +
+               "<h4 style='margin-top: 0; color: #155724;'>📞 Need to Reschedule?</h4>" +
+               "<p style='color: #155724; margin: 10px 0;'>If you need to reschedule or cancel this meeting:</p>" +
+               "<ul style='color: #155724; margin: 10px 0;'>" +
+               "<li>Contact the other party immediately through GemNet messaging</li>" +
+               "<li>Provide at least 24 hours notice when possible</li>" +
+               "<li>Suggest alternative meeting times</li>" +
+               "<li>Be respectful of the other person's time</li>" +
+               "</ul>" +
+               "</div>" +
+               
+               (hoursUntil.equals("6") ? 
+                   "<div style='background: #fff2cc; border: 2px solid #d6b656; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;'>" +
+                   "<h4 style='margin-top: 0; color: #996515;'>⚠️ Attendance Policy Reminder</h4>" +
+                   "<p style='color: #996515; margin-bottom: 0;'>Failure to attend confirmed meetings may result in account warnings or restrictions. " +
+                   "If you cannot attend, please contact the other party and submit a valid reason through the platform.</p>" +
+                   "</div>" : ""
+               ) +
+               
+               "<div style='text-align: center; margin: 30px 0;'>" +
+               "<p style='font-size: 16px; color: #333;'>We wish you a successful meeting! 🤝</p>" +
+               "<p style='font-size: 14px; color: #6c757d;'>Reminder sent at: " + timestamp + "</p>" +
+               "</div>" +
+               "</div>" +
+               
+               "<div style='background: #f8f9fa; padding: 20px; text-align: center; color: #6c757d; font-size: 14px;'>" +
+               "<p>This is an automated meeting reminder from GemNet. Please do not reply to this email.</p>" +
+               "<p>&copy; 2025 GemNet. All rights reserved.</p>" +
+               "</div>" +
+               "</div>" +
+               "</body></html>";
+    }
+
+    /**
+     * Create admin meeting reminder template
+     */
+    private String createAdminMeetingReminderTemplate(String adminName, String meetingDisplayId, String gemName, 
+                                                    String dateTime, String location, String buyerName, String sellerName) {
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("MMM dd, yyyy 'at' HH:mm"));
+
+        return "<!DOCTYPE html>" +
+               "<html lang='en'>" +
+               "<head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'><title>Admin Meeting Verification - GemNet</title></head>" +
+               "<body style='font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f4f4f4;'>" +
+               "<div style='max-width: 600px; margin: 0 auto; background-color: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); overflow: hidden;'>" +
+               
+               "<div style='background: linear-gradient(135deg, #6f42c1 0%, #5a2d91 100%); color: white; padding: 30px; text-align: center;'>" +
+               "<h1>🛡️ Admin Meeting Verification</h1>" +
+               "<p>Meeting Requires Administrative Oversight</p>" +
+               "</div>" +
+               
+               "<div style='padding: 30px;'>" +
+               "<h2>Hello " + adminName + ",</h2>" +
+               "<p>A meeting is scheduled that requires administrative verification for attendance tracking:</p>" +
+               
+               "<div style='background: #f3e5f5; border-left: 4px solid #9c27b0; padding: 20px; border-radius: 5px; margin: 20px 0;'>" +
+               "<h3 style='margin-top: 0; color: #7b1fa2;'>🤝 Meeting Information</h3>" +
+               "<p style='color: #7b1fa2; margin: 5px 0;'><strong>📋 Meeting ID:</strong> " + meetingDisplayId + "</p>" +
+               "<p style='color: #7b1fa2; margin: 5px 0;'><strong>💎 Gemstone:</strong> " + gemName + "</p>" +
+               "<p style='color: #7b1fa2; margin: 5px 0;'><strong>🕐 Scheduled Time:</strong> " + dateTime + "</p>" +
+               "<p style='color: #7b1fa2; margin: 5px 0;'><strong>📍 Location:</strong> " + location + "</p>" +
+               "</div>" +
+               
+               "<div style='background: #e3f2fd; border-radius: 8px; padding: 20px; margin: 20px 0;'>" +
+               "<h4 style='margin-top: 0; color: #1976d2;'>👥 Meeting Participants</h4>" +
+               "<div style='display: flex; justify-content: space-between;'>" +
+               "<div style='flex: 1; margin-right: 10px;'>" +
+               "<p style='color: #1976d2; margin: 5px 0;'><strong>🛒 Buyer:</strong></p>" +
+               "<p style='color: #333; margin: 5px 0; background: white; padding: 10px; border-radius: 5px;'>" + buyerName + "</p>" +
+               "</div>" +
+               "<div style='flex: 1; margin-left: 10px;'>" +
+               "<p style='color: #1976d2; margin: 5px 0;'><strong>🏪 Seller:</strong></p>" +
+               "<p style='color: #333; margin: 5px 0; background: white; padding: 10px; border-radius: 5px;'>" + sellerName + "</p>" +
+               "</div>" +
+               "</div>" +
+               "</div>" +
+               
+               "<h3>📋 Required Actions</h3>" +
+               "<ul style='color: #333; line-height: 1.8;'>" +
+               "<li><strong>📝 Verify Attendance:</strong> Confirm whether both parties attended the meeting</li>" +
+               "<li><strong>🔍 Review Circumstances:</strong> Investigate any no-shows or disputes</li>" +
+               "<li><strong>📄 Document Results:</strong> Record attendance and any relevant notes</li>" +
+               "<li><strong>⚖️ Apply Policies:</strong> Process any no-show penalties if applicable</li>" +
+               "</ul>" +
+               
+               "<div style='background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin: 20px 0;'>" +
+               "<h4 style='margin-top: 0; color: #856404;'>⏰ Post-Meeting Timeline</h4>" +
+               "<ul style='color: #856404; margin: 10px 0;'>" +
+               "<li><strong>Within 24 hours:</strong> Verify attendance status</li>" +
+               "<li><strong>Within 48 hours:</strong> Process any absence reasons submitted</li>" +
+               "<li><strong>Within 72 hours:</strong> Apply no-show penalties if applicable</li>" +
+               "</ul>" +
+               "</div>" +
+               
+               "<div style='text-align: center; margin: 30px 0;'>" +
+               "<div style='background: linear-gradient(135deg, #6f42c1 0%, #5a2d91 100%); color: white; padding: 15px 30px; border-radius: 25px; display: inline-block;'>" +
+               "<strong>🛡️ Access Admin Dashboard</strong>" +
+               "</div>" +
+               "</div>" +
+               
+               "<p style='font-size: 14px; color: #6c757d; text-align: center;'>Reminder sent at: " + timestamp + "</p>" +
+               "</div>" +
+               
+               "<div style='background: #343a40; color: white; padding: 20px; text-align: center;'>" +
+               "<h4 style='margin-top: 0;'>🎯 Admin Responsibilities</h4>" +
+               "<p style='margin: 10px 0; font-size: 14px;'>Maintain fair and consistent enforcement of attendance policies</p>" +
+               "<p style='margin: 10px 0; font-size: 14px;'>Provide timely verification to maintain user trust</p>" +
+               "<p style='margin: 20px 0 0 0; font-size: 12px; opacity: 0.7;'>" +
+               "This is an automated admin alert from GemNet. Please do not reply to this email.<br>" +
+               "&copy; 2025 GemNet. All rights reserved." +
+               "</p>" +
+               "</div>" +
+               "</div>" +
+               "</body></html>";
+    }
+
+    /**
      * Test email functionality
      */
     public void sendTestEmail(String toEmail) throws MessagingException {

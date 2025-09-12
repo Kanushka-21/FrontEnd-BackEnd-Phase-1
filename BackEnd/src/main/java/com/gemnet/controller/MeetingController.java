@@ -2,6 +2,7 @@ package com.gemnet.controller;
 
 import com.gemnet.model.Meeting;
 import com.gemnet.service.MeetingService;
+import com.gemnet.service.NoShowManagementService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +22,9 @@ public class MeetingController {
     
     @Autowired
     private MeetingService meetingService;
+    
+    @Autowired
+    private NoShowManagementService noShowManagementService;
     
     /**
      * Create a new meeting request
@@ -393,6 +397,193 @@ public class MeetingController {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("success", false);
             errorResponse.put("message", "Error fetching meetings by status: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+    
+    // ============ NO-SHOW MANAGEMENT ENDPOINTS ============
+    
+    /**
+     * Admin mark attendance for a meeting
+     */
+    @PostMapping("/admin/{meetingId}/mark-attendance")
+    public ResponseEntity<?> markAttendance(@PathVariable String meetingId, @RequestBody Map<String, Object> requestData) {
+        try {
+            String adminId = (String) requestData.get("adminId");
+            Boolean buyerAttended = (Boolean) requestData.get("buyerAttended");
+            Boolean sellerAttended = (Boolean) requestData.get("sellerAttended");
+            String adminNotes = (String) requestData.get("adminNotes");
+            
+            Map<String, Object> result = noShowManagementService.markAttendance(
+                meetingId, adminId, buyerAttended, sellerAttended, adminNotes);
+            
+            if ((Boolean) result.get("success")) {
+                return ResponseEntity.ok(result);
+            } else {
+                return ResponseEntity.badRequest().body(result);
+            }
+            
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "Error marking attendance: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+    
+    /**
+     * User submit reason for absence
+     */
+    @PostMapping("/{meetingId}/submit-absence-reason")
+    public ResponseEntity<?> submitAbsenceReason(@PathVariable String meetingId, @RequestBody Map<String, String> requestData) {
+        try {
+            String userId = requestData.get("userId");
+            String reason = requestData.get("reason");
+            
+            Map<String, Object> result = noShowManagementService.submitAbsenceReason(meetingId, userId, reason);
+            
+            if ((Boolean) result.get("success")) {
+                return ResponseEntity.ok(result);
+            } else {
+                return ResponseEntity.badRequest().body(result);
+            }
+            
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "Error submitting absence reason: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+    
+    /**
+     * Admin review absence reason
+     */
+    @PostMapping("/admin/{meetingId}/review-absence-reason")
+    public ResponseEntity<?> reviewAbsenceReason(@PathVariable String meetingId, @RequestBody Map<String, Object> requestData) {
+        try {
+            String userId = (String) requestData.get("userId");
+            Boolean accepted = (Boolean) requestData.get("accepted");
+            String adminNotes = (String) requestData.get("adminNotes");
+            
+            Map<String, Object> result = noShowManagementService.reviewAbsenceReason(
+                meetingId, userId, accepted, adminNotes);
+            
+            if ((Boolean) result.get("success")) {
+                return ResponseEntity.ok(result);
+            } else {
+                return ResponseEntity.badRequest().body(result);
+            }
+            
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "Error reviewing absence reason: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+    
+    /**
+     * Get user no-show statistics
+     */
+    @GetMapping("/user/{userId}/no-show-stats")
+    public ResponseEntity<?> getUserNoShowStats(@PathVariable String userId) {
+        try {
+            Map<String, Object> stats = noShowManagementService.getUserNoShowStats(userId);
+            
+            if ((Boolean) stats.get("success")) {
+                return ResponseEntity.ok(stats);
+            } else {
+                return ResponseEntity.badRequest().body(stats);
+            }
+            
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "Error fetching no-show stats: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+    
+    /**
+     * Admin search meeting by display ID
+     */
+    @GetMapping("/admin/search/{displayId}")
+    public ResponseEntity<?> searchMeetingByDisplayId(@PathVariable String displayId) {
+        try {
+            Optional<Meeting> meetingOpt = meetingService.getMeetingByDisplayId(displayId);
+            
+            if (meetingOpt.isPresent()) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", true);
+                response.put("meeting", meetingOpt.get());
+                return ResponseEntity.ok(response);
+            } else {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("success", false);
+                errorResponse.put("message", "Meeting not found with display ID: " + displayId);
+                return ResponseEntity.notFound().build();
+            }
+            
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "Error searching meeting: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+    
+    /**
+     * Download meeting info for users
+     */
+    @GetMapping("/{meetingId}/download-info")
+    public ResponseEntity<?> downloadMeetingInfo(@PathVariable String meetingId, @RequestParam String userId) {
+        try {
+            Optional<Meeting> meetingOpt = meetingService.getMeetingById(meetingId);
+            
+            if (!meetingOpt.isPresent()) {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("success", false);
+                errorResponse.put("message", "Meeting not found");
+                return ResponseEntity.notFound().build();
+            }
+            
+            Meeting meeting = meetingOpt.get();
+            
+            // Verify user is part of this meeting
+            if (!meeting.getBuyerId().equals(userId) && !meeting.getSellerId().equals(userId)) {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("success", false);
+                errorResponse.put("message", "Not authorized to download this meeting info");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResponse);
+            }
+            
+            // Prepare meeting info for download
+            Map<String, Object> meetingInfo = new HashMap<>();
+            meetingInfo.put("meetingId", meeting.getMeetingDisplayId() != null ? 
+                meeting.getMeetingDisplayId() : meeting.getId());
+            meetingInfo.put("gemName", meeting.getGemName());
+            meetingInfo.put("gemType", meeting.getGemType());
+            meetingInfo.put("finalPrice", meeting.getFinalPrice());
+            meetingInfo.put("confirmedDateTime", meeting.getConfirmedDateTime());
+            meetingInfo.put("location", meeting.getLocation());
+            meetingInfo.put("status", meeting.getStatus());
+            meetingInfo.put("buyerName", meeting.getBuyerEmail());
+            meetingInfo.put("sellerName", meeting.getSellerEmail());
+            meetingInfo.put("buyerPhone", meeting.getBuyerPhone());
+            meetingInfo.put("sellerPhone", meeting.getSellerPhone());
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("meetingInfo", meetingInfo);
+            response.put("downloadFormat", "json");
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "Error downloading meeting info: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, User, Phone, Mail, MessageSquare, CheckCircle, XCircle, AlertCircle, Edit, Archive } from 'lucide-react';
+import { Calendar, Clock, MapPin, User, Phone, Mail, MessageSquare, CheckCircle, XCircle, AlertCircle, Edit, Archive, AlertTriangle, FileText, Ban } from 'lucide-react';
 
 interface Meeting {
   id: string;
@@ -31,13 +31,24 @@ interface Meeting {
   };
   createdAt: string;
   updatedAt: string;
+  // No-show management fields
+  buyerAttended?: boolean;
+  sellerAttended?: boolean;
+  buyerAbsenceReason?: string;
+  sellerAbsenceReason?: string;
+  adminVerified?: boolean;
+  adminNotes?: string;
+  buyerNoShowCount?: number;
+  sellerNoShowCount?: number;
+  meetingDisplayId?: string;
 }
 
 interface MeetingManagerProps {
   user: any;
+  userType?: 'buyer' | 'seller';
 }
 
-const MeetingManager: React.FC<MeetingManagerProps> = ({ user }) => {
+const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer' }) => {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('ALL');
@@ -52,6 +63,15 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user }) => {
     sellerNotes: ''
   });
   const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
+  
+  // No-show management state
+  const [showAttendanceModal, setShowAttendanceModal] = useState(false);
+  const [showAbsenceReasonModal, setShowAbsenceReasonModal] = useState(false);
+  const [attendanceData, setAttendanceData] = useState({
+    attended: false,
+    reason: ''
+  });
+  const [absenceReason, setAbsenceReason] = useState('');
 
   // Fetch meetings
   useEffect(() => {
@@ -225,6 +245,75 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user }) => {
     } catch (error) {
       console.error('Error cancelling meeting:', error);
       setMessage({ type: 'error', text: 'Error cancelling meeting. Please try again.' });
+    }
+  };
+
+  // Handle attendance marking
+  const handleMarkAttendance = async (meetingId: string, attended: boolean, reason?: string) => {
+    try {
+      const userId = user.userId || user.id;
+      const response = await fetch(`http://localhost:9092/api/no-show/mark-attendance`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          meetingId,
+          userId,
+          userType,
+          attended,
+          reason
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        await fetchMeetings();
+        setShowAttendanceModal(false);
+        setSelectedMeeting(null);
+        setMessage({ 
+          type: 'success', 
+          text: attended ? 'Attendance marked successfully!' : 'No-show reported successfully!' 
+        });
+      } else {
+        setMessage({ type: 'error', text: `Failed to mark attendance: ${data.message}` });
+      }
+    } catch (error) {
+      console.error('Error marking attendance:', error);
+      setMessage({ type: 'error', text: 'Error marking attendance. Please try again.' });
+    }
+  };
+
+  // Handle absence reason submission
+  const handleSubmitAbsenceReason = async (meetingId: string, reason: string) => {
+    try {
+      const userId = user.userId || user.id;
+      const response = await fetch(`http://localhost:9092/api/no-show/submit-reason`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          meetingId,
+          userId,
+          userType,
+          reason
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        await fetchMeetings();
+        setShowAbsenceReasonModal(false);
+        setSelectedMeeting(null);
+        setAbsenceReason('');
+        setMessage({ type: 'success', text: 'Absence reason submitted successfully!' });
+      } else {
+        setMessage({ type: 'error', text: `Failed to submit reason: ${data.message}` });
+      }
+    } catch (error) {
+      console.error('Error submitting absence reason:', error);
+      setMessage({ type: 'error', text: 'Error submitting reason. Please try again.' });
     }
   };
 
@@ -465,6 +554,69 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user }) => {
                       </button>
                     )}
 
+                    {/* No-Show Management Buttons */}
+                    {meeting.status === 'CONFIRMED' && new Date(meeting.confirmedDateTime || meeting.proposedDateTime) <= new Date() && (
+                      <>
+                        {/* Mark Attendance Button */}
+                        <button
+                          onClick={() => {
+                            setSelectedMeeting(meeting);
+                            setShowAttendanceModal(true);
+                            setAttendanceData({ attended: true, reason: '' });
+                          }}
+                          className="px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm flex items-center space-x-1"
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          <span>Attended</span>
+                        </button>
+                        
+                        {/* Mark No-Show Button */}
+                        <button
+                          onClick={() => {
+                            setSelectedMeeting(meeting);
+                            setShowAttendanceModal(true);
+                            setAttendanceData({ attended: false, reason: '' });
+                          }}
+                          className="px-3 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors text-sm flex items-center space-x-1"
+                        >
+                          <AlertTriangle className="w-4 h-4" />
+                          <span>No-Show</span>
+                        </button>
+                      </>
+                    )}
+
+                    {/* Submit Absence Reason Button */}
+                    {meeting.status === 'CONFIRMED' && 
+                     ((userType === 'buyer' && meeting.buyerAttended === false && !meeting.buyerAbsenceReason) ||
+                      (userType === 'seller' && meeting.sellerAttended === false && !meeting.sellerAbsenceReason)) && (
+                      <button
+                        onClick={() => {
+                          setSelectedMeeting(meeting);
+                          setShowAbsenceReasonModal(true);
+                        }}
+                        className="px-3 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 transition-colors text-sm flex items-center space-x-1"
+                      >
+                        <FileText className="w-4 h-4" />
+                        <span>Submit Reason</span>
+                      </button>
+                    )}
+
+                    {/* Show No-Show Status */}
+                    {meeting.status === 'CONFIRMED' && (meeting.buyerAttended !== undefined || meeting.sellerAttended !== undefined) && (
+                      <div className="text-xs text-gray-600">
+                        {userType === 'buyer' && meeting.buyerAttended !== undefined && (
+                          <span className={`px-2 py-1 rounded ${meeting.buyerAttended ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                            {meeting.buyerAttended ? 'You Attended' : 'You No-Show'}
+                          </span>
+                        )}
+                        {userType === 'seller' && meeting.sellerAttended !== undefined && (
+                          <span className={`px-2 py-1 rounded ${meeting.sellerAttended ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                            {meeting.sellerAttended ? 'You Attended' : 'You No-Show'}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
                     {['PENDING', 'CONFIRMED'].includes(meeting.status) && (
                       <button
                         onClick={() => handleCancelMeeting(meeting.id)}
@@ -574,6 +726,119 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user }) => {
                   className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
                 >
                   Reschedule
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Attendance Modal */}
+        {showAttendanceModal && selectedMeeting && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                {attendanceData.attended ? 'Confirm Attendance' : 'Report No-Show'}
+              </h3>
+              
+              <p className="text-sm text-gray-600 mb-4">
+                {attendanceData.attended 
+                  ? `Confirm that you attended the meeting with ${userType === 'buyer' ? selectedMeeting.sellerName : selectedMeeting.buyerName}.`
+                  : `Report that the other party (${userType === 'buyer' ? selectedMeeting.sellerName : selectedMeeting.buyerName}) did not attend the meeting.`
+                }
+              </p>
+
+              {!attendanceData.attended && (
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Reason for No-Show (Optional)
+                  </label>
+                  <textarea
+                    value={attendanceData.reason}
+                    onChange={(e) => setAttendanceData({ ...attendanceData, reason: e.target.value })}
+                    placeholder="Please describe what happened..."
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              )}
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => {
+                    setShowAttendanceModal(false);
+                    setSelectedMeeting(null);
+                    setAttendanceData({ attended: false, reason: '' });
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleMarkAttendance(selectedMeeting.id, attendanceData.attended, attendanceData.reason)}
+                  className={`px-4 py-2 text-white rounded-md ${
+                    attendanceData.attended 
+                      ? 'bg-green-600 hover:bg-green-700' 
+                      : 'bg-orange-600 hover:bg-orange-700'
+                  }`}
+                >
+                  {attendanceData.attended ? 'Confirm Attendance' : 'Report No-Show'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Absence Reason Modal */}
+        {showAbsenceReasonModal && selectedMeeting && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Submit Absence Reason</h3>
+              
+              <p className="text-sm text-gray-600 mb-4">
+                Please provide a reason for your absence. This will be reviewed by the admin.
+              </p>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Reason for Absence <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={absenceReason}
+                  onChange={(e) => setAbsenceReason(e.target.value)}
+                  placeholder="Please explain why you couldn't attend the meeting..."
+                  rows={4}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 mb-4">
+                <div className="flex">
+                  <AlertTriangle className="w-5 h-5 text-yellow-400 mr-2 mt-0.5" />
+                  <div className="text-sm text-yellow-800">
+                    <p className="font-medium">Important:</p>
+                    <p>This reason will be reviewed by an admin. Providing a valid reason may help avoid penalties.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => {
+                    setShowAbsenceReasonModal(false);
+                    setSelectedMeeting(null);
+                    setAbsenceReason('');
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleSubmitAbsenceReason(selectedMeeting.id, absenceReason)}
+                  disabled={!absenceReason.trim()}
+                  className="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 disabled:opacity-50"
+                >
+                  Submit Reason
                 </button>
               </div>
             </div>

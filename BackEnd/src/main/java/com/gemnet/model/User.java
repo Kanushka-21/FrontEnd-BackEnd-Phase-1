@@ -78,6 +78,13 @@ public class User {
     private Boolean isActive = true;
     private Boolean isLocked = false;
     
+    // No-show tracking fields
+    private Integer noShowCount = 0;
+    private String accountStatus = "ACTIVE"; // ACTIVE, WARNED, BLOCKED
+    private LocalDateTime lastNoShowDate;
+    private String blockingReason; // Reason for blocking (if blocked)
+    private LocalDateTime blockedAt; // When the user was blocked
+    
     // Admin-specific fields
     private String department; // For admin users
     private String employeeId; // For admin users
@@ -201,4 +208,20 @@ public class User {
     
     public String getBio() { return bio; }
     public void setBio(String bio) { this.bio = bio; }
+    
+    // No-show tracking getters and setters
+    public Integer getNoShowCount() { return noShowCount; }
+    public void setNoShowCount(Integer noShowCount) { this.noShowCount = noShowCount; }
+    
+    public String getAccountStatus() { return accountStatus; }
+    public void setAccountStatus(String accountStatus) { this.accountStatus = accountStatus; }
+    
+    public LocalDateTime getLastNoShowDate() { return lastNoShowDate; }
+    public void setLastNoShowDate(LocalDateTime lastNoShowDate) { this.lastNoShowDate = lastNoShowDate; }
+    
+    public String getBlockingReason() { return blockingReason; }
+    public void setBlockingReason(String blockingReason) { this.blockingReason = blockingReason; }
+    
+    public LocalDateTime getBlockedAt() { return blockedAt; }
+    public void setBlockedAt(LocalDateTime blockedAt) { this.blockedAt = blockedAt; }
 }
