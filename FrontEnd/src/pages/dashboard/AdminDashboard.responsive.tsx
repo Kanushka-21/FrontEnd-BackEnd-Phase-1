@@ -2,8 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   Card, Row, Col, Table, 
   Button, Tag, Tabs, Modal,
-  Input, message, Alert, Space, Badge,
-  Switch, Progress, Divider
+  Input, message, Alert, Badge,
+  Progress, Divider
 } from 'antd';
 import {
   UserOutlined, DollarOutlined,
@@ -238,7 +238,6 @@ const AdminDashboard: React.FC = () => {
   const [selectedMeeting, setSelectedMeeting] = useState<any>(null);
   
   // Create refs for sections we want to navigate to
-  const userSectionRef = useRef<HTMLDivElement>(null);
   const listingSectionRef = useRef<HTMLDivElement>(null);
   const meetingSectionRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -268,7 +267,6 @@ const AdminDashboard: React.FC = () => {
   // Admin sidebar navigation items
   const sidebarItems = [
     { id: 'overview', label: 'Overview', icon: <BarChart3 size={24} /> },
-    { id: 'users', label: 'User Management', icon: <Users size={24} /> },
     { id: 'listings', label: 'Listing Management', icon: <Package size={24} /> },
     { id: 'meetings', label: 'Meeting Approvals', icon: <Clock size={24} /> },
     { id: 'feedback', label: 'Submit Feedback', icon: <MessageCircle size={24} /> },
@@ -552,12 +550,7 @@ const AdminDashboard: React.FC = () => {
     
     // Wait for any state updates to be applied before scrolling
     setTimeout(() => {
-      if (itemId === 'users' && userSectionRef.current && contentRef.current) {
-        contentRef.current.scrollTo({
-          top: userSectionRef.current.offsetTop - 20,
-          behavior: 'smooth'
-        });
-      } else if (itemId === 'listings' && listingSectionRef.current && contentRef.current) {
+      if (itemId === 'listings' && listingSectionRef.current && contentRef.current) {
         contentRef.current.scrollTo({
           top: listingSectionRef.current.offsetTop - 20,
           behavior: 'smooth'
@@ -869,191 +862,7 @@ const AdminDashboard: React.FC = () => {
           size="large"
           animated={{ inkBar: true, tabPane: true }}
           tabBarStyle={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb', padding: '0 16px' }}
-        >          <TabPane 
-            tab={<span className="flex items-center px-1"><UserOutlined className="mr-2" /> User Management</span>} 
-            key="users"
-          >
-            <div className="space-y-6">
-              <div ref={userSectionRef}>
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-medium">User Accounts</h3>
-                  <Input.Search
-                    placeholder="Search users..."
-                    style={{ width: 250 }}
-                    allowClear
-                  />
-                </div>
-                <Table 
-                  dataSource={mockUsers}
-                  scroll={{ x: 'max-content' }}
-                  columns={[
-                    {
-                      title: 'Name',
-                      dataIndex: 'name',
-                      key: 'name',
-                    },
-                    {
-                      title: 'Email',
-                      dataIndex: 'email',
-                      key: 'email',
-                    },
-                    {
-                      title: 'Role',
-                      dataIndex: 'role',
-                      key: 'role',
-                      render: (role: string) => <Tag color={role === 'seller' ? 'purple' : 'blue'}>{role.toUpperCase()}</Tag>
-                    },
-                    {
-                      title: 'Status',
-                      dataIndex: 'status',
-                      key: 'status',
-                      render: (status: string) => (
-                        <Tag color={status === 'active' ? 'success' : 'error'}>
-                          {status.toUpperCase()}
-                        </Tag>
-                      )
-                    },
-                    {
-                      title: 'Last Active',
-                      dataIndex: 'lastActive',
-                      key: 'lastActive',
-                      render: date => dayjs(date).format('MMM DD, YYYY')
-                    },
-                    {
-                      title: 'Actions',
-                      key: 'actions',
-                      render: (_, record) => (
-                        <Space>
-                          <Button 
-                            size="small" 
-                            icon={<EyeOutlined />}
-                            onClick={() => handleViewUser(record)}
-                          >
-                            View
-                          </Button>
-                          <Switch
-                            checkedChildren={<UnlockOutlined />}
-                            unCheckedChildren={<LockOutlined />}
-                            checked={record.status === 'active'}
-                            onChange={(checked) => handleToggleUserStatus(record, checked)}
-                          />
-                        </Space>
-                      )
-                    }
-                  ]}
-                  pagination={{ pageSize: 10 }}
-                />
-              </div>
-              
-              <Divider />
-              
-              <div ref={listingSectionRef}>
-                <h3 className="text-lg font-medium mb-4">Pending Gemstone Listings</h3>                <Table 
-                  size="middle"
-                  dataSource={realPendingListings}
-                  loading={loadingListings}
-                  rowKey="_id"
-                  columns={[
-                    {
-                      title: 'Gemstone',
-                      dataIndex: 'gemName',
-                      key: 'gemName',
-                      render: (gemName, record: any) => (
-                        <div className="flex items-center">
-                          <div className="h-10 w-10 rounded-md bg-purple-100 mr-3 overflow-hidden">
-                            <img 
-                              src={getImageUrl(record)} 
-                              alt={gemName}
-                              className="h-full w-full object-cover"
-                              onError={(e) => {
-                                console.error('Image failed to load:', getImageUrl(record));
-                                console.error('Record data:', record);
-                                (e.target as HTMLImageElement).src = 'https://via.placeholder.com/100?text=No+Image';
-                              }}
-                            />
-                          </div>
-                          <span className="font-medium">{gemName}</span>
-                        </div>
-                      ),
-                    },
-                    {
-                      title: 'Price',
-                      dataIndex: 'price',
-                      key: 'price',
-                      render: price => formatLKR(price)
-                    },
-                    {
-                      title: 'Seller',
-                      dataIndex: 'userName',
-                      key: 'userName',
-                    },
-                    {
-                      title: 'Submitted On',
-                      dataIndex: 'createdAt',
-                      key: 'createdAt',
-                      render: date => dayjs(date).format('MMM DD, YYYY')
-                    },
-                    {
-                      title: 'Actions',
-                      key: 'actions',
-                      render: (_, record) => (
-                        <Space>
-                          <Button 
-                            size="small" 
-                            icon={<EyeOutlined />}
-                            onClick={() => handleViewListing(record)}
-                          >
-                            View
-                          </Button>
-                          <Button 
-                            size="small" 
-                            icon={<CheckOutlined />}
-                            onClick={() => handleApproveListing(record)}
-                            type="primary"
-                          >
-                            Approve
-                          </Button>
-                          <Button 
-                            size="small" 
-                            icon={<CloseOutlined />}
-                            danger
-                            onClick={() => handleRejectListing(record)}
-                          >
-                            Reject
-                          </Button>
-                        </Space>
-                      )
-                    }
-                  ]}
-                  pagination={{
-                    current: currentPage + 1, // API is 0-indexed, Ant Design Table is 1-indexed
-                    pageSize: pageSize,
-                    total: totalListings,
-                    onChange: handleListingPageChange,
-                    showSizeChanger: true,
-                    showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} listings`
-                  }}
-                  locale={{
-                    emptyText: listingError ? 
-                      <Alert message="Error" description={listingError} type="error" showIcon /> :
-                      'No pending listings found'
-                  }}
-                />
-              </div>
-              
-              <Divider />
-              
-              <div ref={meetingSectionRef}>
-                <h3 className="text-lg font-medium mb-4">Meeting Management</h3>
-                
-                {/* Import our comprehensive Meeting Management Dashboard */}
-                <div className="mt-6">
-                  <AdminMeetingDashboard />
-                </div>
-              </div>
-            </div>
-          </TabPane>
-          
+        >          
           <TabPane 
             tab={<span className="flex items-center px-1"><DollarOutlined className="mr-2" /> Recent Transactions</span>} 
             key="transactions"

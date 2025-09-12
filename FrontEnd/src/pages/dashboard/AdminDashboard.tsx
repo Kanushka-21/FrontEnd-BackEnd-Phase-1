@@ -10,7 +10,6 @@ import AdminNotificationComponent from '@/components/ui/AdminNotificationCompone
 // Import modular components
 import {
   Overview,
-  UserManagement,
   ListingsManagement,
   Meetings,
   SystemSettings,
@@ -27,7 +26,7 @@ import BlockedUsersManagement from '@/components/admin/BlockedUsersManagement';
 
 const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
-  const { notifications, totalNotifications, refreshNotifications } = useNotifications();
+  const { notifications } = useNotifications();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [modalState, setModalState] = useState<ModalState>({
@@ -48,12 +47,6 @@ const AdminDashboard: React.FC = () => {
       label: 'Dashboard Overview', 
       icon: <BarChart3 size={24} />,
       notificationCount: 0
-    },
-    { 
-      id: 'users', 
-      label: 'User Management', 
-      icon: <Users size={24} />,
-      notificationCount: notifications.userManagement
     },
     { 
       id: 'listings', 
@@ -126,8 +119,6 @@ const AdminDashboard: React.FC = () => {
     switch (activeTab) {
       case 'overview':
         return <Overview user={user} onTabChange={setActiveTab} />;
-      case 'users':
-        return <UserManagement actionHandlers={actionHandlers} />;
       case 'listings':
         return <ListingsManagement />;
       case 'advertisements':

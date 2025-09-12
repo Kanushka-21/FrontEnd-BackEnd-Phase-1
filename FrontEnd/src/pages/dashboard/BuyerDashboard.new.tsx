@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLocation } from 'react-router-dom';
 import { 
   ShoppingBag, User, 
-  TrendingUp, Menu, Home, Calendar, MessageCircle
+  Menu, Home, Calendar, MessageCircle
 } from 'lucide-react';
 import RoleAwareDashboardLayout from '@/components/layout/RoleAwareDashboardLayout';
 import NotificationComponent from '@/components/ui/NotificationComponent';
@@ -12,7 +12,6 @@ import NotificationComponent from '@/components/ui/NotificationComponent';
 import {
   Overview,
   Purchases,
-  Bids,
   Profile
 } from './BuyerDashboardComponents';
 
@@ -36,7 +35,7 @@ const BuyerDashboard = () => {
     
     console.log('🔧 BuyerDashboard URL params:', { section, pathname: location.pathname });
     
-    if (section && ['overview', 'purchases', 'bids', 'meetings', 'profile'].includes(section)) {
+    if (section && ['overview', 'purchases', 'meetings', 'profile'].includes(section)) {
       console.log('🔧 Setting active tab from URL parameter:', section);
       setActiveTab(section);
     }
@@ -55,7 +54,6 @@ const BuyerDashboard = () => {
   const sidebarItems: SidebarItem[] = [
     { id: 'overview', label: 'Overview', icon: <Home size={24} /> },
     { id: 'purchases', label: 'Purchases', icon: <ShoppingBag size={24} /> },
-    { id: 'bids', label: 'My Bids', icon: <TrendingUp size={24} /> },
     { id: 'meetings', label: 'Meetings', icon: <Calendar size={24} /> },
     { id: 'feedback', label: 'Feedback', icon: <MessageCircle size={24} /> },
     { id: 'profile', label: 'Profile', icon: <User size={24} /> }
@@ -68,8 +66,6 @@ const BuyerDashboard = () => {
         return <Overview user={user} />;
       case 'purchases':
         return <Purchases user={user} />;
-      case 'bids':
-        return <Bids />;
       case 'meetings':
         return <MeetingManager user={user} />;
       case 'feedback':

@@ -26,13 +26,6 @@ const formatLKR = (price: number) => {
 };
 
 // Simple mock data
-const mockBids = [
-  { id: '1', gemstone: 'Blue Sapphire', image: 'https://via.placeholder.com/100', amount: 2500, status: 'active', date: '2025-06-01' },
-  { id: '2', gemstone: 'Ruby', image: 'https://via.placeholder.com/100', amount: 3750, status: 'won', date: '2025-06-05' },
-  { id: '3', gemstone: 'Emerald', image: 'https://via.placeholder.com/100', amount: 1850, status: 'lost', date: '2025-06-10' },
-  { id: '4', gemstone: 'Diamond', image: 'https://via.placeholder.com/100', amount: 5200, status: 'active', date: '2025-06-15' }
-];
-
 const mockMeetings = [
   { 
     id: '1',
@@ -198,18 +191,6 @@ const BuyerDashboard: React.FC = (): React.ReactNode => {
     setIsReviewModalVisible(false);
     reviewForm.resetFields();
   };
-  
-  // Function to handle withdrawing a bid
-  const handleWithdrawBid = (_: any) => {
-    confirm({
-      title: 'Withdraw Bid',
-      icon: <ExclamationCircleOutlined />,
-      content: 'Are you sure you want to withdraw this bid? This action cannot be undone.',
-      onOk() {
-        message.success(`Bid withdrawn successfully`);
-      },
-    });
-  };
 
   // Return the JSX for the dashboard
   return (
@@ -350,74 +331,6 @@ const BuyerDashboard: React.FC = (): React.ReactNode => {
           tabBarStyle={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb', padding: '0 16px' }}
         >
           <TabPane 
-            tab={<span className="flex items-center px-1"><TrophyOutlined className="mr-2" /> My Bids</span>} 
-            key="bids"
-          >            <Table 
-              dataSource={mockBids}
-              responsive
-              scroll={{ x: 'max-content' }}
-              columns={[
-                {
-                  title: 'Gemstone',
-                  key: 'gemstone',
-                  render: (_, record) => (
-                    <div className="flex items-center space-x-3">
-                      <img 
-                        src={record.image} 
-                        alt={record.gemstone}
-                        className="w-12 h-12 object-cover rounded-lg"
-                      />
-                      <span className="font-medium">{record.gemstone}</span>
-                    </div>
-                  ),
-                },
-                {                  title: 'Bid Amount',
-                  dataIndex: 'amount',
-                  key: 'amount',
-                  render: amount => formatLKR(amount)
-                },
-                {
-                  title: 'Status',
-                  dataIndex: 'status',
-                  key: 'status',
-                  render: (status: string) => {
-                    const statusColors: Record<string, string> = {
-                      active: 'blue',
-                      won: 'green',
-                      lost: 'red',
-                      withdrawn: 'gray'
-                    };
-                    return <Tag color={statusColors[status] || 'default'}>{status.toUpperCase()}</Tag>;
-                  }
-                },
-                {
-                  title: 'Date',
-                  dataIndex: 'date',
-                  key: 'date',
-                  render: date => dayjs(date).format('MMM DD, YYYY')
-                },
-                {
-                  title: 'Actions',
-                  key: 'actions',
-                  render: (_, record) => (
-                    <div className="space-x-2">
-                      <Button size="small" icon={<EyeOutlined />} onClick={() => handleViewGemstone(record)}>
-                        View
-                      </Button>
-                      {record.status === 'active' && (
-                        <Button size="small" danger onClick={() => handleWithdrawBid(record)}>Withdraw</Button>
-                      )}
-                      {record.status === 'won' && (
-                        <Button size="small" type="primary">Schedule Meeting</Button>
-                      )}
-                    </div>
-                  )
-                }
-              ]}
-              pagination={{ pageSize: 5 }}
-            />
-          </TabPane>
-            <TabPane 
             tab={<span className="flex items-center px-1"><CalendarOutlined className="mr-2" /> Meetings</span>} 
             key="meetings"
           >            <Table 

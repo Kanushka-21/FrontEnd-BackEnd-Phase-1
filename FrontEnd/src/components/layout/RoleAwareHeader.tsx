@@ -12,14 +12,10 @@ import {
   Shield,
   Gem,
   FileText,
-  TrendingUp,
-  Database,
-  BarChart3,
-  Users
+  BarChart3
 } from 'lucide-react';
 import { useAuth } from '@/hooks';
 import Button from '@/components/ui/Button';
-import NotificationComponent from '@/components/ui/NotificationComponent';
 import logoImage from '@/logo-new.gif';
 
 interface RoleAwareHeaderProps {
@@ -93,16 +89,6 @@ const RoleAwareHeader: React.FC<RoleAwareHeaderProps> = ({ transparent = false }
           label: 'Dashboard', 
           icon: <BarChart3 className="w-5 h-5" />, 
           onClick: () => navigate('/admin/dashboard') 
-        },
-        { 
-          label: 'Users', 
-          icon: <Users className="w-5 h-5" />, 
-          onClick: () => navigate('/admin/users') 
-        },
-        { 
-          label: 'Reports', 
-          icon: <Database className="w-5 h-5" />, 
-          onClick: () => navigate('/admin/reports') 
         }
       ];
     } else if (user?.role === 'seller') {
@@ -131,11 +117,6 @@ const RoleAwareHeader: React.FC<RoleAwareHeaderProps> = ({ transparent = false }
           label: 'Dashboard', 
           icon: <ShoppingBag className="w-5 h-5" />, 
           onClick: () => navigate('/buyer/dashboard') 
-        },
-        { 
-          label: 'My Bids', 
-          icon: <TrendingUp className="w-5 h-5" />, 
-          onClick: () => navigate('/buyer/bids') 
         }
       ];
     }
