@@ -587,4 +587,34 @@ public class MeetingController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
+    
+    /**
+     * Delete a meeting (only allowed for buyers and only for pending meetings)
+     */
+    @DeleteMapping("/{meetingId}/delete")
+    public ResponseEntity<?> deleteMeeting(@PathVariable String meetingId, @RequestBody Map<String, Object> requestData) {
+        try {
+            String userId = (String) requestData.get("userId");
+            System.out.println("🗑️ Delete meeting request for meeting ID: " + meetingId + " by user: " + userId);
+            
+            Map<String, Object> result = meetingService.deleteMeeting(meetingId, userId);
+            
+            if ((Boolean) result.get("success")) {
+                System.out.println("✅ Meeting deleted successfully");
+                return ResponseEntity.ok(result);
+            } else {
+                System.out.println("❌ Meeting deletion failed: " + result.get("message"));
+                return ResponseEntity.badRequest().body(result);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("❌ Error deleting meeting: " + e.getMessage());
+            e.printStackTrace();
+            
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "Error deleting meeting: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
 }

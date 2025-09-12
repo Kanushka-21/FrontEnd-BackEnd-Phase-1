@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meeting Reschedule Loading Test</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/lucide-react@latest/dist/umd/lucide-react.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #f8fafc;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+        .status-confirmed { background-color: #dcfce7; color: #166534; }
+        .status-pending { background-color: #fef3c7; color: #92400e; }
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { Calendar, Clock, MapPin, User, Phone, Mail, MessageSquare, CheckCircle, XCircle, AlertCircle, Edit, Archive, AlertTriangle, FileText, Ban, Search } = lucide;
+
+        // Mock meeting data
+        const mockMeeting = {
+            id: "meeting_001",
+            purchaseId: "purchase_001",
+            buyerId: "buyer_123",
+            sellerId: "seller_456",
+            buyerName: "John Smith",
+            sellerName: "Alice Johnson",
+            gemName: "Blue Sapphire Ring",
+            gemType: "Sapphire",
+            finalPrice: 25000,
+            primaryImageUrl: "https://images.unsplash.com/photo-1544737151406-6aec4d3a5b6e?w=400",
+            proposedDateTime: "2025-01-15T14:00:00Z",
+            confirmedDateTime: "2025-01-15T14:00:00Z",
+            location: "Gem Palace, Colombo 03",
+            meetingType: "IN_PERSON",
+            status: "CONFIRMED",
+            buyerNotes: "Looking forward to seeing the gem in person",
+            sellerNotes: "Will bring certification documents",
+            createdAt: "2025-01-10T10:00:00Z",
+            updatedAt: "2025-01-12T15:30:00Z",
+            meetingDisplayId: "MTG-001"
+        };
+
+        const RescheduleLoadingTest = () => {
+            const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+            const [reschedulingMeeting, setReschedulingMeeting] = useState(null);
+            const [rescheduleData, setRescheduleData] = useState({
+                newDateTime: '',
+                notes: ''
+            });
+            const [message, setMessage] = useState(null);
+
+            const formatCurrency = (amount) => {
+                return new Intl.NumberFormat('en-LK', {
+                    style: 'currency',
+                    currency: 'LKR'
+                }).format(amount);
+            };
+
+            const formatDateTime = (dateTimeString) => {
+                const date = new Date(dateTimeString);
+                return {
+                    date: date.toLocaleDateString('en-GB'),
+                    time: date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+                };
+            };
+
+            const handleRescheduleMeeting = async () => {
+                if (!rescheduleData.newDateTime) return;
+
+                try {
+                    // Set loading state
+                    setReschedulingMeeting(mockMeeting.id);
+                    console.log('🔄 Starting reschedule process...');
+                    
+                    // Simulate API call with delay
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    
+                    // Simulate successful response
+                    console.log('✅ Meeting rescheduled successfully');
+                    setShowRescheduleModal(false);
+                    setRescheduleData({ newDateTime: '', notes: '' });
+                    setMessage({ type: 'success', text: 'Meeting rescheduled successfully! The other party has been notified.' });
+                    
+                    // Clear message after 3 seconds
+                    setTimeout(() => setMessage(null), 3000);
+                    
+                } catch (error) {
+                    console.error('❌ Error rescheduling meeting:', error);
+                    setMessage({ type: 'error', text: 'An error occurred while rescheduling the meeting.' });
+                } finally {
+                    // Clear loading state
+                    setReschedulingMeeting(null);
+                }
+            };
+
+            const datetime = formatDateTime(mockMeeting.confirmedDateTime || mockMeeting.proposedDateTime);
+
+            return (
+                <div className="test-container">
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+                        <h1 className="text-2xl font-bold text-gray-900 mb-4">
+                            🔄 Meeting Reschedule Loading Test
+                        </h1>
+                        <p className="text-gray-600 mb-4">
+                            Testing the loading state functionality for meeting reschedule operations. 
+                            Click the "Reschedule" button to open the modal and test the loading behavior.
+                        </p>
+                        
+                        {/* Success/Error Messages */}
+                        {message && (
+                            <div className={`mb-4 p-4 rounded-lg border ${
+                                message.type === 'success' 
+                                    ? 'bg-green-50 border-green-200 text-green-800' 
+                                    : 'bg-red-50 border-red-200 text-red-800'
+                            }`}>
+                                <div className="flex items-center space-x-2">
+                                    {message.type === 'success' ? (
+                                        <CheckCircle className="w-5 h-5" />
+                                    ) : (
+                                        <XCircle className="w-5 h-5" />
+                                    )}
+                                    <span>{message.text}</span>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Test Results */}
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                            <div className="flex items-center space-x-2">
+                                <CheckCircle className="w-5 h-5 text-blue-600" />
+                                <h3 className="font-medium text-blue-800">✅ Loading State Features</h3>
+                            </div>
+                            <ul className="mt-2 text-sm text-blue-700 space-y-1">
+                                <li>• Loading spinner shows during reschedule operation</li>
+                                <li>• Button text changes to "Rescheduling..." with visual feedback</li>
+                                <li>• Button becomes disabled to prevent multiple submissions</li>
+                                <li>• Loading state clears automatically when operation completes</li>
+                                <li>• Proper error handling with user feedback</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    {/* Meeting Card */}
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-4">
+                        <div className="flex items-start justify-between mb-4">
+                            <div className="flex items-start space-x-4">
+                                <img
+                                    src={mockMeeting.primaryImageUrl}
+                                    alt={mockMeeting.gemName}
+                                    className="w-20 h-20 object-cover rounded-lg"
+                                />
+                                <div>
+                                    <h3 className="font-semibold text-gray-900">{mockMeeting.gemName}</h3>
+                                    <p className="text-sm text-gray-600">{mockMeeting.gemType}</p>
+                                    <p className="text-lg font-bold text-green-600 mt-1">
+                                        {formatCurrency(mockMeeting.finalPrice)}
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                <span className={`status-badge status-${mockMeeting.status.toLowerCase()}`}>
+                                    {mockMeeting.status}
+                                </span>
+                                <p className="text-sm text-gray-600 mt-2">
+                                    <span className="font-medium">Meeting with:</span><br />
+                                    {mockMeeting.sellerName}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Meeting Details */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                            <div className="flex items-center space-x-2">
+                                <Calendar className="w-4 h-4 text-gray-400" />
+                                <span className="text-sm text-gray-600">{datetime.date}</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <Clock className="w-4 h-4 text-gray-400" />
+                                <span className="text-sm text-gray-600">{datetime.time}</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <MapPin className="w-4 h-4 text-gray-400" />
+                                <span className="text-sm text-gray-600">{mockMeeting.location}</span>
+                            </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex justify-end space-x-3">
+                            <button
+                                onClick={() => setShowRescheduleModal(true)}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm flex items-center space-x-1"
+                            >
+                                <Edit className="w-4 h-4" />
+                                <span>Reschedule</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Reschedule Modal */}
+                    {showRescheduleModal && (
+                        <div className="modal-backdrop">
+                            <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+                                <h3 className="text-lg font-semibold text-gray-900 mb-4">Reschedule Meeting</h3>
+                                
+                                <div className="mb-4">
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        New Date & Time
+                                    </label>
+                                    <input
+                                        type="datetime-local"
+                                        value={rescheduleData.newDateTime}
+                                        onChange={(e) => setRescheduleData({ ...rescheduleData, newDateTime: e.target.value })}
+                                        min={new Date().toISOString().slice(0, 16)}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+                                
+                                <div className="mb-4">
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Reason for Rescheduling
+                                    </label>
+                                    <textarea
+                                        value={rescheduleData.notes}
+                                        onChange={(e) => setRescheduleData({ ...rescheduleData, notes: e.target.value })}
+                                        placeholder="Please explain why you need to reschedule..."
+                                        rows={3}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+
+                                <div className="flex justify-end space-x-3">
+                                    <button
+                                        onClick={() => {
+                                            setShowRescheduleModal(false);
+                                            setRescheduleData({ newDateTime: '', notes: '' });
+                                        }}
+                                        disabled={reschedulingMeeting === mockMeeting.id}
+                                        className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleRescheduleMeeting}
+                                        disabled={!rescheduleData.newDateTime || reschedulingMeeting === mockMeeting.id}
+                                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center space-x-2"
+                                    >
+                                        {reschedulingMeeting === mockMeeting.id ? (
+                                            <>
+                                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                                <span>Rescheduling...</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Edit className="w-4 h-4" />
+                                                <span>Reschedule</span>
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Implementation Details */}
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mt-6">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                            🛠️ Implementation Details
+                        </h3>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                                <h4 className="font-medium text-gray-800 mb-2">State Management</h4>
+                                <ul className="text-sm text-gray-700 space-y-1">
+                                    <li>• <code>reschedulingMeeting</code> tracks loading state</li>
+                                    <li>• Loading state prevents multiple submissions</li>
+                                    <li>• State clears in finally block for reliability</li>
+                                    <li>• Button disabled during operation</li>
+                                </ul>
+                            </div>
+                            
+                            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                                <h4 className="font-medium text-gray-800 mb-2">User Experience</h4>
+                                <ul className="text-sm text-gray-700 space-y-1">
+                                    <li>• Spinning loading icon for visual feedback</li>
+                                    <li>• Button text changes to "Rescheduling..."</li>
+                                    <li>• Success/error messages with auto-clear</li>
+                                    <li>• Modal stays open on error for retry</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<RescheduleLoadingTest />, document.getElementById('root'));
+    </script>
+</body>
+</html>

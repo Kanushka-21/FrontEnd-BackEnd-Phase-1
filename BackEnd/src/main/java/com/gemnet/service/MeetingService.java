@@ -1055,4 +1055,105 @@ public class MeetingService {
             return response;
         }
     }
+    
+    /**
+     * Delete a meeting (only allowed for buyers and only for pending meetings)
+     */
+    public Map<String, Object> deleteMeeting(String meetingId, String userId) {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            logger.info("🗑️ [MeetingService] Delete meeting request: meetingId={}, userId={}", meetingId, userId);
+            
+            // Get the meeting
+            Optional<Meeting> meetingOpt = meetingRepository.findById(meetingId);
+            if (!meetingOpt.isPresent()) {
+                response.put("success", false);
+                response.put("message", "Meeting not found");
+                return response;
+            }
+            
+            Meeting meeting = meetingOpt.get();
+            
+            // Check if user is the buyer (only buyers can delete meetings)
+            if (!meeting.getBuyerId().equals(userId)) {
+                response.put("success", false);
+                response.put("message", "Only the meeting requester (buyer) can delete this meeting");
+                return response;
+            }
+            
+            // Check if meeting is still pending (only pending meetings can be deleted)
+            if (!"PENDING".equals(meeting.getStatus())) {
+                response.put("success", false);
+                response.put("message", "Only pending meetings can be deleted. This meeting is " + meeting.getStatus());
+                return response;
+            }
+            
+            // Get seller information for notification
+            String sellerName = "Unknown Seller";
+            try {
+                Optional<User> sellerOpt = userRepository.findById(meeting.getSellerId());
+                if (sellerOpt.isPresent()) {
+                    User seller = sellerOpt.get();
+                    sellerName = seller.getFirstName() + " " + seller.getLastName();
+                }
+            } catch (Exception e) {
+                logger.warn("⚠️ [MeetingService] Could not get seller details for notification: {}", e.getMessage());
+            }
+            
+            // Get buyer information for notification
+            String buyerName = "Unknown Buyer";
+            try {
+                Optional<User> buyerOpt = userRepository.findById(meeting.getBuyerId());
+                if (buyerOpt.isPresent()) {
+                    User buyer = buyerOpt.get();
+                    buyerName = buyer.getFirstName() + " " + buyer.getLastName();
+                }
+            } catch (Exception e) {
+                logger.warn("⚠️ [MeetingService] Could not get buyer details for notification: {}", e.getMessage());
+            }
+            
+            // Delete the meeting
+            meetingRepository.delete(meeting);
+            
+            // Send notification to seller about meeting deletion
+            try {
+                String notificationMessage = String.format(
+                    "The meeting request for %s has been deleted by buyer %s. " +
+                    "The meeting was scheduled for %s at %s.",
+                    meeting.getGemName(),
+                    buyerName,
+                    meeting.getProposedDateTime().toString(),
+                    meeting.getLocation()
+                );
+                
+                createMeetingNotification(
+                    meeting.getSellerId(),
+                    meetingId,
+                    meeting.getGemName(),
+                    "MEETING_DELETED",
+                    "Meeting Request Deleted",
+                    notificationMessage,
+                    userId,
+                    buyerName
+                );
+                logger.info("✅ [MeetingService] Deletion notification sent to seller: {}", meeting.getSellerId());
+            } catch (Exception e) {
+                logger.error("❌ [MeetingService] Failed to send deletion notification to seller: {}", e.getMessage());
+            }
+            
+            response.put("success", true);
+            response.put("message", "Meeting deleted successfully. The seller has been notified.");
+            
+            logger.info("✅ [MeetingService] Meeting deleted successfully: {}", meetingId);
+            return response;
+            
+        } catch (Exception e) {
+            logger.error("❌ [MeetingService] Error in deleteMeeting(): {}", e.getMessage(), e);
+            response.put("success", false);
+            response.put("message", "Failed to delete meeting: " + e.getMessage());
+            response.put("error", e.getClass().getSimpleName());
+            return response;
+        }
+    }
 }

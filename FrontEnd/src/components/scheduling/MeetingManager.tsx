@@ -64,6 +64,9 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
     sellerNotes: ''
   });
   const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
+  const [confirmingMeeting, setConfirmingMeeting] = useState<string | null>(null); // Track which meeting is being confirmed
+  const [deletingMeeting, setDeletingMeeting] = useState<string | null>(null); // Track which meeting is being deleted
+  const [reschedulingMeeting, setReschedulingMeeting] = useState<string | null>(null); // Track which meeting is being rescheduled
   
   // No-show management state
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
@@ -175,9 +178,8 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
   const handleConfirmMeeting = async () => {
     if (!selectedMeeting) return;
 
-    // Immediate UI feedback - close modal and show loading
+    setConfirmingMeeting(selectedMeeting.id);
     setShowConfirmModal(false);
-    setSelectedMeeting(null);
     setMessage({ type: 'info', text: 'Confirming meeting...' });
 
     try {
@@ -212,6 +214,51 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
     } catch (error) {
       console.error('❌ Error confirming meeting:', error);
       setMessage({ type: 'error', text: 'Error confirming meeting. Please try again.' });
+    } finally {
+      setConfirmingMeeting(null);
+      setSelectedMeeting(null);
+    }
+  };
+
+  // Handle delete meeting (only for buyers and only for pending meetings)
+  const handleDeleteMeeting = async (meetingId: string) => {
+    if (!confirm('Are you sure you want to delete this meeting request? This action cannot be undone.')) return;
+
+    setDeletingMeeting(meetingId);
+    setMessage({ type: 'info', text: 'Deleting meeting...' });
+
+    try {
+      const userId = user.userId || user.id;
+      console.log('🔄 Deleting meeting with user ID:', userId);
+      
+      const response = await fetch(`http://localhost:9092/api/meetings/${meetingId}/delete`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: userId
+        })
+      });
+
+      const data = await response.json();
+      console.log('📤 Meeting deletion response:', data);
+      
+      if (data.success) {
+        console.log('✅ Meeting deleted successfully');
+        setMessage({ type: 'success', text: 'Meeting request deleted successfully.' });
+        
+        // Refresh data
+        await fetchMeetings();
+      } else {
+        console.error('❌ Failed to delete meeting:', data.message);
+        setMessage({ type: 'error', text: `Failed to delete meeting: ${data.message}` });
+      }
+    } catch (error) {
+      console.error('❌ Error deleting meeting:', error);
+      setMessage({ type: 'error', text: 'Error deleting meeting. Please try again.' });
+    } finally {
+      setDeletingMeeting(null);
     }
   };
 
@@ -220,6 +267,9 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
     if (!selectedMeeting || !rescheduleData.newDateTime) return;
 
     try {
+      // Set loading state
+      setReschedulingMeeting(selectedMeeting.id);
+      
       const userId = user.userId || user.id;
       console.log('🔄 Rescheduling meeting with user ID:', userId);
       
@@ -253,7 +303,10 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
       }
     } catch (error) {
       console.error('❌ Error rescheduling meeting:', error);
-      setMessage({ type: 'error', text: 'Error rescheduling meeting. Please try again.' });
+      setMessage({ type: 'error', text: 'An error occurred while rescheduling the meeting.' });
+    } finally {
+      // Clear loading state
+      setReschedulingMeeting(null);
     }
   };
 
@@ -501,7 +554,6 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
             {filteredMeetings.map((meeting) => {
               const isSeller = isUserSeller(meeting);
               const datetime = formatDateTime(meeting.confirmedDateTime || meeting.proposedDateTime);
-              const contact = isSeller ? meeting.buyerContact : meeting.sellerContact;
               
               return (
                 <div key={meeting.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -554,23 +606,20 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
                     </div>
                   </div>
 
-                  {/* Contact Information (only shown for confirmed meetings) */}
-                  {meeting.status === 'CONFIRMED' && contact && (
-                    <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                      <h4 className="font-medium text-gray-900 mb-2">Contact Information</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                        <div className="flex items-center space-x-2">
-                          <User className="w-4 h-4 text-gray-400" />
-                          <span>{contact.fullName}</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Mail className="w-4 h-4 text-gray-400" />
-                          <span>{contact.email}</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Phone className="w-4 h-4 text-gray-400" />
-                          <span>{contact.phoneNumber}</span>
-                        </div>
+                  {/* Contact Information - Hidden for privacy */}
+                  {meeting.status === 'CONFIRMED' && (
+                    <div className="bg-amber-50 rounded-lg p-4 mb-4 border border-amber-200">
+                      <div className="flex items-center space-x-2">
+                        <AlertTriangle className="w-5 h-5 text-amber-600" />
+                        <h4 className="font-medium text-amber-800">Meeting Coordination</h4>
+                      </div>
+                      <p className="text-sm text-amber-700 mt-2">
+                        For privacy and security, all meeting coordination and contact exchange 
+                        must be handled through the admin team. The admin will facilitate 
+                        communication between both parties for this confirmed meeting.
+                      </p>
+                      <div className="mt-3 text-xs text-amber-600">
+                        <span className="font-medium">Meeting ID:</span> {meeting.meetingDisplayId || meeting.id.slice(-8)}
                       </div>
                     </div>
                   )}
@@ -603,10 +652,24 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
                             setSelectedMeeting(meeting);
                             setShowConfirmModal(true);
                           }}
-                          className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm flex items-center space-x-1"
+                          disabled={confirmingMeeting === meeting.id}
+                          className={`px-4 py-2 ${
+                            confirmingMeeting === meeting.id
+                              ? 'bg-gray-400 cursor-not-allowed'
+                              : 'bg-green-600 hover:bg-green-700'
+                          } text-white rounded-md transition-colors text-sm flex items-center space-x-1`}
                         >
-                          <CheckCircle className="w-4 h-4" />
-                          <span>Confirm</span>
+                          {confirmingMeeting === meeting.id ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                              <span>Confirming...</span>
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle className="w-4 h-4" />
+                              <span>Confirm</span>
+                            </>
+                          )}
                         </button>
                         <button
                           onClick={() => {
@@ -619,6 +682,45 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
                           <span>Reschedule</span>
                         </button>
                       </>
+                    )}
+
+                    {/* Delete option for buyers (only for pending meetings) */}
+                    {meeting.status === 'PENDING' && !isSeller && (
+                      <button
+                        onClick={() => handleDeleteMeeting(meeting.id)}
+                        disabled={deletingMeeting === meeting.id}
+                        className={`px-4 py-2 ${
+                          deletingMeeting === meeting.id
+                            ? 'bg-gray-400 cursor-not-allowed'
+                            : 'bg-red-600 hover:bg-red-700'
+                        } text-white rounded-md transition-colors text-sm flex items-center space-x-1`}
+                      >
+                        {deletingMeeting === meeting.id ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                            <span>Deleting...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Ban className="w-4 h-4" />
+                            <span>Delete</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+
+                    {/* Reschedule option for confirmed meetings */}
+                    {meeting.status === 'CONFIRMED' && (
+                      <button
+                        onClick={() => {
+                          setSelectedMeeting(meeting);
+                          setShowRescheduleModal(true);
+                        }}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm flex items-center space-x-1"
+                      >
+                        <Edit className="w-4 h-4" />
+                        <span>Reschedule</span>
+                      </button>
                     )}
 
                     {meeting.status === 'CONFIRMED' && (
@@ -799,10 +901,20 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
                 </button>
                 <button
                   onClick={handleRescheduleMeeting}
-                  disabled={!rescheduleData.newDateTime}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                  disabled={!rescheduleData.newDateTime || reschedulingMeeting === selectedMeeting.id}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center space-x-2"
                 >
-                  Reschedule
+                  {reschedulingMeeting === selectedMeeting.id ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Rescheduling...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Edit className="w-4 h-4" />
+                      <span>Reschedule</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>

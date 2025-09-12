@@ -663,12 +663,12 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
                       {/* Large Item Image */}
                       <div className="mb-4">
                         <img
-                          src={selectedMeeting.primaryImageUrl || '/api/placeholder/250/250'}
+                          src={getImageUrl(selectedMeeting.primaryImageUrl, selectedMeeting.gemName)}
                           alt={selectedMeeting.gemName || 'Gem Image'}
                           className="w-full h-48 rounded-lg object-cover border-4 border-white shadow-lg"
                           onError={(e) => {
                             const target = e.target as HTMLImageElement;
-                            target.src = '/api/placeholder/250/250';
+                            target.src = getImageUrl(undefined, selectedMeeting.gemName);
                           }}
                         />
                       </div>
