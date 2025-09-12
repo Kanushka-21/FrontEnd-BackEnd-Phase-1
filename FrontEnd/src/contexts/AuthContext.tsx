@@ -87,6 +87,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(response.data);
         setIsAuthenticated(true);
         
+        // Check for account warnings
+        if (response.data.accountStatus === 'WARNED' && response.data.warningMessage) {
+          toast.error(response.data.warningMessage, {
+            duration: 8000,
+            style: {
+              background: '#FEF3C7',
+              color: '#92400E',
+              fontWeight: 'bold',
+              padding: '16px',
+              borderLeft: '4px solid #F59E0B'
+            }
+          });
+        }
+        
         // Role-based routing
         const userRole = response.data.role?.toLowerCase() || 'buyer';
 
@@ -147,14 +161,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Convert admin response to AuthenticationResponse format for compatibility
         const adminUserData: AuthenticationResponse = {
           token: response.data.token,
-          type: response.data.type,
           userId: response.data.userId,
           email: response.data.email,
           firstName: response.data.firstName,
           lastName: response.data.lastName,
           isVerified: true, // Admins are always verified
           verificationStatus: 'VERIFIED',
-          role: response.data.role
+          role: response.data.role as 'admin' // Type assertion for admin role
         };
         
         // Update auth context state

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, User, Phone, Mail, MessageSquare, CheckCircle, XCircle, AlertCircle, Edit, Archive, AlertTriangle, FileText, Ban } from 'lucide-react';
+import { Calendar, Clock, MapPin, User, Phone, Mail, MessageSquare, CheckCircle, XCircle, AlertCircle, Edit, Archive, AlertTriangle, FileText, Ban, Search } from 'lucide-react';
 
 interface Meeting {
   id: string;
@@ -52,6 +52,7 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -97,8 +98,15 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
 
   // Filter meetings
   const filteredMeetings = meetings.filter(meeting => {
-    if (filter === 'ALL') return true;
-    return meeting.status === filter;
+    // First filter by status
+    const statusMatch = filter === 'ALL' || meeting.status === filter;
+    
+    // Then filter by search query (meeting ID)
+    const searchMatch = !searchQuery || 
+      meeting.id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      meeting.meetingId?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    return statusMatch && searchMatch;
   });
 
   // Get status color
@@ -128,6 +136,34 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
       style: 'currency',
       currency: 'LKR',
     }).format(amount);
+  };
+
+  // Get proper image URL
+  const getImageUrl = (imageUrl?: string, gemName?: string) => {
+    if (imageUrl) {
+      // If it's already a full URL, return as is
+      if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+        return imageUrl;
+      }
+      // If it's a relative path, prepend the backend URL
+      if (imageUrl.startsWith('/uploads/') || imageUrl.startsWith('uploads/')) {
+        return `http://localhost:9092/${imageUrl.startsWith('/') ? imageUrl.slice(1) : imageUrl}`;
+      }
+      // If it's just a filename, assume it's in gem-images
+      return `http://localhost:9092/uploads/gem-images/${imageUrl}`;
+    }
+    
+    // Fallback images based on gem type
+    const gemType = gemName?.toLowerCase() || '';
+    if (gemType.includes('ruby')) {
+      return 'https://images.unsplash.com/photo-1506792006437-256b665541e2?w=300&h=200&fit=crop';
+    } else if (gemType.includes('sapphire')) {
+      return 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=300&h=200&fit=crop';
+    } else if (gemType.includes('emerald')) {
+      return 'https://images.unsplash.com/photo-1544829099-b9a0c5303bea?w=300&h=200&fit=crop';
+    } else {
+      return 'https://images.unsplash.com/photo-1506792006437-256b665541e2?w=300&h=200&fit=crop';
+    }
   };
 
   // Check if user is seller for this meeting
@@ -391,6 +427,28 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
             </div>
           </div>
 
+          {/* Search Bar */}
+          <div className="mb-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="text"
+                placeholder="Search by Meeting ID..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <XCircle className="w-5 h-5" />
+                </button>
+              )}
+            </div>
+          </div>
+
           {/* Filter Tabs */}
           <div className="flex space-x-2 overflow-x-auto">
             {['ALL', 'PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED'].map((status) => (
@@ -435,9 +493,13 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-start space-x-4">
                       <img
-                        src={meeting.primaryImageUrl || 'https://images.unsplash.com/photo-1506792006437-256b665541e2?w=300&h=200&fit=crop'}
+                        src={getImageUrl(meeting.primaryImageUrl, meeting.gemName)}
                         alt={meeting.gemName}
                         className="w-20 h-20 object-cover rounded-lg"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = getImageUrl(undefined, meeting.gemName);
+                        }}
                       />
                       <div>
                         <h3 className="font-semibold text-gray-900">{meeting.gemName}</h3>

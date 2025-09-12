@@ -382,6 +382,14 @@ public class UserService {
                 return ApiResponse.error("Account is locked. Please contact support.");
             }
             
+            // Check account status for no-show management
+            String accountStatus = user.getAccountStatus();
+            if ("BLOCKED".equals(accountStatus)) {
+                System.err.println("❌ Account blocked due to no-shows: " + request.getEmail());
+                String blockingReason = user.getBlockingReason() != null ? user.getBlockingReason() : "repeated no-shows";
+                return ApiResponse.error("Your account has been blocked due to " + blockingReason + ". Please contact support to resolve this issue.");
+            }
+            
             // Handle role extraction - check both userRole field and roles array
             String userRole = user.getUserRole();
             
@@ -403,7 +411,13 @@ public class UserService {
             // Generate JWT token
             String token = jwtTokenProvider.generateToken(user.getEmail());
             
-            // Create response
+            // Prepare warning message for WARNED users
+            String warningMessage = null;
+            if ("WARNED".equals(accountStatus)) {
+                warningMessage = "You are now on the warning list because you were unable to participate in a meeting. If you do this again, you will be blocked from the system.";
+            }
+            
+            // Create response with account status information
             AuthenticationResponse response = new AuthenticationResponse(
                 token,
                 user.getId(),
@@ -412,7 +426,10 @@ public class UserService {
                 user.getLastName(),
                 user.getIsVerified(),
                 user.getVerificationStatus(),
-                userRole.toLowerCase()
+                userRole.toLowerCase(),
+                user.getAccountStatus() != null ? user.getAccountStatus() : "ACTIVE",
+                user.getNoShowCount() != null ? user.getNoShowCount() : 0,
+                warningMessage
             );
             
             System.out.println("✅ Login successful for: " + request.getEmail() + " with role: " + userRole.toLowerCase());

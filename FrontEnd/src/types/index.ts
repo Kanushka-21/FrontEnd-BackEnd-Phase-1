@@ -32,6 +32,9 @@ export interface AuthenticationResponse {
   isVerified: boolean;
   verificationStatus: string;
   role: 'buyer' | 'seller' | 'admin';
+  accountStatus?: string; // ACTIVE, WARNED, BLOCKED
+  noShowCount?: number;
+  warningMessage?: string;
 }
 
 // Registration Steps

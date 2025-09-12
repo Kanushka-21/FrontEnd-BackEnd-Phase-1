@@ -10,8 +10,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.Environment;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.scheduling.annotation.EnableAsync;
-import org.springframework.scheduling.annotation.EnableScheduling;
 
 import jakarta.annotation.PostConstruct;
 import java.net.InetAddress;
@@ -19,8 +17,6 @@ import java.net.NetworkInterface;
 import java.util.Enumeration;
 
 @SpringBootApplication
-@EnableScheduling
-@EnableAsync
 public class GemNetApplication {
     
     @Autowired

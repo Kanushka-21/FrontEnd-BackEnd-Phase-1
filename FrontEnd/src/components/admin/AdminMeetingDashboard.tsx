@@ -46,6 +46,34 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
   const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
   const [updatingMeeting, setUpdatingMeeting] = useState<string | null>(null);
 
+  // Get proper image URL
+  const getImageUrl = (imageUrl?: string, gemName?: string) => {
+    if (imageUrl) {
+      // If it's already a full URL, return as is
+      if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+        return imageUrl;
+      }
+      // If it's a relative path, prepend the backend URL
+      if (imageUrl.startsWith('/uploads/') || imageUrl.startsWith('uploads/')) {
+        return `http://localhost:9092/${imageUrl.startsWith('/') ? imageUrl.slice(1) : imageUrl}`;
+      }
+      // If it's just a filename, assume it's in gem-images
+      return `http://localhost:9092/uploads/gem-images/${imageUrl}`;
+    }
+    
+    // Fallback images based on gem type
+    const gemType = gemName?.toLowerCase() || '';
+    if (gemType.includes('ruby')) {
+      return 'https://images.unsplash.com/photo-1506792006437-256b665541e2?w=300&h=200&fit=crop';
+    } else if (gemType.includes('sapphire')) {
+      return 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=300&h=200&fit=crop';
+    } else if (gemType.includes('emerald')) {
+      return 'https://images.unsplash.com/photo-1544829099-b9a0c5303bea?w=300&h=200&fit=crop';
+    } else {
+      return 'https://images.unsplash.com/photo-1506792006437-256b665541e2?w=300&h=200&fit=crop';
+    }
+  };
+
   // Statistics
   const stats = {
     total: meetings.length,
@@ -249,6 +277,8 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
   // Filter meetings
   const filteredMeetings = meetings.filter(meeting => {
     const matchesSearch = !searchTerm || 
+      meeting.id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      meeting.purchaseId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       meeting.gemName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       meeting.buyerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       meeting.sellerName?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -356,7 +386,7 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <input
                 type="text"
-                placeholder="Search meetings..."
+                placeholder="Search by Meeting ID, Gem, Buyer or Seller..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -441,9 +471,13 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
                             {/* Item Image */}
                             <div className="flex-shrink-0">
                               <img
-                                src={meeting.primaryImageUrl || '/api/placeholder/60/60'}
+                                src={getImageUrl(meeting.primaryImageUrl, meeting.gemName)}
                                 alt={meeting.gemName || 'Gem'}
                                 className="w-14 h-14 rounded-lg object-cover border border-gray-200"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.src = getImageUrl(undefined, meeting.gemName);
+                                }}
                               />
                             </div>
                             

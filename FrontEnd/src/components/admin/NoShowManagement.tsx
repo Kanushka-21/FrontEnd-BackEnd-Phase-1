@@ -78,14 +78,17 @@ const NoShowManagement: React.FC<NoShowManagementProps> = ({ user: _user }) => {
       });
       
       const data = await response.json();
-      if (data.success) {
-        setNoShowRecords(data.records || []);
+      if (data.success && data.records) {
+        setNoShowRecords(data.records);
+        setMessage({ type: 'success', text: `Loaded ${data.records.length} no-show records from backend` });
       } else {
-        setMessage({ type: 'error', text: 'Failed to load no-show records' });
+        setMessage({ type: 'error', text: data.message || 'Failed to load no-show records' });
+        setNoShowRecords([]);
       }
     } catch (error) {
       console.error('Error fetching no-show records:', error);
-      setMessage({ type: 'error', text: 'Error loading data. Please try again.' });
+      setMessage({ type: 'error', text: 'Failed to connect to backend. Please check if the server is running.' });
+      setNoShowRecords([]);
     } finally {
       setLoading(false);
     }
@@ -94,15 +97,16 @@ const NoShowManagement: React.FC<NoShowManagementProps> = ({ user: _user }) => {
   // Review absence reason
   const handleReviewReason = async (recordId: string, approved: boolean, adminNotes: string) => {
     try {
-      const response = await fetch('http://localhost:9092/api/no-show/review-reason', {
+      const response = await fetch('http://localhost:9092/api/admin/no-show/review-reason', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
-          recordId,
-          approved,
+          meetingId: selectedRecord?.meetingId,
+          userId: selectedRecord?.userId,
+          accepted: approved,
           adminNotes
         })
       });

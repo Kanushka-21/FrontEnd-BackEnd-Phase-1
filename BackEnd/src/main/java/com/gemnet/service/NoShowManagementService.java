@@ -10,10 +10,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class NoShowManagementService {
@@ -605,6 +603,114 @@ public class NoShowManagementService {
             stats.put("success", false);
             stats.put("message", "Error retrieving stats: " + e.getMessage());
             return stats;
+        }
+    }
+
+    /**
+     * Get all no-show records for admin dashboard
+     */
+    public List<Map<String, Object>> getNoShowRecords() {
+        List<Map<String, Object>> records = new ArrayList<>();
+        
+        try {
+            logger.info("🔄 Getting all no-show records for admin dashboard");
+            
+            // Get all users with no-show count > 0
+            List<User> usersWithNoShows = userRepository.findAll().stream()
+                .filter(user -> user.getNoShowCount() != null && user.getNoShowCount() > 0)
+                .collect(Collectors.toList());
+            
+            for (User user : usersWithNoShows) {
+                Map<String, Object> record = new HashMap<>();
+                record.put("id", user.getId());
+                record.put("userId", user.getId());
+                record.put("userName", user.getFirstName() + " " + user.getLastName());
+                record.put("userEmail", user.getEmail());
+                record.put("userPhone", user.getPhoneNumber());
+                record.put("noShowCount", user.getNoShowCount());
+                record.put("lastNoShowDate", user.getLastNoShowDate());
+                record.put("status", user.getAccountStatus() != null ? user.getAccountStatus() : "ACTIVE");
+                record.put("userType", user.getUserRole() != null ? user.getUserRole().toUpperCase() : "USER");
+                record.put("blockingReason", user.getBlockingReason());
+                record.put("blockedAt", user.getBlockedAt());
+                
+                records.add(record);
+            }
+            
+            logger.info("✅ Retrieved {} no-show records", records.size());
+            return records;
+            
+        } catch (Exception e) {
+            logger.error("❌ Error getting no-show records: {}", e.getMessage());
+            return records; // Return empty list on error
+        }
+    }
+
+    /**
+     * Get no-show statistics for admin dashboard
+     */
+    public Map<String, Object> getNoShowStatistics() {
+        Map<String, Object> stats = new HashMap<>();
+        
+        try {
+            logger.info("🔄 Getting no-show statistics for admin dashboard");
+            
+            List<User> allUsers = userRepository.findAll();
+            
+            long totalUsers = allUsers.size();
+            long activeUsers = allUsers.stream()
+                .filter(user -> "ACTIVE".equals(user.getAccountStatus()) || user.getAccountStatus() == null)
+                .count();
+            long warningUsers = allUsers.stream()
+                .filter(user -> "WARNING".equals(user.getAccountStatus()))
+                .count();
+            long blockedUsers = allUsers.stream()
+                .filter(user -> "BLOCKED".equals(user.getAccountStatus()))
+                .count();
+            long usersWithNoShows = allUsers.stream()
+                .filter(user -> user.getNoShowCount() != null && user.getNoShowCount() > 0)
+                .count();
+            
+            stats.put("totalUsers", totalUsers);
+            stats.put("activeUsers", activeUsers);
+            stats.put("warningUsers", warningUsers);
+            stats.put("blockedUsers", blockedUsers);
+            stats.put("usersWithNoShows", usersWithNoShows);
+            stats.put("totalNoShowRecords", usersWithNoShows);
+            
+            logger.info("✅ Retrieved no-show statistics");
+            return stats;
+            
+        } catch (Exception e) {
+            logger.error("❌ Error getting no-show statistics: {}", e.getMessage());
+            stats.put("totalUsers", 0);
+            stats.put("activeUsers", 0);
+            stats.put("warningUsers", 0);
+            stats.put("blockedUsers", 0);
+            stats.put("usersWithNoShows", 0);
+            stats.put("totalNoShowRecords", 0);
+            return stats;
+        }
+    }
+
+    /**
+     * Get meetings requiring verification (confirmed meetings without attendance marked)
+     */
+    public List<Meeting> getMeetingsRequiringVerification() {
+        try {
+            logger.info("🔄 Getting meetings requiring verification");
+            
+            List<Meeting> confirmedMeetings = meetingRepository.findByStatus("CONFIRMED");
+            List<Meeting> requiresVerification = confirmedMeetings.stream()
+                .filter(meeting -> meeting.getAdminVerified() == null || !meeting.getAdminVerified())
+                .collect(Collectors.toList());
+            
+            logger.info("✅ Found {} meetings requiring verification", requiresVerification.size());
+            return requiresVerification;
+            
+        } catch (Exception e) {
+            logger.error("❌ Error getting meetings requiring verification: {}", e.getMessage());
+            return new ArrayList<>();
         }
     }
 }

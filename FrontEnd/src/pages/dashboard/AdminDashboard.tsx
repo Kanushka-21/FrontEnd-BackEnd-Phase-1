@@ -4,7 +4,7 @@ import { useNotifications, NotificationBadge } from '@/contexts/NotificationCont
 import { Modal, Divider, Alert } from 'antd';
 import dayjs from 'dayjs';
 import RoleAwareDashboardLayout from '@/components/layout/RoleAwareDashboardLayout';
-import { BarChart3, Users, Package, Clock, Settings, Menu as MenuIcon, MessageCircle, Search } from 'lucide-react';
+import { BarChart3, Users, Package, Clock, Settings, Menu as MenuIcon, MessageCircle, Search, Shield, CheckSquare } from 'lucide-react';
 import AdminNotificationComponent from '@/components/ui/AdminNotificationComponent';
 
 // Import modular components
@@ -19,6 +19,10 @@ import {
   FeedbackManagement,
   formatLKR
 } from './AdminDashboardComponents';
+
+// Import no-show management components
+import NoShowManagement from '@/components/admin/NoShowManagement';
+import MeetingAttendanceManagement from '@/components/admin/MeetingAttendanceManagement';
 
 const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -69,6 +73,18 @@ const AdminDashboard: React.FC = () => {
       notificationCount: notifications.meetingRequests
     },
     { 
+      id: 'attendance', 
+      label: 'Meeting Attendance', 
+      icon: <CheckSquare size={24} />,
+      notificationCount: 0
+    },
+    { 
+      id: 'no-show', 
+      label: 'No-Show Management', 
+      icon: <Shield size={24} />,
+      notificationCount: 0
+    },
+    { 
       id: 'feedback', 
       label: 'User Feedback', 
       icon: <MessageCircle size={24} />,
@@ -111,6 +127,10 @@ const AdminDashboard: React.FC = () => {
         return <AdvertisementsManagement actionHandlers={actionHandlers} />;
       case 'meetings':
         return <Meetings actionHandlers={actionHandlers} />;
+      case 'attendance':
+        return <MeetingAttendanceManagement user={user} />;
+      case 'no-show':
+        return <NoShowManagement user={user} />;
       case 'feedback':
         return <FeedbackManagement user={user} onTabChange={setActiveTab} />;
       case 'settings':
