@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { 
   Card, Row, Col, Statistic, Table, Button, Tag, 
   Tabs, List, Rate, Modal, Form,
@@ -10,6 +10,7 @@ import {
   ExclamationCircleOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { AuthContext } from '../../context/AuthContext';
 
 const { TabPane } = Tabs;
 const { confirm } = Modal;
@@ -109,6 +110,8 @@ const mockPurchaseHistory = [
 ];
 
 const BuyerDashboard: React.FC = (): React.ReactNode => {
+  const { user } = useContext(AuthContext);
+  
   // State for modals
   const [isViewGemstoneModalVisible, setIsViewGemstoneModalVisible] = useState(false);
   const [isPlaceBidModalVisible, setIsPlaceBidModalVisible] = useState(false);
@@ -133,6 +136,12 @@ const BuyerDashboard: React.FC = (): React.ReactNode => {
   
   // Function to handle opening the place bid modal
   const handleOpenPlaceBidModal = (gemstone: any) => {
+    // Check if user is admin
+    if (user?.role?.toLowerCase() === 'admin' || user?.userRole?.toLowerCase() === 'admin') {
+      message.error('Admin users cannot place bids on items');
+      return;
+    }
+    
     setSelectedGemstone(gemstone);
     setBidAmount(gemstone.price);
     setIsPlaceBidModalVisible(true);
@@ -140,6 +149,13 @@ const BuyerDashboard: React.FC = (): React.ReactNode => {
   
   // Function to handle submitting a bid
   const handlePlaceBid = (values: { bidAmount: number }) => {
+    // Check if user is admin
+    if (user?.role?.toLowerCase() === 'admin' || user?.userRole?.toLowerCase() === 'admin') {
+      message.error('Admin users cannot place bids on items');
+      setIsPlaceBidModalVisible(false);
+      return;
+    }
+    
     if (!values.bidAmount) {
       message.error('Please enter a bid amount');
       return;
