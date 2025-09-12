@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, Button, Alert, List, Avatar, Tag, message } from 'antd';
+import { Card, Row, Col, Button, Alert, message } from 'antd';
 import { 
   UserOutlined, FileTextOutlined, DollarOutlined, 
   NotificationOutlined, BarChartOutlined 
 } from '@ant-design/icons';
-import dayjs from 'dayjs';
-import { AdminComponentProps, StatsCard, pendingUsers, recentTransactions, formatLKR } from './shared';
+import { AdminComponentProps, StatsCard, formatLKR } from './shared';
 import NotificationSummary from '@/components/admin/NotificationSummary';
 import { api } from '@/services/api';
 
@@ -19,13 +18,11 @@ const Overview: React.FC<AdminComponentProps> = ({ user, onTabChange }) => {
     totalCommission: 4875,
     activeAdvertisements: 1
   });
-  const [loading, setLoading] = useState(true);
 
   // Fetch dashboard statistics on component mount
   useEffect(() => {
     const fetchDashboardStats = async () => {
       try {
-        setLoading(true);
         console.log('🔄 Fetching dashboard statistics...');
         
         const response = await api.admin.getDashboardStats();
@@ -50,8 +47,6 @@ const Overview: React.FC<AdminComponentProps> = ({ user, onTabChange }) => {
       } catch (error) {
         console.error('❌ Error fetching dashboard stats:', error);
         message.error('Error loading dashboard statistics');
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -182,47 +177,6 @@ const Overview: React.FC<AdminComponentProps> = ({ user, onTabChange }) => {
           </Button>
         </div>
       </Card>
-
-      {/* Recent Activity */}
-      <Row gutter={[16, 16]}>
-        <Col xs={24} lg={12}>
-          <Card title="Recent User Registrations" extra={<Button type="link" onClick={() => onTabChange?.('users')}>View All</Button>}>
-            <List
-              dataSource={pendingUsers.slice(0, 3)}
-              renderItem={(user: any) => (
-                <List.Item>
-                  <List.Item.Meta
-                    avatar={<Avatar icon={<UserOutlined />} />}
-                    title={user.name}
-                    description={`${user.role} • ${dayjs(user.joinDate).format('MMM DD, YYYY')}`}
-                  />
-                  <Tag color="gold">Pending</Tag>
-                </List.Item>
-              )}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} lg={12}>
-          <Card title="Recent Transactions" extra={<Button type="link" onClick={() => onTabChange?.('transactions')}>View All</Button>}>
-            <List
-              dataSource={recentTransactions.slice(0, 3)}
-              renderItem={(transaction: any) => (
-                <List.Item>
-                  <List.Item.Meta
-                    avatar={<Avatar src={transaction.image} />}
-                    title={transaction.gemstone}
-                    description={`${transaction.buyer} → ${transaction.seller}`}
-                  />
-                  <div className="text-right">
-                    <div className="font-semibold">{formatLKR(transaction.amount)}</div>
-                    <Tag color="green">{transaction.status}</Tag>
-                  </div>
-                </List.Item>
-              )}
-            />
-          </Card>
-        </Col>
-      </Row>
     </div>
   );
 };

@@ -175,6 +175,11 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
   const handleConfirmMeeting = async () => {
     if (!selectedMeeting) return;
 
+    // Immediate UI feedback - close modal and show loading
+    setShowConfirmModal(false);
+    setSelectedMeeting(null);
+    setMessage({ type: 'info', text: 'Confirming meeting...' });
+
     try {
       const sellerId = user.userId || user.id;
       console.log('🔄 Confirming meeting with seller ID:', sellerId);
@@ -195,13 +200,11 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
       
       if (data.success) {
         console.log('✅ Meeting confirmed successfully');
-        await fetchMeetings();
-        setShowConfirmModal(false);
-        setSelectedMeeting(null);
+        setMessage({ type: 'success', text: 'Meeting confirmed successfully! The buyer has been notified.' });
         setConfirmData({ sellerNotes: '' });
         
-        // Show success message
-        setMessage({ type: 'success', text: 'Meeting confirmed successfully! The buyer has been notified.' });
+        // Refresh data in background
+        await fetchMeetings();
       } else {
         console.error('❌ Failed to confirm meeting:', data.message);
         setMessage({ type: 'error', text: `Failed to confirm meeting: ${data.message}` });
@@ -286,6 +289,17 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
 
   // Handle attendance marking
   const handleMarkAttendance = async (meetingId: string, attended: boolean, reason?: string) => {
+    // Immediate UI feedback - close modal instantly
+    setShowAttendanceModal(false);
+    setSelectedMeeting(null);
+    setAttendanceData({ attended: true, reason: '' });
+    
+    // Show immediate feedback message
+    setMessage({ 
+      type: 'info', 
+      text: attended ? 'Marking attendance...' : 'Reporting no-show...' 
+    });
+
     try {
       const userId = user.userId || user.id;
       const response = await fetch(`http://localhost:9092/api/no-show/mark-attendance`, {
@@ -304,17 +318,14 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
 
       const data = await response.json();
       if (data.success) {
-        // First close modal and reset state
-        setShowAttendanceModal(false);
-        setSelectedMeeting(null);
-        setAttendanceData({ attended: true, reason: '' });
-        
-        // Then fetch meetings and show message
-        await fetchMeetings();
+        // Update success message
         setMessage({ 
           type: 'success', 
           text: attended ? 'Attendance marked successfully!' : 'No-show reported successfully!' 
         });
+        
+        // Refresh data in background
+        await fetchMeetings();
       } else {
         setMessage({ type: 'error', text: `Failed to mark attendance: ${data.message}` });
       }

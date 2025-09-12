@@ -96,6 +96,10 @@ const BlockedUsersManagement: React.FC = () => {
 
         try {
             setLoading(true);
+            
+            // Immediate UI feedback - close modal and show processing message
+            setUnblockModalVisible(false);
+            message.loading(`Unblocking ${selectedUser.firstName} ${selectedUser.lastName}...`, 0);
 
             const response = await fetch(`http://localhost:9092/api/admin/no-show/unblock-user`, {
                 method: 'POST',
@@ -111,6 +115,9 @@ const BlockedUsersManagement: React.FC = () => {
 
             const data = await response.json();
 
+            // Destroy loading message
+            message.destroy();
+
             if (data.success) {
                 const newNoShowCount = data.newNoShowCount !== undefined ? data.newNoShowCount : 'unknown';
                 message.success(
@@ -118,14 +125,16 @@ const BlockedUsersManagement: React.FC = () => {
                     No-show count reduced to ${newNoShowCount}.`,
                     5 // Display for 5 seconds
                 );
-                setUnblockModalVisible(false);
                 setSelectedUser(null);
                 form.resetFields();
-                await fetchBlockedUsers(); // Refresh the list
+                
+                // Refresh the list in background
+                await fetchBlockedUsers();
             } else {
                 message.error(data.message || 'Failed to unblock user');
             }
         } catch (err) {
+            message.destroy(); // Destroy loading message on error
             console.error('Error unblocking user:', err);
             message.error('Failed to unblock user');
         } finally {

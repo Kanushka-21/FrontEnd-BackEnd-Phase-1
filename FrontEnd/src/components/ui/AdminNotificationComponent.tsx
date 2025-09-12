@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Bell, X, Clock, TrendingUp, CheckCircle, Users, Package, Calendar, Settings, AlertTriangle } from 'lucide-react';
 
 interface AdminNotification {
@@ -425,12 +425,29 @@ const AdminNotificationComponent: React.FC<AdminNotificationComponentProps> = ({
                 </span>
               )}
             </div>
-            <button
-              onClick={() => setIsOpen(false)}
-              className="p-1 rounded-full hover:bg-gray-200"
-            >
-              <X className="w-4 h-4 text-gray-500" />
-            </button>
+            <div className="flex items-center space-x-2">
+              {unreadCount > 0 && (
+                <button
+                  onClick={() => {
+                    // Clear all notifications
+                    notifications.forEach(notification => {
+                      if (!notification.isRead) {
+                        markAsRead(notification.id);
+                      }
+                    });
+                  }}
+                  className="px-3 py-1 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
+                >
+                  Clear All
+                </button>
+              )}
+              <button
+                onClick={() => setIsOpen(false)}
+                className="p-1 rounded-full hover:bg-gray-200"
+              >
+                <X className="w-4 h-4 text-gray-500" />
+              </button>
+            </div>
           </div>
 
           {/* Filter Tabs */}
