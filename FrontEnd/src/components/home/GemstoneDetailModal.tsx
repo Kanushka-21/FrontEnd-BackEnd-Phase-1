@@ -57,11 +57,39 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
   const isCurrentUserSeller = currentUser && gemstone?.seller?.userId && 
     currentUser.userId === gemstone.seller.userId;
   
+  // Check if bidding is closed (countdown expired or item sold)
+  // Only consider bidding closed if:
+  // 1. Item is sold, OR
+  // 2. Item has expired status, OR  
+  // 3. Countdown has expired AND there have been bids (bidding was active)
+  const isBiddingClosed = 
+    gemstone?.listingStatus === 'sold' || 
+    gemstone?.listingStatus === 'expired_no_bids' ||
+    String(gemstone?.listingStatus).toLowerCase() === 'sold' ||
+    (countdownData.isExpired && (bidStats.totalBids > 0 || gemstone?.totalBids > 0)) ||
+    (countdownData.remainingTimeSeconds <= 0 && countdownData.biddingActive && (bidStats.totalBids > 0 || gemstone?.totalBids > 0));
+  
+  // Check if waiting for first bid (no bids yet and not expired)
+  const isWaitingForFirstBid = !isBiddingClosed && 
+    (bidStats.totalBids === 0 && (gemstone?.totalBids === 0 || !gemstone?.totalBids)) &&
+    !countdownData.biddingActive;
+  
   console.log('🔐 Seller check:', {
     currentUserId: currentUser?.userId,
     sellerUserId: gemstone?.seller?.userId,
     sellerName: gemstone?.seller?.name,
     isCurrentUserSeller
+  });
+  
+  console.log('🕐 Bidding status check:', {
+    isExpired: countdownData.isExpired,
+    listingStatus: gemstone?.listingStatus,
+    remainingSeconds: countdownData.remainingTimeSeconds,
+    biddingActive: countdownData.biddingActive,
+    totalBids: bidStats.totalBids,
+    gemstoneTotalBids: gemstone?.totalBids,
+    isBiddingClosed,
+    isWaitingForFirstBid
   });
   
   // Use actual uploaded images from the gemstone data, including certificate images
@@ -220,7 +248,7 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
                           ? 'bg-blue-100 text-blue-800' 
                           : 'bg-green-100 text-green-800'
                       }`}>
-                        {getImageType(currentImageIndex) === 'gemstone' ? '💎 Gemstone' : '📜 Certificate'}
+                        {getImageType(currentImageIndex) === 'gemstone' ? 'Gemstone' : 'Certificate'}
                       </span>
                     </div>
                   )}
@@ -283,8 +311,8 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
                       >
                         {/* Thumbnail type indicator */}
                         <div className="absolute top-1 right-1 z-10">
-                          <span className="text-xs">
-                            {getImageType(index) === 'gemstone' ? '💎' : '📜'}
+                          <span className="text-xs bg-white bg-opacity-75 px-1 rounded">
+                            {getImageType(index) === 'gemstone' ? 'G' : 'C'}
                           </span>
                         </div>
                         <img 
@@ -608,7 +636,7 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
                       
                       <div className="mt-4 p-4 bg-orange-100 rounded-lg">
                         <div className="text-sm text-orange-700">
-                          <strong>📊 Current Status:</strong>
+                          <strong>Current Status:</strong>
                           <div className="mt-2 grid grid-cols-2 gap-4 text-center">
                             <div>
                               <div className="font-bold text-lg text-orange-800">
@@ -633,8 +661,153 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
                       )}
                     </div>
                   </div>
+                ) : isBiddingClosed ? (
+                  /* Show bidding closed message when countdown has ended AND there were bids, or item is sold */
+                  <div className="space-y-4 bg-gradient-to-br from-gray-50 to-red-50 p-6 rounded-xl border border-red-200">
+                    <div className="flex items-center space-x-2 mb-4">
+                      <Clock className="w-5 h-5 text-red-600" />
+                      <h3 className="text-xl font-semibold text-red-800">Bidding Closed</h3>
+                    </div>
+                    
+                    <div className="text-center space-y-3">
+                      <div className="text-lg font-medium text-red-700">
+                        {gemstone?.listingStatus === 'sold' || String(gemstone?.listingStatus).toLowerCase() === 'sold' 
+                          ? 'This item has been sold!' 
+                          : countdownData.isExpired || countdownData.remainingTimeSeconds <= 0
+                          ? 'Bidding time has expired'
+                          : 'Bidding is no longer available'
+                        }
+                      </div>
+                      
+                      <p className="text-red-600">
+                        {gemstone?.listingStatus === 'sold' || String(gemstone?.listingStatus).toLowerCase() === 'sold'
+                          ? 'This gemstone has been successfully purchased and is no longer available for bidding.'
+                          : 'The bidding period for this gemstone has ended. No new bids can be placed.'
+                        }
+                      </p>
+                      
+                      <div className="mt-4 p-4 bg-red-100 rounded-lg">
+                        <div className="text-sm text-red-700">
+                          <strong>Final Results:</strong>
+                          <div className="mt-2 grid grid-cols-2 gap-4 text-center">
+                            <div>
+                              <div className="font-bold text-lg text-red-800">
+                                {bidStats.totalBids || gemstone.totalBids || 0}
+                              </div>
+                              <div className="text-xs text-red-600">Total Bids</div>
+                            </div>
+                            <div>
+                              <div className="font-bold text-lg text-red-800">
+                                {formatLKR(currentHighestBid)}
+                              </div>
+                              <div className="text-xs text-red-600">
+                                {gemstone?.listingStatus === 'sold' || String(gemstone?.listingStatus).toLowerCase() === 'sold'
+                                  ? 'Final Price' 
+                                  : 'Highest Bid'
+                                }
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {bidStats.highestBidder && (
+                        <div className="text-sm text-red-600">
+                          <strong>
+                            {gemstone?.listingStatus === 'sold' || String(gemstone?.listingStatus).toLowerCase() === 'sold'
+                              ? 'Winner:' 
+                              : 'Highest Bidder:'
+                            }
+                          </strong> {bidStats.highestBidder}
+                        </div>
+                      )}
+                      
+                      {(gemstone?.listingStatus === 'expired_no_bids' || bidStats.totalBids === 0) && (
+                        <div className="text-sm text-gray-600 mt-2">
+                          This item did not receive any bids during the auction period.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : isWaitingForFirstBid ? (
+                  /* Show waiting for first bid message when no bids have been placed yet */
+                  <div className="space-y-4 bg-gradient-to-br from-primary-50 to-blue-50 p-6 rounded-xl border border-primary-200">
+                    <div className="flex items-center space-x-2 mb-4">
+                      <Clock className="w-5 h-5 text-primary-600" />
+                      <h3 className="text-xl font-semibold text-primary-800">Waiting for First Bid</h3>
+                    </div>
+                    
+                    <div className="text-center space-y-3">
+                      <div className="text-lg font-medium text-primary-700">
+                        Be the first to bid on this gemstone!
+                      </div>
+                      <p className="text-secondary-600">
+                        Once the first bid is placed, the countdown timer will start and other buyers can compete.
+                      </p>
+                      
+                      <div className="mt-4 p-4 bg-primary-100 rounded-lg">
+                        <div className="text-sm text-primary-700">
+                          <strong>Starting Information:</strong>
+                          <div className="mt-2 grid grid-cols-2 gap-4 text-center">
+                            <div>
+                              <div className="font-bold text-lg text-primary-800">
+                                {formatLKR(gemstone.price)}
+                              </div>
+                              <div className="text-xs text-primary-600">Starting Price</div>
+                            </div>
+                            <div>
+                              <div className="font-bold text-lg text-primary-800">
+                                {formatLKR(minimumBid)}
+                              </div>
+                              <div className="text-xs text-primary-600">Minimum First Bid</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* First bid form */}
+                    <form onSubmit={handleSubmit} className="space-y-4 bg-white p-4 rounded-lg border border-primary-200">
+                      <div>
+                        <label htmlFor="bidAmount" className="block text-base font-medium text-primary-700 mb-2">
+                          Place the First Bid
+                        </label>
+                        <div className="text-sm text-secondary-600 mb-3">
+                          Minimum bid: <span className="font-semibold text-primary-600">{formatLKR(minimumBid)}</span>
+                        </div>
+                        
+                        <div className="mt-2">
+                          <input
+                            type="number"
+                            id="bidAmount"
+                            value={bidAmount}
+                            onChange={(e) => {
+                              setBidAmount(e.target.value);
+                              if (e.target.value) validateBid(parseFloat(e.target.value));
+                            }}
+                            className="block w-full px-4 py-3 text-lg border border-secondary-300 rounded-xl shadow-sm focus:ring-primary-500 focus:border-primary-500"
+                            min={minimumBid}
+                            step="any"
+                            required
+                            placeholder={`Enter amount (min: ${formatLKR(minimumBid)})`}
+                          />
+                        </div>
+                        {bidError && (
+                          <p className="mt-2 text-sm text-red-600">{bidError}</p>
+                        )}
+                      </div>
+                      <Button
+                        type="submit"
+                        variant="primary"
+                        className="w-full py-3 text-lg rounded-xl"
+                        disabled={!!bidError || !bidAmount}
+                      >
+                        Place First Bid & Start Auction
+                      </Button>
+                    </form>
+                  </div>
                 ) : (
-                  /* Normal bid form for non-sellers */
+                  /* Normal bid form for non-sellers when bidding is active (after first bid) */
                   <form onSubmit={handleSubmit} className="space-y-4 bg-gradient-to-br from-primary-50 to-blue-50 p-6 rounded-xl border border-primary-200">
                     <div className="flex items-center space-x-2 mb-4">
                       <Users className="w-5 h-5 text-primary-600" />

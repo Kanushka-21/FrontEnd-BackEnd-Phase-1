@@ -88,21 +88,34 @@ const MeetingAttendanceManagement: React.FC<MeetingAttendanceManagementProps> = 
 
   // Get proper image URL - using the exact same logic as AdminMeetingDashboard
   const getImageUrl = (imageUrl?: string, gemName?: string) => {
+    console.log('🖼️ getImageUrl called with:', { imageUrl, gemName });
+    
     if (imageUrl) {
       // If it's already a full URL, return as is
       if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+        console.log('🖼️ Using full URL:', imageUrl);
         return imageUrl;
       }
       // If it's a relative path, prepend the backend URL
       if (imageUrl.startsWith('/uploads/') || imageUrl.startsWith('uploads/')) {
-        return `http://localhost:9092/${imageUrl.startsWith('/') ? imageUrl.slice(1) : imageUrl}`;
+        const finalUrl = `http://localhost:9092/${imageUrl.startsWith('/') ? imageUrl.slice(1) : imageUrl}`;
+        console.log('🖼️ Using uploads path:', finalUrl);
+        return finalUrl;
       }
-      // If it's just a filename, assume it's in gem-images
-      return `http://localhost:9092/uploads/gem-images/${imageUrl}`;
+      // Try different possible paths
+      const possiblePaths = [
+        `http://localhost:9092/uploads/gem-images/${imageUrl}`,
+        `http://localhost:9092/uploads/listing-images/${imageUrl}`,
+        `http://localhost:9092/uploads/${imageUrl}`,
+        `http://localhost:9092/api/uploads/gem-images/${imageUrl}`
+      ];
+      console.log('🖼️ Trying first possible path:', possiblePaths[0]);
+      return possiblePaths[0];
     }
     
     // Fallback images based on gem type
     const gemType = gemName?.toLowerCase() || '';
+    console.log('🖼️ Using fallback for gem type:', gemType);
     if (gemType.includes('ruby')) {
       return 'https://images.unsplash.com/photo-1506792006437-256b665541e2?w=300&h=200&fit=crop';
     } else if (gemType.includes('sapphire')) {
@@ -130,6 +143,7 @@ const MeetingAttendanceManagement: React.FC<MeetingAttendanceManagementProps> = 
   const [pageSize] = useState(10);
   const [totalElements, setTotalElements] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  const [submittingAttendance, setSubmittingAttendance] = useState(false);
 
   useEffect(() => {
     fetchMeetings();
@@ -216,6 +230,7 @@ const MeetingAttendanceManagement: React.FC<MeetingAttendanceManagementProps> = 
       adminNotes: attendanceData.adminNotes
     };
 
+    setSubmittingAttendance(true);
     try {
       const response = await fetch('http://localhost:9092/api/admin/no-show/mark-attendance', {
         method: 'POST',
@@ -247,6 +262,8 @@ const MeetingAttendanceManagement: React.FC<MeetingAttendanceManagementProps> = 
     } catch (error) {
       console.error('Error marking attendance:', error);
       setMessage({ type: 'error', text: 'Error marking attendance. Please try again.' });
+    } finally {
+      setSubmittingAttendance(false);
     }
   };
 
@@ -436,11 +453,41 @@ const MeetingAttendanceManagement: React.FC<MeetingAttendanceManagementProps> = 
                             {/* Gem Image */}
                             <div className="flex-shrink-0">
                               <img
-                                src={getImageUrl(meeting.primaryImageUrl, meeting.gemName)}
+                                src={getImageUrl(meeting.primaryImageUrl || meeting.gem?.primaryImageUrl || meeting.gem?.images?.[0], meeting.gemName)}
                                 alt={meeting.gemName || 'Gem'}
                                 className="w-16 h-16 rounded-lg object-cover border border-gray-200"
                                 onError={(e) => {
+                                  console.log('🖼️ Image load error for:', meeting.gemName);
+                                  console.log('🖼️ Attempted URL:', e.currentTarget.src);
+                                  console.log('🖼️ Meeting image data:', {
+                                    primaryImageUrl: meeting.primaryImageUrl,
+                                    gemImages: meeting.gem?.images,
+                                    gemPrimaryImageUrl: meeting.gem?.primaryImageUrl
+                                  });
+                                  
                                   const target = e.target as HTMLImageElement;
+                                  const currentSrc = target.src;
+                                  
+                                  // Try alternative image paths if not already tried
+                                  const imageUrl = meeting.primaryImageUrl || meeting.gem?.primaryImageUrl || meeting.gem?.images?.[0];
+                                  if (imageUrl && !currentSrc.includes('placeholder') && !currentSrc.includes('unsplash')) {
+                                    const alternativePaths = [
+                                      `http://localhost:9092/uploads/listing-images/${imageUrl}`,
+                                      `http://localhost:9092/uploads/${imageUrl}`,
+                                      `http://localhost:9092/api/uploads/gem-images/${imageUrl}`,
+                                      `http://localhost:9092/uploads/images/${imageUrl}`
+                                    ];
+                                    
+                                    // Find a path we haven't tried yet
+                                    const nextPath = alternativePaths.find(path => path !== currentSrc);
+                                    if (nextPath) {
+                                      console.log('🖼️ Trying alternative path:', nextPath);
+                                      target.src = nextPath;
+                                      return;
+                                    }
+                                  }
+                                  
+                                  // Fall back to type-based fallback image
                                   target.src = getImageUrl(undefined, meeting.gemName);
                                 }}
                               />
@@ -844,10 +891,20 @@ const MeetingAttendanceManagement: React.FC<MeetingAttendanceManagementProps> = 
                     </button>
                     <button
                       onClick={markAttendance}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+                      disabled={submittingAttendance}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <Save className="w-4 h-4" />
-                      <span>Save Attendance</span>
+                      {submittingAttendance ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          <span>Processing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4" />
+                          <span>Save Attendance</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
@@ -908,10 +965,20 @@ const MeetingAttendanceManagement: React.FC<MeetingAttendanceManagementProps> = 
                   </button>
                   <button
                     onClick={submitAttendance}
-                    className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center space-x-2"
+                    disabled={submittingAttendance}
+                    className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <AlertCircle className="w-4 h-4" />
-                    <span>Confirm No-Show</span>
+                    {submittingAttendance ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <span>Processing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle className="w-4 h-4" />
+                        <span>Confirm No-Show</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
