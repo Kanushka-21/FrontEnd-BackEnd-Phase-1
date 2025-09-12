@@ -15,10 +15,8 @@ import {
   Tabs,
   Badge,
   Select,
-  DatePicker,
   Divider,
   Typography,
-  Switch,
   Tooltip,
   Alert
 } from 'antd';
@@ -28,11 +26,10 @@ import {
   StopOutlined,
   SearchOutlined,
   ReloadOutlined,
-  FileDownloadOutlined,
   EyeOutlined,
   CheckCircleOutlined,
-  CloseCircleOutlined,
-  QuestionCircleOutlined
+  QuestionCircleOutlined,
+  UnlockOutlined
 } from '@ant-design/icons';
 import { api } from '../../../services/api';
 
@@ -197,15 +194,30 @@ const NoShowManagement: React.FC = () => {
 
   const handleUnblockUser = async (userId: string, adminNotes: string) => {
     try {
-      const response = await api.post(`/admin/users/${userId}/unblock`, {
-        adminNotes
+      // Use the new no-show management endpoint that reduces no-show count
+      const response = await fetch('http://localhost:9092/api/admin/no-show/unblock-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: userId,
+          adminId: 'admin', // You might want to get this from auth context
+          reason: adminNotes || 'Unblocked via No-Show Management'
+        }),
       });
 
-      if (response.data.success) {
-        message.success('User unblocked successfully');
+      const data = await response.json();
+
+      if (data.success) {
+        const newNoShowCount = data.newNoShowCount !== undefined ? data.newNoShowCount : 'unknown';
+        message.success(
+          `User unblocked successfully! No-show count reduced to ${newNoShowCount}.`,
+          5
+        );
         fetchData();
       } else {
-        message.error(response.data.message || 'Failed to unblock user');
+        message.error(data.message || 'Failed to unblock user');
       }
     } catch (error) {
       console.error('Error unblocking user:', error);
@@ -329,31 +341,50 @@ const NoShowManagement: React.FC = () => {
             View
           </Button>
           {record.accountStatus === 'BLOCKED' && (
-            <Button
-              type="primary"
-              size="small"
-              onClick={() => {
-                Modal.confirm({
-                  title: 'Unblock User',
-                  content: (
-                    <div>
-                      <p>Are you sure you want to unblock {record.firstName} {record.lastName}?</p>
-                      <TextArea
-                        placeholder="Admin notes (optional)"
-                        id="unblock-notes"
-                        rows={3}
-                      />
-                    </div>
-                  ),
-                  onOk: () => {
-                    const notes = (document.getElementById('unblock-notes') as HTMLTextAreaElement)?.value || '';
-                    handleUnblockUser(record.id, notes);
-                  }
-                });
-              }}
-            >
-              Unblock
-            </Button>
+            <Tooltip title="Unblock user and reduce their no-show count by 1 as administrative grace">
+              <Button
+                type="primary"
+                size="small"
+                icon={<UnlockOutlined />}
+                onClick={() => {
+                  Modal.confirm({
+                    title: '🔓 Unblock User & Reduce No-Show Count',
+                    content: (
+                      <div>
+                        <p>Are you sure you want to unblock <strong>{record.firstName} {record.lastName}</strong>?</p>
+                        <div style={{ 
+                          backgroundColor: '#fff7e6', 
+                          border: '1px solid #ffd666', 
+                          borderRadius: '6px', 
+                          padding: '12px', 
+                          margin: '12px 0' 
+                        }}>
+                          <p style={{ margin: 0, fontWeight: 'bold', color: '#fa8c16' }}>
+                            ⚠️ This action will:
+                          </p>
+                          <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px', color: '#666' }}>
+                            <li>Change account status to ACTIVE</li>
+                            <li>Reduce no-show count by 1 (current: {record.noShowCount})</li>
+                            <li>Send notification email to user</li>
+                          </ul>
+                        </div>
+                        <TextArea
+                          placeholder="Admin notes (optional)"
+                          id="unblock-notes"
+                          rows={3}
+                        />
+                      </div>
+                    ),
+                    onOk: () => {
+                      const notes = (document.getElementById('unblock-notes') as HTMLTextAreaElement)?.value || '';
+                      handleUnblockUser(record.id, notes);
+                    }
+                  });
+                }}
+              >
+                🔓 Unblock & Reduce Count
+              </Button>
+            </Tooltip>
           )}
           {record.noShowCount > 0 && (
             <Button
@@ -498,6 +529,23 @@ const NoShowManagement: React.FC = () => {
         <StopOutlined style={{ marginRight: 8 }} />
         No-Show Management System
       </Title>
+
+      {/* Enhanced Unblock Feature Alert */}
+      <Alert
+        message="🆕 Enhanced Unblock Feature"
+        description={
+          <span>
+            When you unblock a user, their no-show count will be automatically reduced by 1 as administrative grace. 
+            This encourages better attendance while maintaining accountability. 
+            <br />
+            <strong>New process:</strong> Unblock → Account activated + No-show count reduced + Email notification sent
+          </span>
+        }
+        type="info"
+        showIcon
+        style={{ marginBottom: 24 }}
+        closable
+      />
 
       {/* Statistics Cards */}
       <Row gutter={16} style={{ marginBottom: 24 }}>

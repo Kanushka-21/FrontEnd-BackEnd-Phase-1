@@ -316,4 +316,78 @@ public class AdminNoShowController {
             return ResponseEntity.badRequest().body(response);
         }
     }
+
+    /**
+     * Get all blocked users for admin management
+     */
+    @GetMapping("/blocked-users")
+    public ResponseEntity<Map<String, Object>> getBlockedUsers() {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            logger.info("🔄 Getting blocked users for admin management");
+            
+            Map<String, Object> result = noShowManagementService.getBlockedUsers();
+            
+            if ((Boolean) result.get("success")) {
+                logger.info("✅ Retrieved blocked users list");
+            } else {
+                logger.warn("⚠️ Failed to get blocked users: {}", result.get("message"));
+            }
+            
+            return ResponseEntity.ok(result);
+            
+        } catch (Exception e) {
+            logger.error("❌ Error getting blocked users: {}", e.getMessage(), e);
+            response.put("success", false);
+            response.put("message", "Failed to get blocked users: " + e.getMessage());
+            response.put("blockedUsers", new ArrayList<>());
+            response.put("totalBlocked", 0);
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    /**
+     * Admin unblock a blocked user
+     */
+    @PostMapping("/unblock-user")
+    public ResponseEntity<Map<String, Object>> unblockUser(@RequestBody Map<String, Object> request) {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            String userId = (String) request.get("userId");
+            String adminId = (String) request.get("adminId");
+            String reason = (String) request.get("reason");
+            
+            logger.info("🔓 Admin {} attempting to unblock user: {}", adminId, userId);
+            
+            if (userId == null || userId.trim().isEmpty()) {
+                response.put("success", false);
+                response.put("message", "User ID is required");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            if (adminId == null || adminId.trim().isEmpty()) {
+                response.put("success", false);
+                response.put("message", "Admin ID is required");
+                return ResponseEntity.badRequest().body(response);
+            }
+            
+            Map<String, Object> result = noShowManagementService.unblockUser(userId, adminId, reason);
+            
+            if ((Boolean) result.get("success")) {
+                logger.info("✅ User {} successfully unblocked by admin {}", userId, adminId);
+            } else {
+                logger.warn("⚠️ Failed to unblock user {}: {}", userId, result.get("message"));
+            }
+            
+            return ResponseEntity.ok(result);
+            
+        } catch (Exception e) {
+            logger.error("❌ Error unblocking user: {}", e.getMessage(), e);
+            response.put("success", false);
+            response.put("message", "Failed to unblock user: " + e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
 }

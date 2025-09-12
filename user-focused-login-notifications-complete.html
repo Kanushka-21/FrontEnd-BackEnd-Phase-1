@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User-Focused Login Notifications - Complete Implementation</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/antd/5.12.5/reset.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/antd@5.12.5/dist/antd.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+        }
+        .demo-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .content {
+            padding: 30px;
+        }
+        .demo-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e8e8e8;
+            border-radius: 6px;
+            background: #fafafa;
+        }
+        .demo-button {
+            margin: 10px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        .warning-btn {
+            background: #faad14;
+            color: white;
+        }
+        .warning-btn:hover {
+            background: #d48806;
+        }
+        .error-btn {
+            background: #ff4d4f;
+            color: white;
+        }
+        .error-btn:hover {
+            background: #d9363e;
+        }
+        .success-btn {
+            background: #52c41a;
+            color: white;
+        }
+        .success-btn:hover {
+            background: #389e0d;
+        }
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .feature-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e8e8e8;
+        }
+        .feature-icon {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        .code-preview {
+            background: #001529;
+            color: #fff;
+            padding: 20px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        .comparison-table th,
+        .comparison-table td {
+            border: 1px solid #e8e8e8;
+            padding: 12px;
+            text-align: left;
+        }
+        .comparison-table th {
+            background: #f0f0f0;
+            font-weight: 600;
+        }
+        .old-method {
+            background: #fff2f0;
+        }
+        .new-method {
+            background: #f6ffed;
+        }
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .status-complete {
+            background: #f6ffed;
+            color: #52c41a;
+        }
+        .status-improved {
+            background: #e6f7ff;
+            color: #1890ff;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <div class="header">
+            <h1>🎯 User-Focused Login Notifications</h1>
+            <p>Enhanced notification system matching existing alert UI with user-centered messaging</p>
+            <div>
+                <span class="status-badge status-complete">✅ Complete</span>
+                <span class="status-badge status-improved">🚀 UI Enhanced</span>
+            </div>
+        </div>
+
+        <div class="content">
+            <!-- Implementation Overview -->
+            <div class="demo-section">
+                <h2>📋 Implementation Overview</h2>
+                <p>The login notification system has been completely redesigned to provide user-focused, actionable messaging using Ant Design components that match the existing system UI.</p>
+                
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Aspect</th>
+                            <th class="old-method">Previous Implementation</th>
+                            <th class="new-method">Enhanced Implementation</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>UI Component</strong></td>
+                            <td class="old-method">React Hot Toast (Basic notification)</td>
+                            <td class="new-method">Ant Design Alert + Modal (Consistent with system)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Message Focus</strong></td>
+                            <td class="old-method">Technical/Administrative language</td>
+                            <td class="new-method">User-centered, actionable guidance</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Visual Design</strong></td>
+                            <td class="old-method">Custom toast styling</td>
+                            <td class="new-method">Matches existing Alert components</td>
+                        </tr>
+                        <tr>
+                            <td><strong>User Experience</strong></td>
+                            <td class="old-method">Dismissible notification</td>
+                            <td class="new-method">Modal with clear acknowledgment</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Information Clarity</strong></td>
+                            <td class="old-method">Warning message only</td>
+                            <td class="new-method">Reason + Action Required + Next Steps</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Demo Section -->
+            <div class="demo-section">
+                <h2>🎮 Interactive Demo</h2>
+                <p>Click the buttons below to see the new user-focused notification modals:</p>
+                
+                <button class="demo-button warning-btn" onclick="showWarningNotification()">
+                    ⚠️ Show Warning Account Notification
+                </button>
+                <button class="demo-button error-btn" onclick="showBlockedNotification()">
+                    🚫 Show Blocked Account Notification
+                </button>
+                <button class="demo-button success-btn" onclick="showSuccessNotification()">
+                    ✅ Show Normal Login (No Alerts)
+                </button>
+            </div>
+
+            <!-- Features Grid -->
+            <div class="demo-section">
+                <h2>🌟 Key Features</h2>
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">🎯</div>
+                        <h3>User-Focused Messaging</h3>
+                        <p>Clear, actionable language that tells users exactly what's happening and what they need to do.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🎨</div>
+                        <h3>Consistent UI Design</h3>
+                        <p>Uses Ant Design Alert components that match the existing system's visual design patterns.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">📱</div>
+                        <h3>Modal Presentation</h3>
+                        <p>Important notifications are displayed in focused modals that require user acknowledgment.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">💡</div>
+                        <h3>Actionable Guidance</h3>
+                        <p>Each notification includes clear next steps and guidance for resolving account issues.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🔄</div>
+                        <h3>Status-Aware</h3>
+                        <p>Different notification types (warning, error) with appropriate visual indicators and messaging.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🛡️</div>
+                        <h3>Non-Dismissible</h3>
+                        <p>Critical account status notifications require explicit user acknowledgment before proceeding.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Code Implementation -->
+            <div class="demo-section">
+                <h2>💻 Implementation Details</h2>
+                
+                <h3>🔄 Updated AuthContext.tsx</h3>
+                <div class="code-preview">
+// Enhanced login notification system
+if (response.data.accountStatus === 'WARNED' && response.data.warningMessage) {
+  Modal.warning({
+    title: '⚠️ Account Warning',
+    content: (
+      &lt;div style={{ padding: '16px 0' }}&gt;
+        &lt;Alert
+          message="Your Account Has Been Flagged"
+          description={
+            &lt;div&gt;
+              &lt;p&gt;&lt;strong&gt;Reason:&lt;/strong&gt; {response.data.warningMessage}&lt;/p&gt;
+              &lt;p&gt;⚡ &lt;strong&gt;Action Required:&lt;/strong&gt; Please review our community guidelines...&lt;/p&gt;
+              &lt;p&gt;💡 &lt;strong&gt;Next Steps:&lt;/strong&gt; Attend scheduled meetings to maintain good standing...&lt;/p&gt;
+            &lt;/div&gt;
+          }
+          type="warning"
+          showIcon
+        /&gt;
+      &lt;/div&gt;
+    ),
+    okText: 'I Understand',
+    width: 500,
+    centered: true,
+    maskClosable: false
+  });
+}
+
+if (response.data.accountStatus === 'BLOCKED') {
+  Modal.error({
+    title: '🚫 Account Access Restricted',
+    content: (
+      &lt;Alert
+        message="Your Account Has Been Temporarily Blocked"
+        description="Clear guidance for blocked users..."
+        type="error"
+        showIcon
+      /&gt;
+    ),
+    okText: 'Contact Support',
+    centered: true
+  });
+}
+                </div>
+
+                <h3>📦 Required Imports</h3>
+                <div class="code-preview">
+import { Alert, Modal } from 'antd';
+                </div>
+            </div>
+
+            <!-- Benefits Section -->
+            <div class="demo-section">
+                <h2>✨ Benefits & Improvements</h2>
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <h4>🎯 Enhanced User Experience</h4>
+                        <ul>
+                            <li>Clear, actionable messaging</li>
+                            <li>Consistent visual design</li>
+                            <li>Focused modal presentation</li>
+                            <li>Required acknowledgment</li>
+                        </ul>
+                    </div>
+                    <div class="feature-card">
+                        <h4>🏗️ Technical Improvements</h4>
+                        <ul>
+                            <li>Uses existing Ant Design components</li>
+                            <li>Matches system UI patterns</li>
+                            <li>Better error handling</li>
+                            <li>Improved accessibility</li>
+                        </ul>
+                    </div>
+                    <div class="feature-card">
+                        <h4>📈 Business Impact</h4>
+                        <ul>
+                            <li>Reduced user confusion</li>
+                            <li>Better policy compliance</li>
+                            <li>Improved user retention</li>
+                            <li>Clear support pathways</li>
+                        </ul>
+                    </div>
+                    <div class="feature-card">
+                        <h4>🔧 Maintenance Benefits</h4>
+                        <ul>
+                            <li>Consistent codebase</li>
+                            <li>Reusable components</li>
+                            <li>Easy to extend</li>
+                            <li>Better code organization</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Testing Notes -->
+            <div class="demo-section">
+                <h2>🧪 Testing & Validation</h2>
+                <h3>✅ Test Scenarios</h3>
+                <ul>
+                    <li><strong>Warning Account Login:</strong> User sees modal with clear warning message and action steps</li>
+                    <li><strong>Blocked Account Login:</strong> User sees error modal with support contact information</li>
+                    <li><strong>Normal Login:</strong> No additional notifications, smooth login experience</li>
+                    <li><strong>UI Consistency:</strong> All alerts match existing system design patterns</li>
+                    <li><strong>Mobile Responsiveness:</strong> Modals work properly on mobile devices</li>
+                </ul>
+
+                <h3>🎯 Validation Points</h3>
+                <ul>
+                    <li>✅ Alert components match existing system UI</li>
+                    <li>✅ User-focused messaging is clear and actionable</li>
+                    <li>✅ Modal presentation ensures user acknowledgment</li>
+                    <li>✅ Different notification types (warning/error) handled properly</li>
+                    <li>✅ No console errors or compilation issues</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { Modal, Alert } = antd;
+
+        function showWarningNotification() {
+            Modal.warning({
+                title: '⚠️ Account Warning',
+                content: React.createElement('div', { style: { padding: '16px 0' } },
+                    React.createElement(Alert, {
+                        message: "Your Account Has Been Flagged",
+                        description: React.createElement('div', null,
+                            React.createElement('p', { style: { marginBottom: '12px', fontSize: '14px' } },
+                                React.createElement('strong', null, 'Reason: '), 'Multiple no-shows detected in your recent meetings'
+                            ),
+                            React.createElement('p', { style: { marginBottom: '8px', fontSize: '13px', color: '#d97706' } },
+                                '⚡ ', React.createElement('strong', null, 'Action Required: '), 'Please review our community guidelines and improve your attendance.'
+                            ),
+                            React.createElement('p', { style: { marginBottom: '0', fontSize: '13px', color: '#374151' } },
+                                '💡 ', React.createElement('strong', null, 'Next Steps: '), 'Attend scheduled meetings to maintain good standing and avoid account restrictions.'
+                            )
+                        ),
+                        type: "warning",
+                        showIcon: true,
+                        style: { marginTop: '8px' }
+                    })
+                ),
+                okText: 'I Understand',
+                width: 500,
+                centered: true,
+                maskClosable: false,
+                onOk: () => {
+                    console.log('User acknowledged account warning');
+                }
+            });
+        }
+
+        function showBlockedNotification() {
+            Modal.error({
+                title: '🚫 Account Access Restricted',
+                content: React.createElement('div', { style: { padding: '16px 0' } },
+                    React.createElement(Alert, {
+                        message: "Your Account Has Been Temporarily Blocked",
+                        description: React.createElement('div', null,
+                            React.createElement('p', { style: { marginBottom: '12px', fontSize: '14px' } },
+                                React.createElement('strong', null, 'Status: '), 'Your account access has been suspended due to multiple no-shows or policy violations.'
+                            ),
+                            React.createElement('p', { style: { marginBottom: '8px', fontSize: '13px', color: '#dc2626' } },
+                                '🔒 ', React.createElement('strong', null, 'Impact: '), 'You cannot book new meetings or access platform features until resolved.'
+                            ),
+                            React.createElement('p', { style: { marginBottom: '0', fontSize: '13px', color: '#374151' } },
+                                '📞 ', React.createElement('strong', null, 'Support: '), 'Contact our support team to discuss account restoration options.'
+                            )
+                        ),
+                        type: "error",
+                        showIcon: true,
+                        style: { marginTop: '8px' }
+                    })
+                ),
+                okText: 'Contact Support',
+                width: 500,
+                centered: true,
+                maskClosable: false,
+                onOk: () => {
+                    console.log('User needs to contact support for blocked account');
+                }
+            });
+        }
+
+        function showSuccessNotification() {
+            Modal.success({
+                title: '✅ Login Successful',
+                content: 'Welcome back! Your account is in good standing.',
+                okText: 'Continue',
+                centered: true
+            });
+        }
+    </script>
+</body>
+</html>

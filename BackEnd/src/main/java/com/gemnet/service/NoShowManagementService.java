@@ -713,4 +713,139 @@ public class NoShowManagementService {
             return new ArrayList<>();
         }
     }
+
+    /**
+     * Admin unblock a blocked user
+     */
+    public Map<String, Object> unblockUser(String userId, String adminId, String reason) {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            logger.info("🔓 Admin {} unblocking user: {}", adminId, userId);
+            
+            // Find the user
+            Optional<User> userOpt = userRepository.findById(userId);
+            if (!userOpt.isPresent()) {
+                response.put("success", false);
+                response.put("message", "User not found");
+                return response;
+            }
+            
+            User user = userOpt.get();
+            
+            // Check if user is actually blocked
+            if (!"BLOCKED".equals(user.getAccountStatus())) {
+                response.put("success", false);
+                response.put("message", "User is not currently blocked");
+                return response;
+            }
+            
+            // Update user status
+            user.setAccountStatus("ACTIVE");
+            user.setBlockingReason(null);
+            user.setBlockedAt(null);
+            
+            // Reduce no-show count by 1 as administrative grace when unblocking
+            int currentNoShowCount = user.getNoShowCount();
+            if (currentNoShowCount > 0) {
+                user.setNoShowCount(currentNoShowCount - 1);
+                logger.info("🔄 Reduced no-show count from {} to {} for unblocked user {}", 
+                           currentNoShowCount, currentNoShowCount - 1, userId);
+            }
+            
+            // Save user
+            userRepository.save(user);
+            
+            // Send unblock notification email
+            try {
+                emailService.sendNotificationEmail(
+                    userId,
+                    "ACCOUNT_UNBLOCKED",
+                    "Account Unblocked",
+                    "Your account has been unblocked by an administrator. You can now access the system normally.",
+                    reason != null && !reason.trim().isEmpty() ? "Admin note: " + reason : "No additional notes provided"
+                );
+                logger.info("✅ Unblock notification email sent to: {}", user.getEmail());
+            } catch (Exception emailError) {
+                logger.warn("⚠️ Failed to send unblock email to {}: {}", user.getEmail(), emailError.getMessage());
+            }
+            
+            // Create notification
+            try {
+                notificationService.createNotification(
+                    userId,
+                    "ACCOUNT_UNBLOCKED",
+                    "Account Unblocked",
+                    "Your account has been unblocked by an administrator. You can now access the system normally.",
+                    "Unblocked by admin: " + adminId
+                );
+                logger.info("✅ Unblock notification created for user: {}", userId);
+            } catch (Exception notifError) {
+                logger.warn("⚠️ Failed to create unblock notification for {}: {}", userId, notifError.getMessage());
+            }
+            
+            response.put("success", true);
+            response.put("message", "User successfully unblocked");
+            response.put("userId", userId);
+            response.put("newStatus", "ACTIVE");
+            response.put("newNoShowCount", user.getNoShowCount());
+            response.put("unblockedBy", adminId);
+            response.put("unblockedAt", LocalDateTime.now().toString());
+            
+            logger.info("✅ User {} successfully unblocked by admin {} (no-show count reduced to {})", userId, adminId, user.getNoShowCount());
+            return response;
+            
+        } catch (Exception e) {
+            logger.error("❌ Error unblocking user {}: {}", userId, e.getMessage());
+            response.put("success", false);
+            response.put("message", "Failed to unblock user: " + e.getMessage());
+            return response;
+        }
+    }
+
+    /**
+     * Get list of blocked users for admin management
+     */
+    public Map<String, Object> getBlockedUsers() {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            logger.info("🔄 Getting blocked users");
+            
+            List<User> allUsers = userRepository.findAll();
+            List<Map<String, Object>> blockedUsers = allUsers.stream()
+                .filter(user -> "BLOCKED".equals(user.getAccountStatus()))
+                .map(user -> {
+                    Map<String, Object> userInfo = new HashMap<>();
+                    userInfo.put("id", user.getId());
+                    userInfo.put("firstName", user.getFirstName());
+                    userInfo.put("lastName", user.getLastName());
+                    userInfo.put("email", user.getEmail());
+                    userInfo.put("userRole", user.getUserRole());
+                    userInfo.put("noShowCount", user.getNoShowCount());
+                    userInfo.put("blockingReason", user.getBlockingReason());
+                    userInfo.put("blockedAt", user.getBlockedAt());
+                    userInfo.put("lastNoShowDate", user.getLastNoShowDate());
+                    return userInfo;
+                })
+                .collect(Collectors.toList());
+            
+            response.put("success", true);
+            response.put("blockedUsers", blockedUsers);
+            response.put("totalBlocked", blockedUsers.size());
+            response.put("message", "Blocked users retrieved successfully");
+            
+            logger.info("✅ Retrieved {} blocked users", blockedUsers.size());
+            return response;
+            
+        } catch (Exception e) {
+            logger.error("❌ Error getting blocked users: {}", e.getMessage());
+            response.put("success", false);
+            response.put("message", "Failed to retrieve blocked users: " + e.getMessage());
+            response.put("blockedUsers", new ArrayList<>());
+            response.put("totalBlocked", 0);
+            return response;
+        }
+    }
+    
 }

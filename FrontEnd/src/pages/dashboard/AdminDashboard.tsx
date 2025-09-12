@@ -23,6 +23,7 @@ import {
 // Import no-show management components
 import NoShowManagement from '@/components/admin/NoShowManagement';
 import MeetingAttendanceManagement from '@/components/admin/MeetingAttendanceManagement';
+import BlockedUsersManagement from '@/components/admin/BlockedUsersManagement';
 
 const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -85,6 +86,12 @@ const AdminDashboard: React.FC = () => {
       notificationCount: 0
     },
     { 
+      id: 'blocked-users', 
+      label: 'Blocked Users', 
+      icon: <Users size={24} />,
+      notificationCount: 0
+    },
+    { 
       id: 'feedback', 
       label: 'User Feedback', 
       icon: <MessageCircle size={24} />,
@@ -131,6 +138,8 @@ const AdminDashboard: React.FC = () => {
         return <MeetingAttendanceManagement user={user} />;
       case 'no-show':
         return <NoShowManagement user={user} />;
+      case 'blocked-users':
+        return <BlockedUsersManagement />;
       case 'feedback':
         return <FeedbackManagement user={user} onTabChange={setActiveTab} />;
       case 'settings':

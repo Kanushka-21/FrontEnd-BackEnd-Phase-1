@@ -4,6 +4,7 @@ import { authAPI, apiUtils } from '@/services/api';
 import { LoginRequest, AuthenticationResponse } from '@/types';
 import { AdminLoginRequest } from '@/Admin/types/AdminTypes';
 import { toast } from 'react-hot-toast';
+import { Alert, Modal } from 'antd';
 
 // Define the context type
 interface AuthContextType {
@@ -87,16 +88,76 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(response.data);
         setIsAuthenticated(true);
         
-        // Check for account warnings
+        // Check for account warnings and blocks
         if (response.data.accountStatus === 'WARNED' && response.data.warningMessage) {
-          toast.error(response.data.warningMessage, {
-            duration: 8000,
-            style: {
-              background: '#FEF3C7',
-              color: '#92400E',
-              fontWeight: 'bold',
-              padding: '16px',
-              borderLeft: '4px solid #F59E0B'
+          Modal.warning({
+            title: '⚠️ Account Warning',
+            content: (
+              <div style={{ padding: '16px 0' }}>
+                <Alert
+                  message="Your Account Has Been Flagged"
+                  description={
+                    <div>
+                      <p style={{ marginBottom: '12px', fontSize: '14px' }}>
+                        <strong>Reason:</strong> {response.data.warningMessage}
+                      </p>
+                      <p style={{ marginBottom: '8px', fontSize: '13px', color: '#d97706' }}>
+                        ⚡ <strong>Action Required:</strong> Please review our community guidelines and improve your attendance.
+                      </p>
+                      <p style={{ marginBottom: '0', fontSize: '13px', color: '#374151' }}>
+                        💡 <strong>Next Steps:</strong> Attend scheduled meetings to maintain good standing and avoid account restrictions.
+                      </p>
+                    </div>
+                  }
+                  type="warning"
+                  showIcon
+                  style={{ marginTop: '8px' }}
+                />
+              </div>
+            ),
+            okText: 'I Understand',
+            width: 500,
+            centered: true,
+            maskClosable: false,
+            onOk: () => {
+              console.log('User acknowledged account warning');
+            }
+          });
+        }
+        
+        if (response.data.accountStatus === 'BLOCKED') {
+          Modal.error({
+            title: '🚫 Account Access Restricted',
+            content: (
+              <div style={{ padding: '16px 0' }}>
+                <Alert
+                  message="Your Account Has Been Temporarily Blocked"
+                  description={
+                    <div>
+                      <p style={{ marginBottom: '12px', fontSize: '14px' }}>
+                        <strong>Status:</strong> Your account access has been suspended due to multiple no-shows or policy violations.
+                      </p>
+                      <p style={{ marginBottom: '8px', fontSize: '13px', color: '#dc2626' }}>
+                        🔒 <strong>Impact:</strong> You cannot book new meetings or access platform features until resolved.
+                      </p>
+                      <p style={{ marginBottom: '0', fontSize: '13px', color: '#374151' }}>
+                        📞 <strong>Support:</strong> Contact our support team to discuss account restoration options.
+                      </p>
+                    </div>
+                  }
+                  type="error"
+                  showIcon
+                  style={{ marginTop: '8px' }}
+                />
+              </div>
+            ),
+            okText: 'Contact Support',
+            width: 500,
+            centered: true,
+            maskClosable: false,
+            onOk: () => {
+              // Could redirect to support page or show contact info
+              console.log('User needs to contact support for blocked account');
             }
           });
         }
