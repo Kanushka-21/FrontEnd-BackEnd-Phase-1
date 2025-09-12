@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, User, Phone, Mail, MessageSquare, CheckCircle, XCircle, AlertCircle, Edit, Archive, AlertTriangle, FileText, Ban, Search } from 'lucide-react';
+import { Calendar, Clock, MapPin, User, Phone, Mail, MessageSquare, CheckCircle, XCircle, AlertCircle, Edit, Archive, AlertTriangle, FileText, Ban, Search, Download } from 'lucide-react';
 
 interface Meeting {
   id: string;
@@ -260,6 +260,95 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
     } finally {
       setDeletingMeeting(null);
     }
+  };
+
+  // Handle download meeting card
+  const handleDownloadMeetingCard = (meeting: Meeting) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Set canvas size
+    canvas.width = 800;
+    canvas.height = 600;
+
+    // Background
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Header background
+    ctx.fillStyle = '#3B82F6';
+    ctx.fillRect(0, 0, canvas.width, 80);
+
+    // Title
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 24px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('GemNet Meeting Card', canvas.width / 2, 35);
+    ctx.font = '14px Arial';
+    ctx.fillText('Official Meeting Verification Document', canvas.width / 2, 60);
+
+    // Content
+    ctx.fillStyle = '#1F2937';
+    ctx.textAlign = 'left';
+    ctx.font = 'bold 18px Arial';
+    
+    const isSeller = isUserSeller(meeting);
+    const userRole = isSeller ? 'Seller' : 'Buyer';
+    const otherParty = isSeller ? meeting.buyerName : meeting.sellerName;
+    const datetime = formatDateTime(meeting.confirmedDateTime || meeting.proposedDateTime);
+
+    // Meeting Information
+    ctx.fillText('Meeting Information', 50, 130);
+    ctx.font = '14px Arial';
+    ctx.fillStyle = '#374151';
+    
+    const info = [
+      `Meeting ID: ${meeting.meetingDisplayId || `GEM-2025-${meeting.id.slice(-3)}`}`,
+      `Purchase ID: ${meeting.purchaseId.slice(-8)}`,
+      `Gem: ${meeting.gemName} (${meeting.gemType})`,
+      `Price: LKR ${meeting.finalPrice.toLocaleString()}`,
+      `Date: ${datetime.date}`,
+      `Time: ${datetime.time}`,
+      `Location: ${meeting.location}`,
+      `Status: ${meeting.status}`,
+      `Your Role: ${userRole}`,
+      `Meeting With: ${otherParty}`
+    ];
+
+    info.forEach((line, index) => {
+      ctx.fillText(line, 50, 160 + (index * 25));
+    });
+
+    // Instructions
+    ctx.fillStyle = '#DC2626';
+    ctx.font = 'bold 14px Arial';
+    ctx.fillText('Important Instructions:', 50, 420);
+    ctx.fillStyle = '#374151';
+    ctx.font = '12px Arial';
+    
+    const instructions = [
+      '• Present this card during the meeting for verification',
+      '• Admin can verify this meeting using the Meeting ID',
+      '• Contact admin team for any changes or issues',
+      '• Keep this card safe as proof of scheduled meeting'
+    ];
+
+    instructions.forEach((line, index) => {
+      ctx.fillText(line, 50, 445 + (index * 20));
+    });
+
+    // Footer
+    ctx.fillStyle = '#6B7280';
+    ctx.font = '10px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(`Generated on ${new Date().toLocaleDateString()} | GemNet Official Document`, canvas.width / 2, 570);
+
+    // Download
+    const link = document.createElement('a');
+    link.download = `GemNet-Meeting-${meeting.meetingDisplayId || meeting.id.slice(-8)}.png`;
+    link.href = canvas.toDataURL();
+    link.click();
   };
 
   // Handle reschedule meeting
@@ -645,6 +734,17 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
 
                   {/* Action Buttons */}
                   <div className="flex items-center justify-end space-x-2">
+                    {/* Download Meeting Card - Available for confirmed meetings */}
+                    {meeting.status === 'CONFIRMED' && (
+                      <button
+                        onClick={() => handleDownloadMeetingCard(meeting)}
+                        className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors text-sm flex items-center space-x-1"
+                      >
+                        <Download className="w-4 h-4" />
+                        <span>Download Card</span>
+                      </button>
+                    )}
+
                     {meeting.status === 'PENDING' && isSeller && (
                       <>
                         <button
