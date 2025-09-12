@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  CheckCircle, TrendingUp, ShoppingBag, Package, Calendar
+  CheckCircle, TrendingUp, ShoppingBag, Package, Calendar,
+  Star, Eye, Trophy, DollarSign
 } from 'lucide-react';
 import { StatsCard, formatLKR } from './shared';
 import { api } from '@/services/api';
@@ -24,7 +25,22 @@ const Overview: React.FC<OverviewProps> = ({ user }) => {
     totalPurchases: 0,
     totalSpent: 0,
     upcomingMeetings: 0,
-    savedSearches: 0
+    savedSearches: 0,
+    // New comprehensive buyer statistics
+    wonBids: 0,
+    rejectedBids: 0,
+    totalBidAmount: 0,
+    highestBid: 0,
+    averagePurchasePrice: 0,
+    highestPurchase: 0,
+    mostExpensiveGem: '',
+    watchlistedItems: 0,
+    recentlyViewedItems: 0,
+    totalBuyerAdvertisements: 0,
+    approvedBuyerAdvertisements: 0,
+    totalReceivedFeedbacks: 0,
+    totalSentFeedbacks: 0,
+    averageRating: 0
   });
 
   const [statsLoading, setStatsLoading] = useState(true);
@@ -44,7 +60,21 @@ const Overview: React.FC<OverviewProps> = ({ user }) => {
           totalPurchases: 8,
           totalSpent: 2500000,
           upcomingMeetings: 2,
-          savedSearches: 5
+          savedSearches: 5,
+          wonBids: 5,
+          rejectedBids: 7,
+          totalBidAmount: 3200000,
+          highestBid: 650000,
+          averagePurchasePrice: 312500,
+          highestPurchase: 850000,
+          mostExpensiveGem: 'Blue Sapphire',
+          watchlistedItems: 12,
+          recentlyViewedItems: 25,
+          totalBuyerAdvertisements: 2,
+          approvedBuyerAdvertisements: 1,
+          totalReceivedFeedbacks: 8,
+          totalSentFeedbacks: 12,
+          averageRating: 4.6
         });
         return;
       }
@@ -66,7 +96,21 @@ const Overview: React.FC<OverviewProps> = ({ user }) => {
           totalPurchases: 8,
           totalSpent: 2500000,
           upcomingMeetings: 2,
-          savedSearches: 5
+          savedSearches: 5,
+          wonBids: 5,
+          rejectedBids: 7,
+          totalBidAmount: 3200000,
+          highestBid: 650000,
+          averagePurchasePrice: 312500,
+          highestPurchase: 850000,
+          mostExpensiveGem: 'Blue Sapphire',
+          watchlistedItems: 12,
+          recentlyViewedItems: 25,
+          totalBuyerAdvertisements: 2,
+          approvedBuyerAdvertisements: 1,
+          totalReceivedFeedbacks: 8,
+          totalSentFeedbacks: 12,
+          averageRating: 4.6
         });
       }
     } catch (error) {
@@ -79,7 +123,21 @@ const Overview: React.FC<OverviewProps> = ({ user }) => {
         totalPurchases: 8,
         totalSpent: 2500000,
         upcomingMeetings: 2,
-        savedSearches: 5
+        savedSearches: 5,
+        wonBids: 5,
+        rejectedBids: 7,
+        totalBidAmount: 3200000,
+        highestBid: 650000,
+        averagePurchasePrice: 312500,
+        highestPurchase: 850000,
+        mostExpensiveGem: 'Blue Sapphire',
+        watchlistedItems: 12,
+        recentlyViewedItems: 25,
+        totalBuyerAdvertisements: 2,
+        approvedBuyerAdvertisements: 1,
+        totalReceivedFeedbacks: 8,
+        totalSentFeedbacks: 12,
+        averageRating: 4.6
       });
     } finally {
       setStatsLoading(false);
@@ -183,6 +241,67 @@ const Overview: React.FC<OverviewProps> = ({ user }) => {
           iconBgColor="bg-indigo-100"
           textColor="text-indigo-600"
         />
+      </div>
+
+      {/* Additional Comprehensive Statistics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatsCard
+          title="Won Bids"
+          value={statsLoading ? "..." : buyerStats.wonBids}
+          change={statsLoading ? "Loading..." : (buyerStats.wonBids > 0 ? `${buyerStats.wonBids} successful bids` : "No wins yet")}
+          icon={<Trophy className="w-6 h-6 text-yellow-600" />}
+          iconBgColor="bg-yellow-100"
+          textColor="text-yellow-600"
+        />
+
+        <StatsCard
+          title="Highest Bid"
+          value={statsLoading ? "..." : formatLKR(buyerStats.highestBid)}
+          change={statsLoading ? "Loading..." : (buyerStats.highestBid > 0 ? "Maximum bid placed" : "No bids yet")}
+          icon={<DollarSign className="w-6 h-6 text-emerald-600" />}
+          iconBgColor="bg-emerald-100"
+          textColor="text-emerald-600"
+        />
+
+        <StatsCard
+          title="Average Rating"
+          value={statsLoading ? "..." : `${buyerStats.averageRating.toFixed(1)}/5.0`}
+          change={statsLoading ? "Loading..." : (buyerStats.totalReceivedFeedbacks > 0 ? `${buyerStats.totalReceivedFeedbacks} reviews` : "No reviews yet")}
+          icon={<Star className="w-6 h-6 text-pink-600" />}
+          iconBgColor="bg-pink-100"
+          textColor="text-pink-600"
+        />
+
+        <StatsCard
+          title="Watchlist Items"
+          value={statsLoading ? "..." : buyerStats.watchlistedItems}
+          change={statsLoading ? "Loading..." : (buyerStats.watchlistedItems > 0 ? "Items saved" : "No saved items")}
+          icon={<Eye className="w-6 h-6 text-cyan-600" />}
+          iconBgColor="bg-cyan-100"
+          textColor="text-cyan-600"
+        />
+      </div>
+
+      {/* Business Intelligence Section */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">📊 Buying Analytics</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-blue-600">{formatLKR(buyerStats.averagePurchasePrice)}</div>
+            <div className="text-sm text-gray-500">Average Purchase Price</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-green-600">{formatLKR(buyerStats.highestPurchase)}</div>
+            <div className="text-sm text-gray-500">Highest Purchase</div>
+            {buyerStats.mostExpensiveGem && (
+              <div className="text-xs text-gray-400 mt-1">{buyerStats.mostExpensiveGem}</div>
+            )}
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-purple-600">{buyerStats.rejectedBids}</div>
+            <div className="text-sm text-gray-500">Rejected Bids</div>
+          </div>
+        </div>
       </div>
     </div>
   );
