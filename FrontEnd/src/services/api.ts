@@ -888,6 +888,31 @@ const extendedAPI = {
     }
   },
 
+  // User Dashboard Stats APIs
+  getUserStats: {
+    // Get seller dashboard statistics
+    getSellerStats: async (userId: string): Promise<ApiResponse<any>> => {
+      try {
+        const response = await api.get(`/api/user-stats/seller/${userId}`);
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching seller stats:', error);
+        return { success: false, message: apiUtils.formatErrorMessage(error) };
+      }
+    },
+
+    // Get buyer dashboard statistics  
+    getBuyerStats: async (userId: string): Promise<ApiResponse<any>> => {
+      try {
+        const response = await api.get(`/api/user-stats/buyer/${userId}`);
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching buyer stats:', error);
+        return { success: false, message: apiUtils.formatErrorMessage(error) };
+      }
+    },
+  },
+
   // Machine Learning Price Prediction
   predictPrice: async (attributes: PriceAttributes): Promise<ApiResponse<PricePrediction>> => {
     const response = await api.post('/api/ml/predict-price', attributes);
