@@ -64,11 +64,5 @@ export const MOCK_ADVERTISEMENTS: Advertisement[] = [
   }
 ];
 
-export const formatLKR = (amount: number): string => {
-  return new Intl.NumberFormat('si-LK', {
-    style: 'currency',
-    currency: 'LKR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-};
+// Import enhanced formatter that handles large numbers
+export { formatLKR, formatLKRExact, formatNumberCompact } from '../../../../utils/formatLKR';

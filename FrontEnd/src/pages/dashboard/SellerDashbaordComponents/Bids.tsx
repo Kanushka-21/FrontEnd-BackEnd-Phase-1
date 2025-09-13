@@ -14,7 +14,9 @@ dayjs.extend(relativeTime);
 
 interface BidsProps {
   user?: {
-    id: string;
+    id?: string;
+    userId?: string;
+    _id?: any;
     name?: string;
   };
 }
@@ -97,19 +99,21 @@ const Bids: React.FC<BidsProps> = ({ user }) => {
   const fetchSellerBids = useCallback(async () => {
     console.log('fetchSellerBids called with user:', user);
     
-    if (!user?.id) {
+    // Support multiple user ID formats for compatibility
+    const userId = user?.userId || user?.id || user?._id?.$oid;
+    if (!userId) {
       console.log('No user ID available, skipping API call');
       setLoading(false);
       setBids([]);
       return;
     }
 
-    console.log('Starting API call for seller bids...', { userId: user.id, currentPage, pageSize });
+    console.log('Starting API call for seller bids...', { userId, currentPage, pageSize });
     setLoading(true);
     
     try {
       console.log('Calling api.bidding.getSellerReceivedBids...');
-      const response = await api.bidding.getSellerReceivedBids(user.id, currentPage, pageSize);
+      const response = await api.bidding.getSellerReceivedBids(userId, currentPage, pageSize);
       console.log('API response received:', response);
       
       if (response.success && response.data) {
@@ -141,7 +145,7 @@ const Bids: React.FC<BidsProps> = ({ user }) => {
       console.log('API call completed, setting loading to false');
       setLoading(false);
     }
-  }, [user?.id, currentPage, pageSize]);
+  }, [user?.userId, user?.id, user?._id, currentPage, pageSize]);
 
   useEffect(() => {
     fetchSellerBids();

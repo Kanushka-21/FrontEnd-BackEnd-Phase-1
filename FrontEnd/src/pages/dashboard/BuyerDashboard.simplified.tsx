@@ -15,15 +15,8 @@ import { AuthContext } from '../../context/AuthContext';
 const { TabPane } = Tabs;
 const { confirm } = Modal;
 
-// Helper function to format price in LKR
-const formatLKR = (price: number) => {
-  return new Intl.NumberFormat('si-LK', {
-    style: 'currency',
-    currency: 'LKR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(price);
-};
+// Import enhanced formatter that handles large numbers
+import { formatLKR, formatLKRExact, formatNumberCompact } from '../../utils/formatLKR';
 
 // Simple mock data
 const mockMeetings = [

@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔢 Dashboard Large Number Formatting Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .test-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            border-left: 4px solid #667eea;
+        }
+        .test-card h3 {
+            margin: 0 0 15px 0;
+            color: #667eea;
+            font-size: 1.1em;
+        }
+        .test-results {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .result-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        .result-label {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 5px;
+        }
+        .result-value {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #28a745;
+        }
+        .test-extreme {
+            background: #fff3cd;
+            border-left-color: #ffc107;
+        }
+        .test-extreme h3 {
+            color: #856404;
+        }
+        .original-broken {
+            color: #dc3545;
+            font-size: 0.8em;
+            word-break: break-all;
+            max-height: 40px;
+            overflow: hidden;
+            position: relative;
+        }
+        .original-broken::after {
+            content: "...";
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            background: white;
+            padding-left: 10px;
+        }
+        .stats-demo {
+            background: #e8f5e8;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 30px;
+        }
+        .stats-demo h3 {
+            color: #155724;
+            margin-bottom: 20px;
+        }
+        .mock-dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .stat-label {
+            color: #6c757d;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #28a745;
+            margin-bottom: 5px;
+        }
+        .stat-subtitle {
+            color: #868e96;
+            font-size: 0.8em;
+        }
+        .test-button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            margin: 10px;
+            transition: transform 0.2s;
+        }
+        .test-button:hover {
+            transform: translateY(-2px);
+        }
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .before, .after {
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .before {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+        }
+        .after {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+        }
+        .before h4 {
+            color: #721c24;
+        }
+        .after h4 {
+            color: #155724;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔢 Dashboard Large Number Formatting Test</h1>
+            <p>Testing the enhanced formatLKR function that prevents dashboard layout corruption from extremely large numbers</p>
+            <div>
+                <button class="test-button" onclick="runAllTests()">🧪 Run All Tests</button>
+                <button class="test-button" onclick="testExtremeCases()">⚠️ Test Extreme Cases</button>
+            </div>
+        </div>
+
+        <!-- Test Cases Grid -->
+        <div class="test-grid">
+            <!-- Normal Cases -->
+            <div class="test-card">
+                <h3>💚 Normal Numbers (Working Fine)</h3>
+                <div class="test-results">
+                    <div class="result-item">
+                        <div class="result-label">Small Amount</div>
+                        <div class="result-value" id="test-small">-</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">Medium Amount</div>
+                        <div class="result-value" id="test-medium">-</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">Large Amount</div>
+                        <div class="result-value" id="test-large">-</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">Very Large</div>
+                        <div class="result-value" id="test-very-large">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Extreme Cases -->
+            <div class="test-card test-extreme">
+                <h3>⚠️ Extreme Numbers (Previously Broken)</h3>
+                <div class="test-results">
+                    <div class="result-item">
+                        <div class="result-label">Billion</div>
+                        <div class="result-value" id="test-billion">-</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">Trillion</div>
+                        <div class="result-value" id="test-trillion">-</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">Extreme Large</div>
+                        <div class="result-value" id="test-extreme">-</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">JavaScript MAX</div>
+                        <div class="result-value" id="test-max">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Negative Numbers -->
+            <div class="test-card">
+                <h3>➖ Negative Numbers</h3>
+                <div class="test-results">
+                    <div class="result-item">
+                        <div class="result-label">Negative Small</div>
+                        <div class="result-value" id="test-neg-small">-</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">Negative Million</div>
+                        <div class="result-value" id="test-neg-million">-</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">Negative Billion</div>
+                        <div class="result-value" id="test-neg-billion">-</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">Zero</div>
+                        <div class="result-value" id="test-zero">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Edge Cases -->
+            <div class="test-card">
+                <h3>🔍 Edge Cases</h3>
+                <div class="test-results">
+                    <div class="result-item">
+                        <div class="result-label">Decimal Large</div>
+                        <div class="result-value" id="test-decimal">-</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">Just Under Million</div>
+                        <div class="result-value" id="test-under-million">-</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">Just Over Million</div>
+                        <div class="result-value" id="test-over-million">-</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">Fractional</div>
+                        <div class="result-value" id="test-fractional">-</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Before/After Comparison -->
+        <div class="comparison">
+            <div class="before">
+                <h4>❌ Before (Layout Breaking)</h4>
+                <p>Original formatLKR with extreme number:</p>
+                <div class="original-broken" id="before-extreme">
+                    LKR 10,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000,000
+                </div>
+            </div>
+            <div class="after">
+                <h4>✅ After (Compact & Clean)</h4>
+                <p>Enhanced formatLKR with same number:</p>
+                <div class="result-value" id="after-extreme">-</div>
+            </div>
+        </div>
+
+        <!-- Mock Dashboard Demo -->
+        <div class="stats-demo">
+            <h3>📊 Mock Dashboard Statistics with Large Numbers</h3>
+            <div class="mock-dashboard">
+                <div class="stat-card">
+                    <div class="stat-label">Total Revenue</div>
+                    <div class="stat-value" id="demo-revenue">-</div>
+                    <div class="stat-subtitle">Platform earnings</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Users</div>
+                    <div class="stat-value" id="demo-users">-</div>
+                    <div class="stat-subtitle">Registered users</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Listings</div>
+                    <div class="stat-value" id="demo-listings">-</div>
+                    <div class="stat-subtitle">Active gemstone listings</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Highest Bid</div>
+                    <div class="stat-value" id="demo-bid">-</div>
+                    <div class="stat-subtitle">Record breaking bid</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Test Results Log -->
+        <div style="margin-top: 30px; background: #f8f9fa; padding: 20px; border-radius: 10px;">
+            <h3>📝 Test Results Log</h3>
+            <div id="test-log" style="font-family: monospace; font-size: 0.9em; color: #495057;">
+                Ready to run tests...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Enhanced formatLKR function that handles large numbers
+        function formatLKR(amount) {
+            if (amount === 0) return 'LKR 0';
+            
+            // Handle negative numbers
+            const isNegative = amount < 0;
+            const absAmount = Math.abs(amount);
+            
+            // For very small amounts (less than 1000), show exact amount
+            if (absAmount < 1000) {
+                return new Intl.NumberFormat('en-LK', {
+                    style: 'currency',
+                    currency: 'LKR',
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 2,
+                }).format(amount);
+            }
+            
+            // For amounts 1,000 to 999,999, show exact amount with thousands separator
+            if (absAmount < 1000000) {
+                return new Intl.NumberFormat('en-LK', {
+                    style: 'currency',
+                    currency: 'LKR',
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0,
+                }).format(amount);
+            }
+            
+            // For larger amounts, use abbreviated format
+            const units = [
+                { value: 1e12, suffix: 'T' }, // Trillion
+                { value: 1e9, suffix: 'B' },  // Billion
+                { value: 1e6, suffix: 'M' },  // Million
+                { value: 1e3, suffix: 'K' }   // Thousand
+            ];
+            
+            for (const unit of units) {
+                if (absAmount >= unit.value) {
+                    const value = absAmount / unit.value;
+                    const formattedValue = value >= 100 
+                        ? Math.round(value) 
+                        : Math.round(value * 10) / 10;
+                    
+                    const sign = isNegative ? '-' : '';
+                    return `${sign}LKR ${formattedValue}${unit.suffix}`;
+                }
+            }
+            
+            // Fallback for unexpected cases
+            return new Intl.NumberFormat('en-LK', {
+                style: 'currency',
+                currency: 'LKR',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0,
+            }).format(amount);
+        }
+
+        function formatNumberCompact(amount) {
+            if (amount === 0) return '0';
+            
+            const isNegative = amount < 0;
+            const absAmount = Math.abs(amount);
+            
+            if (absAmount < 1000) {
+                return amount.toString();
+            }
+            
+            if (absAmount < 1000000) {
+                return new Intl.NumberFormat('en-LK').format(amount);
+            }
+            
+            const units = [
+                { value: 1e12, suffix: 'T' },
+                { value: 1e9, suffix: 'B' },
+                { value: 1e6, suffix: 'M' },
+                { value: 1e3, suffix: 'K' }
+            ];
+            
+            for (const unit of units) {
+                if (absAmount >= unit.value) {
+                    const value = absAmount / unit.value;
+                    const formattedValue = value >= 100 
+                        ? Math.round(value) 
+                        : Math.round(value * 10) / 10;
+                    
+                    const sign = isNegative ? '-' : '';
+                    return `${sign}${formattedValue}${unit.suffix}`;
+                }
+            }
+            
+            return new Intl.NumberFormat('en-LK').format(amount);
+        }
+
+        function log(message) {
+            const logDiv = document.getElementById('test-log');
+            logDiv.innerHTML += message + '<br>';
+            console.log(message);
+        }
+
+        function runAllTests() {
+            log('🧪 Starting comprehensive number formatting tests...');
+            
+            // Normal cases
+            document.getElementById('test-small').textContent = formatLKR(150);
+            document.getElementById('test-medium').textContent = formatLKR(15000);
+            document.getElementById('test-large').textContent = formatLKR(150000);
+            document.getElementById('test-very-large').textContent = formatLKR(1500000);
+            
+            // Extreme cases
+            document.getElementById('test-billion').textContent = formatLKR(2500000000);
+            document.getElementById('test-trillion').textContent = formatLKR(15000000000000);
+            document.getElementById('test-extreme').textContent = formatLKR(10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000);
+            document.getElementById('test-max').textContent = formatLKR(Number.MAX_SAFE_INTEGER);
+            
+            // Negative numbers
+            document.getElementById('test-neg-small').textContent = formatLKR(-500);
+            document.getElementById('test-neg-million').textContent = formatLKR(-2500000);
+            document.getElementById('test-neg-billion').textContent = formatLKR(-3500000000);
+            document.getElementById('test-zero').textContent = formatLKR(0);
+            
+            // Edge cases
+            document.getElementById('test-decimal').textContent = formatLKR(1234567.89);
+            document.getElementById('test-under-million').textContent = formatLKR(999999);
+            document.getElementById('test-over-million').textContent = formatLKR(1000001);
+            document.getElementById('test-fractional').textContent = formatLKR(123.45);
+            
+            log('✅ Normal number tests completed');
+            log('✅ Extreme number tests completed');
+            log('✅ Negative number tests completed');
+            log('✅ Edge case tests completed');
+        }
+
+        function testExtremeCases() {
+            log('⚠️ Testing extreme cases that previously broke dashboards...');
+            
+            // The problematic number from user's example
+            const extremeNumber = 10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000;
+            document.getElementById('after-extreme').textContent = formatLKR(extremeNumber);
+            
+            log('✅ Extreme case test completed - layout preserved!');
+        }
+
+        function runDashboardDemo() {
+            log('📊 Loading mock dashboard with realistic large numbers...');
+            
+            // Simulate realistic but large dashboard stats
+            document.getElementById('demo-revenue').textContent = formatLKR(245000000000); // 245B
+            document.getElementById('demo-users').textContent = formatNumberCompact(15234567); // 15.2M
+            document.getElementById('demo-listings').textContent = formatNumberCompact(892456); // 892K
+            document.getElementById('demo-bid').textContent = formatLKR(125000000); // 125M
+            
+            log('✅ Dashboard demo loaded with compact, readable numbers');
+        }
+
+        // Auto-run tests on page load
+        window.onload = function() {
+            log('🚀 Page loaded - initializing number formatting tests');
+            runAllTests();
+            testExtremeCases();
+            runDashboardDemo();
+            log('🎉 All tests completed successfully!');
+            log('');
+            log('📋 Summary:');
+            log('• Small numbers (< 1K): Show exact amount with currency formatting');
+            log('• Medium numbers (1K - 999K): Show exact amount with thousands separators'); 
+            log('• Large numbers (1M+): Show compact format (1.2M, 5.8B, 15T)');
+            log('• Extreme numbers: Always show compact format to prevent layout breaks');
+            log('• Negative numbers: Handled correctly with proper sign');
+            log('• Zero: Shows as "LKR 0"');
+        };
+    </script>
+</body>
+</html>

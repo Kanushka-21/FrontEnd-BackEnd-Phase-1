@@ -9,7 +9,7 @@ import {
 import { 
   FileText, Eye, Edit, Trash2
 } from 'lucide-react';
-import { StatsCard, formatLKR } from './shared';
+import { StatsCard, formatLKR, formatNumberCompact } from './shared';
 import { authUtils } from '@/utils';
 import { api } from '@/services/api';
 import axios from 'axios';
@@ -294,7 +294,7 @@ const Overview: React.FC<OverviewProps> = ({ user, onTabChange }) => {
         <Col xs={24} sm={12} lg={6}>
           <StatsCard
             title="Total Listings"
-            value={statsLoading ? "..." : stats.totalListings.toLocaleString()}
+            value={statsLoading ? "..." : formatNumberCompact(stats.totalListings)}
             icon={<EyeOutlined />}
             color="#8b5cf6"
             gradient="linear-gradient(135deg, #8b5cf611 0%, #8b5cf622 100%)"

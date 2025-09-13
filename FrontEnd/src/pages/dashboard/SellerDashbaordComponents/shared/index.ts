@@ -1,15 +1,8 @@
 export * from './types';
 export { default as StatsCard } from './StatsCard';
 
-// Utility function to format LKR currency
-export const formatLKR = (amount: number): string => {
-  return new Intl.NumberFormat('en-LK', {
-    style: 'currency',
-    currency: 'LKR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-};
+// Import enhanced formatter that handles large numbers
+export { formatLKR, formatLKRExact, formatNumberCompact } from '../../../../utils/formatLKR';
 
 // Mock stats data for seller dashboard
 export const mockStats = {
