@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/hooks';
 import Button from '@/components/ui/Button';
+import NotificationComponent from '@/components/ui/NotificationComponent';
 import logoImage from '@/logo-new.gif';
 
 interface RoleAwareHeaderProps {
@@ -250,6 +251,16 @@ const RoleAwareHeader: React.FC<RoleAwareHeaderProps> = ({ transparent = false }
           {isAuthenticated ? (
             <div className="relative">
               <div className="flex items-center space-x-2">
+                {/* Notifications */}
+                {isAuthenticated && user?.userId && (
+                  <NotificationComponent 
+                    userId={user.userId}
+                    context={user.role === 'seller' ? 'seller' : user.role === 'buyer' ? 'buyer' : user.role === 'admin' ? 'admin' : undefined}
+                    maxNotifications={5}
+                    user={user}
+                  />
+                )}
+                
                 {/* User menu button */}
                 <div className="relative">
                   <button

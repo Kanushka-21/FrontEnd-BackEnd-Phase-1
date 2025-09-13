@@ -3,7 +3,7 @@ import { Row, Col } from 'antd';
 import { 
   ShopOutlined, DollarOutlined,
   CalendarOutlined, TrophyOutlined,
-  LineChartOutlined, BellOutlined,
+  LineChartOutlined,
   StarOutlined, EyeOutlined
 } from '@ant-design/icons';
 import { 
@@ -305,7 +305,7 @@ const Overview: React.FC<OverviewProps> = ({ user, onTabChange }) => {
           <StatsCard
             title="Advertisements"
             value={statsLoading ? "..." : `${stats.approvedAdvertisements}/${stats.totalAdvertisements}`}
-            icon={<BellOutlined />}
+            icon={<StarOutlined />}
             color="#ef4444"
             gradient="linear-gradient(135deg, #ef444411 0%, #ef444422 100%)"
             subtitle={statsLoading ? "Loading..." : 

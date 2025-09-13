@@ -6,7 +6,6 @@ import {
   Menu, Home, Calendar, MessageCircle
 } from 'lucide-react';
 import RoleAwareDashboardLayout from '@/components/layout/RoleAwareDashboardLayout';
-import NotificationComponent from '@/components/ui/NotificationComponent';
 
 // Import modular components
 import {
@@ -183,16 +182,9 @@ const BuyerDashboard = () => {
               </div>
             </div>
             
-            {/* Right side - Notifications */}
+            {/* Right side - Dashboard controls */}
             <div className="flex items-center space-x-4">
-              {user?.userId && (
-                <NotificationComponent 
-                  userId={user.userId} 
-                  context="buyer"
-                  maxNotifications={5}
-                  user={user}
-                />
-              )}
+              {/* Dashboard-specific controls can be added here if needed */}
             </div>
           </div>
         </header>

@@ -25,7 +25,7 @@ import {
   CloseOutlined
 } from '@ant-design/icons';
 import { DetailedGemstone } from '@/types';
-import Header from '@/components/layout/Header';
+import Header from '@/components/layout/RoleAwareHeader';
 import GemstoneCard from '@/components/ui/GemstoneCard';
 import GemstoneDetailModal from '@/components/home/GemstoneDetailModal';
 import { api } from '@/services/api';

@@ -7,7 +7,6 @@ import {
   CalendarOutlined, TrophyOutlined
 } from '@ant-design/icons';
 import { AdminComponentProps, StatsCard, formatLKR } from './shared';
-import NotificationSummary from '@/components/admin/NotificationSummary';
 import { api } from '@/services/api';
 
 const Overview: React.FC<AdminComponentProps> = ({ user, onTabChange }) => {
@@ -302,11 +301,6 @@ const Overview: React.FC<AdminComponentProps> = ({ user, onTabChange }) => {
             />
           </Col>
         </Row>
-      </div>
-
-      {/* Notification Summary */}
-      <div className="mb-6">
-        <NotificationSummary onTabChange={onTabChange || (() => {})} />
       </div>
 
       {/* Quick Actions */}

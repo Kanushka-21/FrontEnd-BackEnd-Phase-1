@@ -5,11 +5,11 @@ import { Modal, Divider, Alert } from 'antd';
 import dayjs from 'dayjs';
 import RoleAwareDashboardLayout from '@/components/layout/RoleAwareDashboardLayout';
 import { BarChart3, Users, Package, Clock, Settings, Menu as MenuIcon, MessageCircle, Search, Shield, CheckSquare } from 'lucide-react';
-import AdminNotificationComponent from '@/components/ui/AdminNotificationComponent';
 
 // Import modular components
 import {
   Overview,
+  UserManagement,
   ListingsManagement,
   Meetings,
   SystemSettings,
@@ -46,6 +46,12 @@ const AdminDashboard: React.FC = () => {
       id: 'overview', 
       label: 'Dashboard Overview', 
       icon: <BarChart3 size={24} />,
+      notificationCount: 0
+    },
+    { 
+      id: 'users', 
+      label: 'User Management', 
+      icon: <Users size={24} />,
       notificationCount: 0
     },
     { 
@@ -119,6 +125,8 @@ const AdminDashboard: React.FC = () => {
     switch (activeTab) {
       case 'overview':
         return <Overview user={user} onTabChange={setActiveTab} />;
+      case 'users':
+        return <UserManagement actionHandlers={actionHandlers} />;
       case 'listings':
         return <ListingsManagement />;
       case 'advertisements':
@@ -223,14 +231,6 @@ const AdminDashboard: React.FC = () => {
                 </p>
               </div>
               <div className="flex items-center space-x-4">
-                {/* Admin Notification Component */}
-                {user?.userId && (
-                  <AdminNotificationComponent 
-                    userId={user.userId}
-                    maxNotifications={10}
-                    onSectionChange={(section) => setActiveTab(section)}
-                  />
-                )}
                 {/* Search */}
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
