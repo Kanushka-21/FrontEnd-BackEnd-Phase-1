@@ -82,6 +82,14 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({ endTime, isActive }) =>
 };
 
 const Bids: React.FC<BidsProps> = ({ user }) => {
+  console.log('🔧 Bids component rendered with user:', user);
+  console.log('🔧 User properties:', {
+    id: user?.id,
+    userId: user?.userId,
+    _id: user?._id,
+    name: user?.name
+  });
+
   const [bids, setBids] = useState<EnhancedBid[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedBid, setSelectedBid] = useState<EnhancedBid | null>(null);
@@ -91,33 +99,46 @@ const Bids: React.FC<BidsProps> = ({ user }) => {
   const [totalElements, setTotalElements] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [stats, setStats] = useState({
-    activeBids: 0,
-    totalListingsWithBids: 0
+    activeBids: undefined as number | undefined,
+    totalListingsWithBids: undefined as number | undefined
   });
 
   // Fetch seller's received bids
   const fetchSellerBids = useCallback(async () => {
-    console.log('fetchSellerBids called with user:', user);
+    console.log('🔧 fetchSellerBids called with user:', user);
     
     // Support multiple user ID formats for compatibility
     const userId = user?.userId || user?.id || user?._id?.$oid;
+    console.log('🔧 Extracted userId:', userId);
+    
     if (!userId) {
-      console.log('No user ID available, skipping API call');
-      setLoading(false);
+      console.log('❌ No user ID available, skipping API call');
+      // Don't set loading to false immediately - user might still be loading
+      if (user === null) {
+        // User object is null (no auth), can set loading to false
+        setLoading(false);
+      }
       setBids([]);
       return;
     }
 
-    console.log('Starting API call for seller bids...', { userId, currentPage, pageSize });
+    console.log('🚀 Starting API call for seller bids...', { userId, currentPage, pageSize });
     setLoading(true);
     
     try {
-      console.log('Calling api.bidding.getSellerReceivedBids...');
+      console.log('📡 Calling api.bidding.getSellerReceivedBids...');
       const response = await api.bidding.getSellerReceivedBids(userId, currentPage, pageSize);
-      console.log('API response received:', response);
+      console.log('✅ API response received:', response);
       
       if (response.success && response.data) {
-        console.log('Processing successful response:', response.data);
+        console.log('📊 Processing successful response:', response.data);
+        console.log('📊 Stats from API:', {
+          activeBids: response.data.activeBids,
+          totalListingsWithBids: response.data.totalListingsWithBids,
+          totalElements: response.data.totalElements,
+          bidsCount: response.data.bids?.length
+        });
+        
         setBids(response.data.bids || []);
         setTotalElements(response.data.totalElements || 0);
         setTotalPages(response.data.totalPages || 0);
@@ -335,9 +356,20 @@ const Bids: React.FC<BidsProps> = ({ user }) => {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900">My Bids</h2>
-        <p className="text-gray-600">Manage bids received on your gemstone listings</p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">My Bids</h2>
+          <p className="text-gray-600">Manage bids received on your gemstone listings</p>
+        </div>
+        <Button 
+          type="primary" 
+          onClick={() => {
+            console.log('🔧 Manual fetch triggered');
+            fetchSellerBids();
+          }}
+        >
+          🔄 Refresh Bids
+        </Button>
       </div>
 
       {/* Stats Cards */}
@@ -345,7 +377,7 @@ const Bids: React.FC<BidsProps> = ({ user }) => {
         <Card className="hover:shadow-md transition-shadow">
           <Statistic
             title="Active Bids"
-            value={stats.activeBids}
+            value={loading ? "..." : (stats.activeBids ?? 0)}
             valueStyle={{ color: '#1890ff' }}
             prefix={<Badge status="processing" />}
           />
@@ -353,7 +385,7 @@ const Bids: React.FC<BidsProps> = ({ user }) => {
         <Card className="hover:shadow-md transition-shadow">
           <Statistic
             title="Listings with Bids"
-            value={stats.totalListingsWithBids}
+            value={loading ? "..." : (stats.totalListingsWithBids ?? 0)}
             valueStyle={{ color: '#52c41a' }}
             prefix={<TrophyOutlined />}
           />
@@ -361,7 +393,7 @@ const Bids: React.FC<BidsProps> = ({ user }) => {
         <Card className="hover:shadow-md transition-shadow">
           <Statistic
             title="Total Bids"
-            value={totalElements}
+            value={loading ? "..." : totalElements}
             valueStyle={{ color: '#722ed1' }}
             prefix={<EyeOutlined />}
           />
