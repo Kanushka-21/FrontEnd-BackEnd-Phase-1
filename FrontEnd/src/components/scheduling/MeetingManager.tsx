@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, User, Phone, Mail, MessageSquare, CheckCircle, XCircle, AlertCircle, Edit, Archive, AlertTriangle, FileText, Ban, Search, Download } from 'lucide-react';
+import { Calendar, Clock, MapPin, CheckCircle, XCircle, Edit, AlertTriangle, FileText, Ban, Search, Download } from 'lucide-react';
 
 interface Meeting {
   id: string;
@@ -71,11 +71,18 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
   // No-show management state
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
   const [showAbsenceReasonModal, setShowAbsenceReasonModal] = useState(false);
+  const [showNoShowModal, setShowNoShowModal] = useState(false);
   const [attendanceData, setAttendanceData] = useState({
     attended: false,
     reason: ''
   });
   const [absenceReason, setAbsenceReason] = useState('');
+  const [noShowData, setNoShowData] = useState({
+    reason: ''
+  });
+  
+  // Confirmation modal state
+  const [showConfirmNoShowModal, setShowConfirmNoShowModal] = useState(false);
 
   // Fetch meetings
   useEffect(() => {
@@ -510,33 +517,64 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
     }
   };
 
-  // Handle complete meeting
-  const handleCompleteMeeting = async (meetingId: string) => {
-    if (!confirm('Mark this meeting as completed?')) return;
+  // Handle report no-show functionality
+  const handleReportNoShow = async (meetingId: string, reason?: string) => {
+    // Immediate UI feedback - close modal instantly
+    setShowNoShowModal(false);
+    setSelectedMeeting(null);
+    setNoShowData({ reason: '' });
+    
+    // Show immediate feedback message
+    setMessage({ 
+      type: 'info', 
+      text: 'Reporting no-show...' 
+    });
 
     try {
       const userId = user.userId || user.id;
-      const response = await fetch(`http://localhost:9092/api/meetings/${meetingId}/complete`, {
-        method: 'PUT',
+      const response = await fetch(`http://localhost:9092/api/no-show/mark-attendance`, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          userId: userId
+          meetingId,
+          userId,
+          userType,
+          attended: false, // This is a no-show report
+          reason: reason || 'No-show reported by user'
         })
       });
 
-      const data = await response.json();
+      // Check if response is ok first
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Try to parse JSON, but handle empty responses
+      let data;
+      const responseText = await response.text();
+      try {
+        data = responseText ? JSON.parse(responseText) : { success: false, message: 'Empty response from server' };
+      } catch (parseError) {
+        throw new Error(`Invalid JSON response: ${responseText}`);
+      }
+
       if (data.success) {
+        // Update success message
+        setMessage({ 
+          type: 'success', 
+          text: 'No-show reported successfully!' 
+        });
+        
+        // Refresh data in background
         await fetchMeetings();
-        // Use proper UI message instead of browser alert
-        setMessage({ type: 'success', text: 'Meeting marked as completed!' });
       } else {
-        setMessage({ type: 'error', text: `Failed to complete meeting: ${data.message}` });
+        setMessage({ type: 'error', text: `Failed to report no-show: ${data.message}` });
       }
     } catch (error) {
-      console.error('Error completing meeting:', error);
-      setMessage({ type: 'error', text: 'Error completing meeting. Please try again.' });
+      console.error('Error reporting no-show:', error);
+      setMessage({ type: 'error', text: 'Error reporting no-show. Please try again.' });
     }
   };
 
@@ -824,13 +862,20 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
                     )}
 
                     {meeting.status === 'CONFIRMED' && (
-                      <button
-                        onClick={() => handleCompleteMeeting(meeting.id)}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm flex items-center space-x-1"
-                      >
-                        <Archive className="w-4 h-4" />
-                        <span>Mark Complete</span>
-                      </button>
+                      <>
+                        {/* Report No-Show Button - Prominent Design */}
+                        <button
+                          onClick={() => {
+                            setSelectedMeeting(meeting);
+                            setShowNoShowModal(true);
+                            setNoShowData({ reason: '' });
+                          }}
+                          className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm flex items-center space-x-1 font-medium"
+                        >
+                          <AlertTriangle className="w-4 h-4" />
+                          <span>Report No-Show</span>
+                        </button>
+                      </>
                     )}
 
                     {/* No-Show Management Buttons */}
@@ -1128,6 +1173,90 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
                   className="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 disabled:opacity-50"
                 >
                   Submit Reason
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Report No-Show Modal */}
+        {showNoShowModal && selectedMeeting && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Report No-Show</h3>
+              
+              <p className="text-sm text-gray-600 mb-4">
+                Report that the other party ({userType === 'buyer' ? selectedMeeting.sellerName : selectedMeeting.buyerName}) did not attend the meeting.
+              </p>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Reason for No-Show (Optional)
+                </label>
+                <textarea
+                  value={noShowData.reason}
+                  onChange={(e) => setNoShowData({ reason: e.target.value })}
+                  placeholder="Please describe what happened..."
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => {
+                    setShowNoShowModal(false);
+                    setSelectedMeeting(null);
+                    setNoShowData({ reason: '' });
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => setShowConfirmNoShowModal(true)}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                >
+                  Report No-Show
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Confirmation Modal for No-Show Report */}
+        {showConfirmNoShowModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+              <div className="flex items-center mb-4">
+                <AlertTriangle className="h-6 w-6 text-orange-500 mr-3" />
+                <h3 className="text-lg font-semibold text-gray-900">Confirm No-Show Report</h3>
+              </div>
+              
+              <div className="mb-6">
+                <p className="text-gray-700 mb-3">
+                  Are you sure you want to report this meeting as a no-show?
+                </p>
+                <p className="text-sm text-gray-600">
+                  This action will notify the admin and may affect meeting statistics.
+                </p>
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => setShowConfirmNoShowModal(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    setShowConfirmNoShowModal(false);
+                    handleReportNoShow(selectedMeeting.id, noShowData.reason);
+                  }}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                >
+                  Yes, Report No-Show
                 </button>
               </div>
             </div>

@@ -804,6 +804,46 @@ const NoShowManagement: React.FC = () => {
             style={{ marginBottom: 16 }}
           />
 
+          {/* Submitted No-Show Reasons */}
+          {(selectedMeeting?.buyerReasonSubmission || selectedMeeting?.sellerReasonSubmission) && (
+            <Alert
+              message="Submitted No-Show Reasons"
+              description={
+                <div style={{ marginTop: 8 }}>
+                  {selectedMeeting?.buyerReasonSubmission && (
+                    <div style={{ marginBottom: 8, padding: 8, background: '#f5f5f5', borderRadius: 4 }}>
+                      <strong>Buyer ({selectedMeeting?.buyerName}):</strong>
+                      <div style={{ marginTop: 4, fontSize: '13px' }}>
+                        {selectedMeeting.buyerReasonSubmission}
+                      </div>
+                      {selectedMeeting?.buyerReasonSubmittedAt && (
+                        <div style={{ fontSize: '11px', color: '#666', marginTop: 2 }}>
+                          Submitted: {new Date(selectedMeeting.buyerReasonSubmittedAt).toLocaleString()}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {selectedMeeting?.sellerReasonSubmission && (
+                    <div style={{ padding: 8, background: '#f5f5f5', borderRadius: 4 }}>
+                      <strong>Seller ({selectedMeeting?.sellerName}):</strong>
+                      <div style={{ marginTop: 4, fontSize: '13px' }}>
+                        {selectedMeeting.sellerReasonSubmission}
+                      </div>
+                      {selectedMeeting?.sellerReasonSubmittedAt && (
+                        <div style={{ fontSize: '11px', color: '#666', marginTop: 2 }}>
+                          Submitted: {new Date(selectedMeeting.sellerReasonSubmittedAt).toLocaleString()}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              }
+              type="warning"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+          )}
+
           <Form.Item
             label="Buyer Attendance"
             name="buyerAttended"

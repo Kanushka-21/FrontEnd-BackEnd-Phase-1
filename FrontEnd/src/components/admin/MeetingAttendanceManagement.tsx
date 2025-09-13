@@ -56,18 +56,13 @@ interface Meeting {
   sellerNotes?: string;
   createdAt?: string;
   updatedAt?: string;
-  buyerReasonSubmission?: {
-    reason: string;
-    submittedAt: string;
-    adminReviewed: boolean;
-    adminApproved?: boolean;
-  };
-  sellerReasonSubmission?: {
-    reason: string;
-    submittedAt: string;
-    adminReviewed: boolean;
-    adminApproved?: boolean;
-  };
+  // No-show reason fields
+  buyerReasonSubmission?: string;
+  sellerReasonSubmission?: string;
+  buyerReasonSubmittedAt?: string;
+  sellerReasonSubmittedAt?: string;
+  buyerReasonAccepted?: boolean;
+  sellerReasonAccepted?: boolean;
 }
 
 interface MeetingAttendanceManagementProps {
@@ -780,6 +775,52 @@ const MeetingAttendanceManagement: React.FC<MeetingAttendanceManagementProps> = 
                       </div>
                     </div>
                   </div>
+
+                  {/* Submitted No-Show Reasons */}
+                  {(selectedMeeting.buyerReasonSubmission || selectedMeeting.sellerReasonSubmission) && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                        <AlertTriangle className="w-5 h-5 text-yellow-600 mr-2" />
+                        Submitted No-Show Reasons
+                      </h4>
+                      
+                      <div className="space-y-3">
+                        {/* Buyer Reason */}
+                        {selectedMeeting.buyerReasonSubmission && (
+                          <div className="bg-white border border-gray-200 rounded-lg p-3">
+                            <div className="flex items-start justify-between mb-2">
+                              <span className="font-medium text-gray-900">Buyer ({selectedMeeting.buyerName})</span>
+                              {selectedMeeting.buyerReasonSubmittedAt && (
+                                <span className="text-xs text-gray-500">
+                                  {new Date(selectedMeeting.buyerReasonSubmittedAt).toLocaleString()}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm text-gray-700 bg-gray-50 p-2 rounded border">
+                              {selectedMeeting.buyerReasonSubmission}
+                            </p>
+                          </div>
+                        )}
+                        
+                        {/* Seller Reason */}
+                        {selectedMeeting.sellerReasonSubmission && (
+                          <div className="bg-white border border-gray-200 rounded-lg p-3">
+                            <div className="flex items-start justify-between mb-2">
+                              <span className="font-medium text-gray-900">Seller ({selectedMeeting.sellerName})</span>
+                              {selectedMeeting.sellerReasonSubmittedAt && (
+                                <span className="text-xs text-gray-500">
+                                  {new Date(selectedMeeting.sellerReasonSubmittedAt).toLocaleString()}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm text-gray-700 bg-gray-50 p-2 rounded border">
+                              {selectedMeeting.sellerReasonSubmission}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Attendance Marking */}
                   <div className="space-y-4">

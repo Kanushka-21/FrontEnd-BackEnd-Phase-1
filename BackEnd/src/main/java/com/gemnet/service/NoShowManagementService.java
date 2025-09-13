@@ -854,5 +854,68 @@ public class NoShowManagementService {
             return response;
         }
     }
+
+    /**
+     * Record user attendance report (no-show or attended)
+     */
+    public Map<String, Object> recordUserAttendanceReport(String meetingId, String userId, 
+                                                         String userType, Boolean attended, String reason) {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            logger.info("🔄 User {} ({}) reporting attendance for meeting: {} - Attended: {}", 
+                       userId, userType, meetingId, attended);
+            
+            // Find the meeting
+            Optional<Meeting> meetingOpt = meetingRepository.findById(meetingId);
+            if (!meetingOpt.isPresent()) {
+                response.put("success", false);
+                response.put("message", "Meeting not found");
+                return response;
+            }
+            
+            Meeting meeting = meetingOpt.get();
+            
+            // Validate that user is part of this meeting
+            if (!userId.equals(meeting.getBuyerId()) && !userId.equals(meeting.getSellerId())) {
+                response.put("success", false);
+                response.put("message", "User is not part of this meeting");
+                return response;
+            }
+            
+            // Determine if user is buyer or seller
+            boolean isBuyer = userId.equals(meeting.getBuyerId());
+            
+            // Update attendance status and reason if provided
+            if (isBuyer) {
+                meeting.setBuyerAttended(attended);
+                if (reason != null && !reason.trim().isEmpty()) {
+                    meeting.setBuyerReasonSubmission(reason);
+                }
+            } else {
+                meeting.setSellerAttended(attended);
+                if (reason != null && !reason.trim().isEmpty()) {
+                    meeting.setSellerReasonSubmission(reason);
+                }
+            }
+            
+            meeting.setUpdatedAt(LocalDateTime.now());
+            meetingRepository.save(meeting);
+            
+            response.put("success", true);
+            response.put("message", attended ? "Attendance marked successfully!" : "No-show reported successfully!");
+            
+            logger.info("✅ Attendance report recorded - User: {}, Meeting: {}, Attended: {}", 
+                       userId, meetingId, attended);
+            
+            return response;
+            
+        } catch (Exception e) {
+            logger.error("❌ Error recording attendance report: {}", e.getMessage(), e);
+            response.put("success", false);
+            response.put("message", "Failed to record attendance: " + e.getMessage());
+            return response;
+        }
+    }
     
 }
