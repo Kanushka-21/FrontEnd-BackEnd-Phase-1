@@ -299,7 +299,7 @@ const BuyerDashboard: React.FC = (): React.ReactNode => {
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500 mb-1">Purchase History</p>
+                <p className="text-sm font-medium text-gray-500 mb-1">Reserved Items History</p>
                 <h3 className="text-2xl font-bold text-gray-800">{stats.purchaseHistory}</h3>
               </div>
               <div className="w-12 h-12 flex items-center justify-center rounded-full bg-purple-100">
@@ -420,7 +420,7 @@ const BuyerDashboard: React.FC = (): React.ReactNode => {
               )}
             />
           </TabPane>          <TabPane 
-            tab={<span className="flex items-center px-1"><ShoppingOutlined className="mr-2" /> Purchase History</span>} 
+            tab={<span className="flex items-center px-1"><ShoppingOutlined className="mr-2" /> Reserved Items History</span>} 
             key="purchaseHistory"
           >            <Table 
               dataSource={mockPurchaseHistory}

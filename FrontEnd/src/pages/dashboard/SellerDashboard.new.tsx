@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { 
   User, Menu, 
   Home, Trophy, Calendar, Gem, Megaphone, MessageCircle
@@ -23,8 +24,22 @@ import FeedbackForm from '../Feedback/FeedbackPage';
 
 const SellerDashboard = () => {
   const { user } = useAuth();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState('overview');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+
+  // Check URL parameters on component mount and when location changes
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const section = urlParams.get('section');
+    
+    console.log('🔧 SellerDashboard URL params:', { section, pathname: location.pathname });
+    
+    if (section && ['overview', 'listings', 'advertisements', 'bids', 'meetings', 'feedback', 'profile'].includes(section)) {
+      console.log('🔧 Setting active tab from URL parameter:', section);
+      setActiveTab(section);
+    }
+  }, [location]);
 
   // Debug user state for notifications
   console.log('🔧 SellerDashboard - User state:', user);

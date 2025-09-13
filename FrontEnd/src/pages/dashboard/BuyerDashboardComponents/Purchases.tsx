@@ -69,19 +69,19 @@ const Purchases: React.FC<PurchasesProps> = ({ user }) => {
     checkExistingMeetings();
   }, [purchases, user]);
 
-  // Fetch purchase history
+  // Fetch reserved items history
   useEffect(() => {
     const fetchPurchaseHistory = async () => {
       // Use userId (the correct database field) instead of id
       const userId = user?.userId || user?.id;
       if (!userId) {
-        console.log('🛒 No user ID available for purchase history');
+        console.log('🛒 No user ID available for reserved items history');
         setLoading(false);
         return;
       }
 
       try {
-        console.log('🛒 Fetching purchase history for user ID:', userId);
+        console.log('🛒 Fetching reserved items history for user ID:', userId);
         setLoading(true);
         setError(null);
 
@@ -92,15 +92,15 @@ const Purchases: React.FC<PurchasesProps> = ({ user }) => {
           },
         });
 
-        console.log('🛒 Purchase history API response status:', response.status);
+        console.log('🛒 Reserved items history API response status:', response.status);
 
         if (response.ok) {
           const result = await response.json();
-          console.log('🛒 Purchase history API response data:', result);
+          console.log('🛒 Reserved items history API response data:', result);
           
           if (result.success && result.data) {
             setPurchases(result.data);
-            console.log('🛒 Purchase history loaded successfully:', result.data.length, 'items');
+            console.log('🛒 Reserved items history loaded successfully:', result.data.length, 'items');
             
             // Debug: Log each purchase item
             result.data.forEach((purchase: any, index: number) => {
@@ -119,18 +119,18 @@ const Purchases: React.FC<PurchasesProps> = ({ user }) => {
               });
             });
           } else {
-            console.log('🛒 Purchase history API returned unsuccessful response:', result);
+            console.log('🛒 Reserved items history API returned unsuccessful response:', result);
             setPurchases([]);
-            setError(result.message || 'Failed to load purchase history');
+            setError(result.message || 'Failed to load reserved items history');
           }
         } else {
-          console.error('🛒 Failed to fetch purchase history - HTTP Status:', response.status, response.statusText);
-          setError(`Failed to load purchase history: ${response.status} ${response.statusText}`);
+          console.error('🛒 Failed to fetch reserved items history - HTTP Status:', response.status, response.statusText);
+          setError(`Failed to load reserved items history: ${response.status} ${response.statusText}`);
           setPurchases([]);
         }
       } catch (error) {
-        console.error('🛒 Error fetching purchase history:', error);
-        setError(error instanceof Error ? error.message : 'Error loading purchase history');
+        console.error('🛒 Error fetching reserved items history:', error);
+        setError(error instanceof Error ? error.message : 'Error loading reserved items history');
         setPurchases([]);
       } finally {
         setLoading(false);
@@ -150,7 +150,7 @@ const Purchases: React.FC<PurchasesProps> = ({ user }) => {
       return;
     }
 
-    console.log('🔄 Manually refreshing purchase history for user:', userId);
+    console.log('🔄 Manually refreshing reserved items history for user:', userId);
 
     fetch(`http://localhost:9092/api/bidding/purchase-history/${userId}`, {
       method: 'GET',
@@ -167,14 +167,14 @@ const Purchases: React.FC<PurchasesProps> = ({ user }) => {
       if (result.success && result.data) {
         setPurchases(result.data);
         setError(null);
-        console.log('🔄 Purchase history refreshed:', result.data.length, 'items');
+        console.log('🔄 Reserved items history refreshed:', result.data.length, 'items');
       } else {
-        setError(result.message || 'Failed to refresh purchase history');
+        setError(result.message || 'Failed to refresh reserved items history');
       }
     })
     .catch(error => {
       console.error('🔄 Refresh error:', error);
-      setError(error instanceof Error ? error.message : 'Error refreshing purchase history');
+      setError(error instanceof Error ? error.message : 'Error refreshing reserved items history');
     })
     .finally(() => setRefreshing(false));
   };
@@ -197,7 +197,7 @@ const Purchases: React.FC<PurchasesProps> = ({ user }) => {
         console.log('🧪 Test data creation result:', result);
         
         if (result.success) {
-          // Refresh purchase history after creating test data
+          // Refresh reserved items history after creating test data
           setTimeout(() => {
             handleRefresh();
           }, 1000);
@@ -364,12 +364,12 @@ const Purchases: React.FC<PurchasesProps> = ({ user }) => {
     return (
       <div className="space-y-6">
         <div className="flex justify-between items-center">
-          <h2 className="text-xl font-semibold text-gray-900">Purchase History</h2>
+          <h2 className="text-xl font-semibold text-gray-900">Reserved Items History</h2>
           <div className="text-sm text-gray-500">Loading...</div>
         </div>
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
           <Clock className="w-12 h-12 text-gray-400 mx-auto mb-4 animate-spin" />
-          <p className="text-gray-500">Loading your purchase history...</p>
+          <p className="text-gray-500">Loading your reserved items history...</p>
         </div>
       </div>
     );
@@ -379,11 +379,11 @@ const Purchases: React.FC<PurchasesProps> = ({ user }) => {
     return (
       <div className="space-y-6">
         <div className="flex justify-between items-center">
-          <h2 className="text-xl font-semibold text-gray-900">Purchase History</h2>
+          <h2 className="text-xl font-semibold text-gray-900">Reserved Items History</h2>
         </div>
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
           <Package className="w-12 h-12 text-red-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Error loading purchases</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Error loading reserved items</h3>
           <p className="text-red-500">{error}</p>
         </div>
       </div>
@@ -393,10 +393,10 @@ const Purchases: React.FC<PurchasesProps> = ({ user }) => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold text-gray-900">Purchase History</h2>
+        <h2 className="text-xl font-semibold text-gray-900">Reserved Items History</h2>
         <div className="flex items-center space-x-4">
           <div className="text-sm text-gray-500">
-            Total purchases: {purchases.length}
+            Total reserved items: {purchases.length}
           </div>
           <button
             onClick={handleRefresh}
@@ -723,10 +723,10 @@ const Purchases: React.FC<PurchasesProps> = ({ user }) => {
               <p>Looking for items where winningBidderId = "{user.userId || user.id}" and listingStatus = "sold"</p>
               
               <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded">
-                <p className="font-semibold text-yellow-800">🔧 Need to fix Purchase History?</p>
+                <p className="font-semibold text-yellow-800">🔧 Need to fix Reserved Items History?</p>
                 <p className="text-yellow-700 text-xs mt-1">
-                  If you should have purchases but they're not showing, there might be SOLD items in the database 
-                  that aren't linked to your account. Use the Purchase History Fix Tool to resolve this.
+                  If you should have reserved items but they're not showing, there might be SOLD items in the database 
+                  that aren't linked to your account. Use the Reserved Items History Fix Tool to resolve this.
                 </p>
                 <div className="mt-2 space-x-2">
                   <button 

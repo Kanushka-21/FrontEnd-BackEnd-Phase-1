@@ -34,7 +34,7 @@ const BuyerDashboard = () => {
     
     console.log('🔧 BuyerDashboard URL params:', { section, pathname: location.pathname });
     
-    if (section && ['overview', 'purchases', 'meetings', 'profile'].includes(section)) {
+    if (section && ['overview', 'purchases', 'reserved', 'meetings', 'profile'].includes(section)) {
       console.log('🔧 Setting active tab from URL parameter:', section);
       setActiveTab(section);
     }
@@ -52,7 +52,7 @@ const BuyerDashboard = () => {
   // Sidebar navigation items
   const sidebarItems: SidebarItem[] = [
     { id: 'overview', label: 'Overview', icon: <Home size={24} /> },
-    { id: 'purchases', label: 'Purchases', icon: <ShoppingBag size={24} /> },
+    { id: 'reserved', label: 'Reserved Items', icon: <ShoppingBag size={24} /> },
     { id: 'meetings', label: 'Meetings', icon: <Calendar size={24} /> },
     { id: 'feedback', label: 'Feedback', icon: <MessageCircle size={24} /> },
     { id: 'profile', label: 'Profile', icon: <User size={24} /> }
@@ -63,7 +63,8 @@ const BuyerDashboard = () => {
     switch (activeTab) {
       case 'overview':
         return <Overview user={user} />;
-      case 'purchases':
+      case 'reserved':
+      case 'purchases': // Keep backward compatibility
         return <Purchases user={user} />;
       case 'meetings':
         return <MeetingManager user={user} />;
