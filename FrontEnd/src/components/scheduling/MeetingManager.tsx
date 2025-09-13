@@ -751,6 +751,48 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
                     </div>
                   )}
 
+                  {/* No-Show Notification Alert */}
+                  {meeting.status === 'CONFIRMED' && (
+                    ((!isSeller && meeting.sellerReasonSubmission) || 
+                     (isSeller && meeting.buyerReasonSubmission)) && (
+                    <div className="bg-orange-50 rounded-lg p-4 mb-4 border border-orange-200">
+                      <div className="flex items-start space-x-2">
+                        <AlertTriangle className="w-5 h-5 text-orange-600 mt-0.5" />
+                        <div className="flex-1">
+                          <h4 className="font-medium text-orange-800">
+                            {isSeller ? 'Buyer' : 'Seller'} Reported No-Show
+                          </h4>
+                          <p className="text-sm text-orange-700 mt-1">
+                            The {isSeller ? 'buyer' : 'seller'} has reported they could not attend this meeting.
+                          </p>
+                          <div className="mt-2 p-3 bg-orange-100 rounded-md">
+                            <p className="text-sm text-orange-800">
+                              <span className="font-medium">Reason provided:</span>
+                            </p>
+                            <p className="text-sm text-orange-700 mt-1">
+                              "{isSeller ? meeting.buyerReasonSubmission : meeting.sellerReasonSubmission}"
+                            </p>
+                          </div>
+                          <div className="mt-3 flex items-center space-x-2">
+                            <button
+                              onClick={() => {
+                                setSelectedMeeting(meeting);
+                                setShowRescheduleModal(true);
+                              }}
+                              className="px-3 py-1 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors text-sm flex items-center space-x-1"
+                            >
+                              <Calendar className="w-4 h-4" />
+                              <span>Reschedule Meeting</span>
+                            </button>
+                            <span className="text-xs text-orange-600">
+                              You can reschedule to a new time that works for both parties
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
                   {/* Notes */}
                   {(meeting.buyerNotes || meeting.sellerNotes) && (
                     <div className="bg-blue-50 rounded-lg p-4 mb-4">

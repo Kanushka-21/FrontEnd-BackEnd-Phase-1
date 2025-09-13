@@ -885,6 +885,9 @@ public class NoShowManagementService {
             
             // Determine if user is buyer or seller
             boolean isBuyer = userId.equals(meeting.getBuyerId());
+            String reportingUserType = isBuyer ? "buyer" : "seller";
+            String otherPartyId = isBuyer ? meeting.getSellerId() : meeting.getBuyerId();
+            String otherPartyType = isBuyer ? "seller" : "buyer";
             
             // Update attendance status and reason if provided
             if (isBuyer) {
@@ -900,7 +903,18 @@ public class NoShowManagementService {
             }
             
             meeting.setUpdatedAt(LocalDateTime.now());
-            meetingRepository.save(meeting);
+            Meeting savedMeeting = meetingRepository.save(meeting);
+            
+            // If it's a no-show with a reason, notify the other party
+            if (!attended && reason != null && !reason.trim().isEmpty()) {
+                try {
+                    notifyOtherPartyOfNoShow(savedMeeting, reportingUserType, otherPartyId, reason);
+                    logger.info("✅ No-show notification sent to {} ({})", otherPartyType, otherPartyId);
+                } catch (Exception e) {
+                    logger.error("⚠️ Failed to send no-show notification to other party: {}", e.getMessage());
+                    // Don't fail the main operation if notification fails
+                }
+            }
             
             response.put("success", true);
             response.put("message", attended ? "Attendance marked successfully!" : "No-show reported successfully!");
@@ -915,6 +929,104 @@ public class NoShowManagementService {
             response.put("success", false);
             response.put("message", "Failed to record attendance: " + e.getMessage());
             return response;
+        }
+    }
+    
+    /**
+     * Notify the other party (buyer/seller) when someone reports a no-show with reason
+     * This allows the other party to reschedule or take appropriate action
+     */
+    private void notifyOtherPartyOfNoShow(Meeting meeting, String reportingUserType, String otherPartyId, String reason) {
+        try {
+            // Get user details for personalized notifications
+            Optional<User> otherPartyOpt = userRepository.findById(otherPartyId);
+            if (!otherPartyOpt.isPresent()) {
+                logger.warn("⚠️ Other party user not found: {}", otherPartyId);
+                return;
+            }
+            
+            User otherParty = otherPartyOpt.get();
+            String otherPartyName = otherParty.getFirstName() + " " + otherParty.getLastName();
+            
+            // Get reporting user details
+            String reportingUserId = reportingUserType.equals("buyer") ? meeting.getBuyerId() : meeting.getSellerId();
+            Optional<User> reportingUserOpt = userRepository.findById(reportingUserId);
+            String reportingUserName = "Unknown User";
+            if (reportingUserOpt.isPresent()) {
+                User reportingUser = reportingUserOpt.get();
+                reportingUserName = reportingUser.getFirstName() + " " + reportingUser.getLastName();
+            }
+            
+            // Create notification title and message
+            String title = String.format("No-Show Reported by %s", reportingUserType.equals("buyer") ? "Buyer" : "Seller");
+            String notificationMessage = String.format(
+                "The %s (%s) has reported a no-show for your meeting about %s.\n\n" +
+                "Reason provided: %s\n\n" +
+                "📅 Meeting Date: %s\n" +
+                "📍 Location: %s\n\n" +
+                "You can now reschedule this meeting if needed. Please contact the %s to arrange a new time.",
+                reportingUserType,
+                reportingUserName,
+                meeting.getGemName() != null ? meeting.getGemName() : "gemstone",
+                reason,
+                meeting.getConfirmedDateTime() != null ? meeting.getConfirmedDateTime().toString() : meeting.getProposedDateTime().toString(),
+                meeting.getLocation() != null ? meeting.getLocation() : "Not specified",
+                reportingUserType
+            );
+            
+            // Send in-app notification
+            notificationService.sendNotification(
+                otherPartyId,
+                "NO_SHOW_REPORTED",
+                title,
+                notificationMessage,
+                "Meeting ID: " + meeting.getMeetingDisplayId() + " | You can reschedule this meeting"
+            );
+            
+            // Send email notification
+            String emailTitle = String.format("No-Show Report - Meeting %s", meeting.getMeetingDisplayId() != null ? meeting.getMeetingDisplayId() : meeting.getId());
+            String emailMessage = String.format(
+                "Dear %s,\n\n" +
+                "The %s (%s) has reported that they could not attend your scheduled meeting.\n\n" +
+                "💎 Meeting Details:\n" +
+                "• Gemstone: %s\n" +
+                "• Meeting ID: %s\n" +
+                "• Scheduled Date: %s\n" +
+                "• Location: %s\n\n" +
+                "📝 Reason Provided:\n%s\n\n" +
+                "🔄 Next Steps:\n" +
+                "• You can reschedule this meeting through your dashboard\n" +
+                "• Contact the %s to arrange a new suitable time\n" +
+                "• The meeting status has been updated in the system\n\n" +
+                "Please log in to your account to reschedule or contact support if you need assistance.\n\n" +
+                "Best regards,\n" +
+                "GemNet Team",
+                otherPartyName,
+                reportingUserType,
+                reportingUserName,
+                meeting.getGemName() != null ? meeting.getGemName() : "Gemstone",
+                meeting.getMeetingDisplayId() != null ? meeting.getMeetingDisplayId() : meeting.getId(),
+                meeting.getConfirmedDateTime() != null ? meeting.getConfirmedDateTime().toString() : meeting.getProposedDateTime().toString(),
+                meeting.getLocation() != null ? meeting.getLocation() : "Not specified",
+                reason,
+                reportingUserType
+            );
+            
+            emailService.sendMeetingNotificationEmail(
+                otherPartyId,
+                "NO_SHOW_REPORTED",
+                emailTitle,
+                emailMessage,
+                meeting.getLocation(),
+                meeting.getConfirmedDateTime() != null ? meeting.getConfirmedDateTime().toString() : meeting.getProposedDateTime().toString(),
+                "Meeting ID: " + (meeting.getMeetingDisplayId() != null ? meeting.getMeetingDisplayId() : meeting.getId())
+            );
+            
+            logger.info("✅ No-show notification sent successfully to {} ({})", otherPartyName, otherPartyId);
+            
+        } catch (Exception e) {
+            logger.error("❌ Error sending no-show notification: {}", e.getMessage(), e);
+            throw e; // Re-throw to be caught by caller
         }
     }
     
