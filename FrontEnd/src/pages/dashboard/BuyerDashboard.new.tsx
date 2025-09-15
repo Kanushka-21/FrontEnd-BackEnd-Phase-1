@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNotifications } from '@/contexts/NotificationContext';
+import NotificationBadge from '@/components/ui/NotificationBadge';
 import { useLocation } from 'react-router-dom';
 import { 
   ShoppingBag, User, 
@@ -23,6 +25,7 @@ import FeedbackForm from '../Feedback/FeedbackPage';
 
 const BuyerDashboard = () => {
   const { user, loading } = useAuth();
+  const { getNotificationCount } = useNotifications();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState('overview');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
@@ -51,11 +54,36 @@ const BuyerDashboard = () => {
 
   // Sidebar navigation items
   const sidebarItems: SidebarItem[] = [
-    { id: 'overview', label: 'Overview', icon: <Home size={24} /> },
-    { id: 'reserved', label: 'Reserved Items', icon: <ShoppingBag size={24} /> },
-    { id: 'meetings', label: 'Meetings', icon: <Calendar size={24} /> },
-    { id: 'feedback', label: 'Feedback', icon: <MessageCircle size={24} /> },
-    { id: 'profile', label: 'Profile', icon: <User size={24} /> }
+    { 
+      id: 'overview', 
+      label: 'Overview', 
+      icon: <Home size={24} />,
+      notificationCount: getNotificationCount('buyer', 'overview') || 0
+    },
+    { 
+      id: 'reserved', 
+      label: 'Reserved Items', 
+      icon: <ShoppingBag size={24} />,
+      notificationCount: getNotificationCount('buyer', 'reservedItems') || 0
+    },
+    { 
+      id: 'meetings', 
+      label: 'Meetings', 
+      icon: <Calendar size={24} />,
+      notificationCount: getNotificationCount('buyer', 'meetings') || 0
+    },
+    { 
+      id: 'feedback', 
+      label: 'Feedback', 
+      icon: <MessageCircle size={24} />,
+      notificationCount: getNotificationCount('buyer', 'feedback') || 0
+    },
+    { 
+      id: 'profile', 
+      label: 'Profile', 
+      icon: <User size={24} />,
+      notificationCount: getNotificationCount('buyer', 'profile') || 0
+    }
   ];
 
   // Render content based on active tab
@@ -149,8 +177,15 @@ const BuyerDashboard = () => {
               }`}
               title={sidebarCollapsed ? item.label : undefined}
             >
-              <div className={`flex-shrink-0 ${sidebarCollapsed ? '' : ''}`}>
+              <div className={`flex-shrink-0 relative ${sidebarCollapsed ? '' : ''}`}>
                 {item.icon}
+                {item.notificationCount && item.notificationCount > 0 ? (
+                  <NotificationBadge 
+                    count={item.notificationCount} 
+                    size="sm"
+                    variant="danger"
+                  />
+                ) : null}
               </div>
               {!sidebarCollapsed && (
                 <span className="text-base font-medium truncate">{item.label}</span>

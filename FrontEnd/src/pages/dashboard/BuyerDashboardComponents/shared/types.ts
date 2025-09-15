@@ -39,6 +39,7 @@ export interface SidebarItem {
   id: string;
   label: string;
   icon: React.ReactNode;
+  notificationCount?: number;
 }
 
 export const CATEGORIES = [

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNotifications, NotificationBadge } from '@/contexts/NotificationContext';
+import { useNotifications } from '@/contexts/NotificationContext';
+import NotificationBadge from '@/components/ui/NotificationBadge';
 import { Modal, Divider, Alert } from 'antd';
 import dayjs from 'dayjs';
 import RoleAwareDashboardLayout from '@/components/layout/RoleAwareDashboardLayout';
@@ -40,37 +41,41 @@ const AdminDashboard: React.FC = () => {
     selectedListing: null,
   });
 
+  // Get notifications from context
+  const { notifications: allNotifications, getNotificationCount } = useNotifications();
+  const adminNotifications = allNotifications.admin;
+
   // Sidebar items for admin with notification badges
   const sidebarItems = [
     { 
       id: 'overview', 
       label: 'Dashboard Overview', 
       icon: <BarChart3 size={24} />,
-      notificationCount: 0
+      notificationCount: getNotificationCount('admin', 'overview') || 0
     },
     { 
       id: 'users', 
       label: 'User Management', 
       icon: <Users size={24} />,
-      notificationCount: 0
+      notificationCount: getNotificationCount('admin', 'userManagement') || 0
     },
     { 
       id: 'listings', 
       label: 'Listing Management', 
       icon: <Package size={24} />,
-      notificationCount: notifications.listingManagement
+      notificationCount: getNotificationCount('admin', 'listingManagement') || 0
     },
     { 
       id: 'advertisements', 
       label: 'Manage Advertisement', 
       icon: <Package size={24} />,
-      notificationCount: notifications.advertisements
+      notificationCount: getNotificationCount('admin', 'advertisements') || 0
     },
     { 
       id: 'meetings', 
       label: 'Meeting Requests', 
       icon: <Clock size={24} />,
-      notificationCount: notifications.meetingRequests
+      notificationCount: getNotificationCount('admin', 'meetingRequests') || 0
     },
     { 
       id: 'attendance', 
@@ -100,7 +105,7 @@ const AdminDashboard: React.FC = () => {
       id: 'settings', 
       label: 'System Settings', 
       icon: <Settings size={24} />,
-      notificationCount: notifications.systemAlerts
+      notificationCount: getNotificationCount('admin', 'systemAlerts') || 0
     }
   ];
 
@@ -198,22 +203,13 @@ const AdminDashboard: React.FC = () => {
                   {item.notificationCount > 0 && (
                     <NotificationBadge 
                       count={item.notificationCount} 
-                      size="small"
-                      color="red"
+                      size="sm"
+                      variant="danger"
                     />
                   )}
                 </span>
                 {!sidebarCollapsed && (
                   <span className="text-sm font-medium flex-1">{item.label}</span>
-                )}
-                {!sidebarCollapsed && item.notificationCount > 0 && (
-                  <span className="ml-auto">
-                    <NotificationBadge 
-                      count={item.notificationCount} 
-                      size="small"
-                      color="red"
-                    />
-                  </span>
                 )}
               </button>
             ))}
