@@ -14,6 +14,7 @@ interface Advertisement {
   mobileNo: string;
   email: string;
   images: string[];
+  video?: string; // Optional video field
   approved: boolean;
   createdOn: string;
 }
@@ -29,26 +30,46 @@ const AdvertisementPopup: React.FC<AdvertisementPopupProps> = ({
   advertisement,
   onClose
 }) => {
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
 
-  // Reset image index when advertisement changes
+  // Reset media index when advertisement changes
   useEffect(() => {
-    setCurrentImageIndex(0);
+    setCurrentMediaIndex(0);
   }, [advertisement]);
 
   if (!advertisement) return null;
 
-  const nextImage = () => {
-    setCurrentImageIndex((prev) => 
-      (prev + 1) % advertisement.images.length
-    );
+  // Create media array with video first (if exists), then images
+  const mediaItems = [];
+  if (advertisement.video) {
+    mediaItems.push({ type: 'video', url: advertisement.video });
+  }
+  if (advertisement.images && advertisement.images.length > 0) {
+    advertisement.images.forEach(image => {
+      mediaItems.push({ type: 'image', url: image });
+    });
+  }
+
+  console.log('Advertisement data:', advertisement);
+  console.log('Media items:', mediaItems);
+  console.log('Current media index:', currentMediaIndex);
+  console.log('Current media:', mediaItems[currentMediaIndex]);
+
+  const nextMedia = () => {
+    if (mediaItems.length > 1) {
+      setCurrentMediaIndex((prev) => (prev + 1) % mediaItems.length);
+    }
   };
 
-  const prevImage = () => {
-    setCurrentImageIndex((prev) => 
-      prev === 0 ? advertisement.images.length - 1 : prev - 1
-    );
+  const prevMedia = () => {
+    if (mediaItems.length > 1) {
+      setCurrentMediaIndex((prev) => 
+        prev === 0 ? mediaItems.length - 1 : prev - 1
+      );
+    }
   };
+
+  const currentMedia = mediaItems[currentMediaIndex];
 
   // Format image URL
   const formatImageUrl = (imagePath: string): string => {
@@ -57,6 +78,18 @@ const AdvertisementPopup: React.FC<AdvertisementPopupProps> = ({
     }
     const fileName = imagePath.split('/').pop() || imagePath.split('\\').pop();
     return `http://localhost:9092/uploads/advertisement-images/${fileName}`;
+  };
+
+  // Format video URL
+  const formatVideoUrl = (videoPath: string): string => {
+    if (videoPath.startsWith('http://') || videoPath.startsWith('https://')) {
+      console.log('Video URL (already formatted):', videoPath);
+      return videoPath;
+    }
+    const fileName = videoPath.split('/').pop() || videoPath.split('\\').pop();
+    const formattedUrl = `http://localhost:9092/uploads/advertisement-videos/${fileName}`;
+    console.log('Video URL (formatted):', formattedUrl, 'from path:', videoPath);
+    return formattedUrl;
   };
 
   return (
@@ -88,27 +121,49 @@ const AdvertisementPopup: React.FC<AdvertisementPopupProps> = ({
             />
 
             <div className="flex flex-col md:flex-row gap-6">
-              {/* Image Section */}
+              {/* Media Section - Video First Slideshow */}
               <div className="flex-1 relative">
-                {advertisement.images && advertisement.images.length > 0 ? (
+                {mediaItems.length > 0 ? (
                   <div className="relative">
-                    <Image
-                      src={formatImageUrl(advertisement.images[currentImageIndex])}
-                      alt={advertisement.title}
-                      width="100%"
-                      height={300}
-                      style={{ objectFit: 'cover', borderRadius: '8px' }}
-                      preview={false}
-                    />
+                    {currentMedia?.type === 'video' ? (
+                      <video
+                        key={currentMedia.url}
+                        src={formatVideoUrl(currentMedia.url)}
+                        autoPlay
+                        muted
+                        loop
+                        controls
+                        playsInline
+                        preload="metadata"
+                        width="100%"
+                        height={300}
+                        style={{ objectFit: 'cover', borderRadius: '8px' }}
+                        className="w-full"
+                        onLoadStart={() => console.log('Video loading started')}
+                        onCanPlay={() => console.log('Video can play')}
+                        onPlay={() => console.log('Video started playing')}
+                        onError={(e) => console.error('Video error:', e)}
+                        onLoadedData={() => console.log('Video data loaded')}
+                      />
+                    ) : currentMedia?.type === 'image' ? (
+                      <Image
+                        src={formatImageUrl(currentMedia.url)}
+                        alt={advertisement.title}
+                        width="100%"
+                        height={300}
+                        style={{ objectFit: 'cover', borderRadius: '8px' }}
+                        preview={false}
+                      />
+                    ) : null}
                     
-                    {/* Image Navigation */}
-                    {advertisement.images.length > 1 && (
+                    {/* Navigation Controls */}
+                    {mediaItems.length > 1 && (
                       <>
                         <Button
                           type="primary"
                           shape="circle"
                           icon={<LeftOutlined />}
-                          onClick={prevImage}
+                          onClick={prevMedia}
                           className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 border-0 text-white hover:bg-opacity-70"
                           style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)' }}
                         />
@@ -116,29 +171,35 @@ const AdvertisementPopup: React.FC<AdvertisementPopupProps> = ({
                           type="primary"
                           shape="circle"
                           icon={<RightOutlined />}
-                          onClick={nextImage}
+                          onClick={nextMedia}
                           className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 border-0 text-white hover:bg-opacity-70"
                           style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)' }}
                         />
                         
-                        {/* Image Indicators */}
+                        {/* Media Indicators */}
                         <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex gap-2">
-                          {advertisement.images.map((_, index) => (
+                          {mediaItems.map((media, index) => (
                             <div
                               key={index}
                               className={`w-2 h-2 rounded-full cursor-pointer transition-all ${
-                                index === currentImageIndex ? 'bg-white' : 'bg-white bg-opacity-50'
+                                index === currentMediaIndex ? 'bg-white' : 'bg-white bg-opacity-50'
                               }`}
-                              onClick={() => setCurrentImageIndex(index)}
+                              onClick={() => setCurrentMediaIndex(index)}
+                              title={media.type === 'video' ? 'Video' : `Image ${advertisement.images ? index - (advertisement.video ? 1 : 0) + 1 : index + 1}`}
                             />
                           ))}
+                        </div>
+
+                        {/* Media Type Indicator */}
+                        <div className="absolute top-2 left-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
+                          {currentMedia?.type === 'video' ? 'Video' : `Image ${currentMediaIndex - (advertisement.video ? 1 : 0) + 1}/${advertisement.images?.length || 0}`}
                         </div>
                       </>
                     )}
                   </div>
                 ) : (
                   <div className="w-full h-64 bg-gray-200 rounded-lg flex items-center justify-center">
-                    <Text type="secondary">No Image Available</Text>
+                    <Text type="secondary">No Media Available</Text>
                   </div>
                 )}
               </div>

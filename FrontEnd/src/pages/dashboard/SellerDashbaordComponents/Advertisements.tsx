@@ -17,6 +17,7 @@ interface Advertisement {
   mobileNo: string;
   email: string;
   images: string[];
+  video?: string; // Optional video field
   sellerId: string;
   sellerName: string;
   approved: string; // Changed from status to approved to match backend
@@ -91,7 +92,9 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
     mobileNo: '',
   });
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [selectedVideo, setSelectedVideo] = useState<File | null>(null);
   const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]);
+  const [videoPreviewUrl, setVideoPreviewUrl] = useState<string>('');
 
   // Fetch user's advertisements
   const fetchAdvertisements = async () => {
@@ -158,6 +161,35 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
     setImagePreviewUrls(newPreviews);
   };
 
+  // Handle video selection
+  const handleVideoSelection = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    
+    if (file) {
+      // Check file size (max 50MB)
+      if (file.size > 50 * 1024 * 1024) {
+        toast.error('Video file size must be less than 50MB');
+        return;
+      }
+
+      // Check file type
+      if (!file.type.startsWith('video/')) {
+        toast.error('Please select a valid video file');
+        return;
+      }
+
+      setSelectedVideo(file);
+      const previewUrl = URL.createObjectURL(file);
+      setVideoPreviewUrl(previewUrl);
+    }
+  };
+
+  // Remove selected video
+  const removeVideo = () => {
+    setSelectedVideo(null);
+    setVideoPreviewUrl('');
+  };
+
   // Submit new advertisement
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -167,8 +199,8 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
       return;
     }
 
-    if (selectedImages.length === 0) {
-      toast.error('Please select at least one image');
+    if (selectedImages.length === 0 && !selectedVideo) {
+      toast.error('Please select at least one image or video');
       return;
     }
 
@@ -195,6 +227,11 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
       selectedImages.forEach((image) => {
         submitFormData.append('images', image);
       });
+
+      // Add video if selected
+      if (selectedVideo) {
+        submitFormData.append('video', selectedVideo);
+      }
 
       const response = await axios.post(`${API_BASE_URL}/api/advertisements`, submitFormData, {
         headers: {
@@ -227,7 +264,9 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
       mobileNo: '',
     });
     setSelectedImages([]);
+    setSelectedVideo(null);
     setImagePreviewUrls([]);
+    setVideoPreviewUrl('');
   };
 
   // Handle edit advertisement
@@ -240,9 +279,11 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
       price: advertisement.price,
       mobileNo: advertisement.mobileNo,
     });
-    // Reset image selection when editing
+    // Reset image and video selection when editing
     setSelectedImages([]);
+    setSelectedVideo(null);
     setImagePreviewUrls([]);
+    setVideoPreviewUrl('');
   };
 
   // Submit edit
@@ -275,6 +316,11 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
         selectedImages.forEach((image) => {
           submitFormData.append('images', image);
         });
+      }
+
+      // Add new video only if selected
+      if (selectedVideo) {
+        submitFormData.append('video', selectedVideo);
       }
 
       const response = await axios.put(`${API_BASE_URL}/api/advertisements/${editingAd.id}`, submitFormData, {
@@ -389,16 +435,67 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
             const statusConfig = getStatusConfig(ad.approved);
             return (
               <div key={ad.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
-                {/* Image */}
-                {ad.images && ad.images.length > 0 && (
-                  <div className="aspect-w-16 aspect-h-9 bg-gray-200">
-                    <img
-                      src={ad.images[0]}
-                      alt={ad.title}
-                      className="w-full h-48 object-cover"
-                    />
-                  </div>
-                )}
+                {/* Media Preview */}
+                <div className="relative">
+                  {ad.video && ad.video.trim() !== '' ? (
+                    <div className="aspect-w-16 aspect-h-9 bg-gray-200 relative">
+                      <video
+                        src={ad.video.startsWith('http') 
+                          ? ad.video 
+                          : `http://localhost:8080/advertisements/videos/${ad.video}`}
+                        className="w-full h-48 object-cover"
+                        muted
+                        onMouseEnter={(e) => {
+                          const video = e.target as HTMLVideoElement;
+                          video.play().catch(() => {
+                            // Ignore autoplay errors
+                          });
+                        }}
+                        onMouseLeave={(e) => {
+                          const video = e.target as HTMLVideoElement;
+                          video.pause();
+                          video.currentTime = 0;
+                        }}
+                      />
+                      {/* Video Indicator */}
+                      <div className="absolute top-2 left-2">
+                        <div className="bg-purple-600 text-white px-2 py-1 rounded-full text-xs font-bold flex items-center space-x-1">
+                          <span>🎬</span>
+                          <span>VIDEO</span>
+                        </div>
+                      </div>
+                      {/* Play Icon Overlay */}
+                      <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-20">
+                        <div className="w-12 h-12 bg-white bg-opacity-90 rounded-full flex items-center justify-center">
+                          <div className="w-0 h-0 border-l-4 border-l-purple-600 border-t-2 border-t-transparent border-b-2 border-b-transparent ml-1"></div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : ad.images && ad.images.length > 0 ? (
+                    <div className="aspect-w-16 aspect-h-9 bg-gray-200 relative">
+                      <img
+                        src={ad.images[0]}
+                        alt={ad.title}
+                        className="w-full h-48 object-cover"
+                      />
+                      {/* Multiple Images Indicator */}
+                      {ad.images.length > 1 && (
+                        <div className="absolute top-2 left-2">
+                          <div className="bg-blue-600 text-white px-2 py-1 rounded-full text-xs font-bold">
+                            📷 {ad.images.length} Images
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="aspect-w-16 aspect-h-9 bg-gray-200 h-48 flex items-center justify-center">
+                      <div className="text-center text-gray-400">
+                        <FileText size={32} className="mx-auto mb-2" />
+                        <span className="text-sm">No Media</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
                 
                 {/* Content */}
                 <div className="p-4">
@@ -547,7 +644,7 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Images (up to 5)
+                  Images (up to 5) - Optional
                 </label>
                 <input
                   type="file"
@@ -576,6 +673,39 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
                         </button>
                       </div>
                     ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Video (optional) - Max 50MB
+                </label>
+                <input
+                  type="file"
+                  accept="video/*"
+                  onChange={handleVideoSelection}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                />
+                
+                {/* Video Preview */}
+                {videoPreviewUrl && (
+                  <div className="mt-4">
+                    <div className="relative">
+                      <video
+                        src={videoPreviewUrl}
+                        controls
+                        className="w-full h-32 object-cover rounded-md"
+                        style={{ maxHeight: '200px' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={removeVideo}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -704,27 +834,54 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Current Images
+                  Current Media
                 </label>
-                {editingAd.images && editingAd.images.length > 0 ? (
-                  <div className="mb-4 grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {editingAd.images.map((image, index) => (
-                      <div key={index} className="relative">
-                        <img
-                          src={image}
-                          alt={`Current ${index + 1}`}
-                          className="w-full h-24 object-cover rounded-md border-2 border-gray-200"
-                        />
-                        <div className="absolute top-1 left-1 bg-blue-500 text-white text-xs px-1 py-0.5 rounded">
-                          Current
-                        </div>
+                
+                {/* Current Video */}
+                {editingAd.video && editingAd.video.trim() !== '' && (
+                  <div className="mb-4">
+                    <p className="text-sm font-medium text-gray-700 mb-2">Current Video:</p>
+                    <div className="relative">
+                      <video
+                        src={editingAd.video.startsWith('http') 
+                          ? editingAd.video 
+                          : `http://localhost:8080/advertisements/videos/${editingAd.video}`}
+                        controls
+                        className="w-full h-32 object-cover rounded-md border-2 border-purple-200"
+                        style={{ maxHeight: '200px' }}
+                      />
+                      <div className="absolute top-1 left-1 bg-purple-500 text-white text-xs px-1 py-0.5 rounded">
+                        Current Video
                       </div>
-                    ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Current Images */}
+                {editingAd.images && editingAd.images.length > 0 ? (
+                  <div className="mb-4">
+                    <p className="text-sm font-medium text-gray-700 mb-2">Current Images:</p>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {editingAd.images.map((image, index) => (
+                        <div key={index} className="relative">
+                          <img
+                            src={image}
+                            alt={`Current ${index + 1}`}
+                            className="w-full h-24 object-cover rounded-md border-2 border-gray-200"
+                          />
+                          <div className="absolute top-1 left-1 bg-blue-500 text-white text-xs px-1 py-0.5 rounded">
+                            Current
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 ) : (
-                  <div className="mb-4 p-4 border border-gray-200 rounded-md text-center text-gray-500">
-                    No current images
-                  </div>
+                  !editingAd.video && (
+                    <div className="mb-4 p-4 border border-gray-200 rounded-md text-center text-gray-500">
+                      No current media
+                    </div>
+                  )
                 )}
 
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -770,6 +927,46 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
                 )}
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Add New Video (optional) - Max 50MB
+                </label>
+                <p className="text-sm text-gray-500 mb-2">
+                  Upload a new video to replace the current video. Leave empty to keep existing video.
+                </p>
+                <input
+                  type="file"
+                  accept="video/*"
+                  onChange={handleVideoSelection}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                />
+                
+                {/* New Video Preview */}
+                {videoPreviewUrl && (
+                  <div className="mt-4">
+                    <p className="text-sm font-medium text-gray-700 mb-2">New Video Preview:</p>
+                    <div className="relative">
+                      <video
+                        src={videoPreviewUrl}
+                        controls
+                        className="w-full h-32 object-cover rounded-md border-2 border-green-200"
+                        style={{ maxHeight: '200px' }}
+                      />
+                      <div className="absolute top-1 left-1 bg-green-500 text-white text-xs px-1 py-0.5 rounded">
+                        New Video
+                      </div>
+                      <button
+                        type="button"
+                        onClick={removeVideo}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="flex justify-end space-x-3 pt-4">
                 <button
                   type="button"
@@ -810,17 +1007,54 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
             </div>
             
             <div className="p-6">
-              {/* Images */}
-              {viewingAd.images && viewingAd.images.length > 0 && (
+              {/* Media Section - Videos and Images */}
+              {((viewingAd.video && viewingAd.video.trim() !== '') || (viewingAd.images && viewingAd.images.length > 0)) && (
                 <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Media</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {viewingAd.images.map((image, index) => (
-                      <img
-                        key={index}
-                        src={image}
-                        alt={`${viewingAd.title} - Image ${index + 1}`}
-                        className="w-full h-48 object-cover rounded-lg"
-                      />
+                    {/* Video First */}
+                    {viewingAd.video && viewingAd.video.trim() !== '' && (
+                      <div className="md:col-span-2 lg:col-span-3">
+                        <div className="relative bg-gray-100 rounded-lg overflow-hidden">
+                          <video
+                            src={viewingAd.video.startsWith('http') 
+                              ? viewingAd.video 
+                              : `http://localhost:8080/advertisements/videos/${viewingAd.video}`}
+                            className="w-full h-64 object-cover rounded-lg"
+                            controls
+                            autoPlay
+                            muted
+                            onLoadStart={() => console.log('🎬 Seller dashboard video loading:', viewingAd.video)}
+                            onCanPlay={() => console.log('▶️ Seller dashboard video ready')}
+                            onError={(e) => console.error('❌ Seller dashboard video error:', e)}
+                          >
+                            Your browser does not support the video tag.
+                          </video>
+                          {/* Video Badge */}
+                          <div className="absolute top-3 left-3">
+                            <div className="bg-purple-600 text-white px-3 py-1 rounded-full text-sm font-bold">
+                              🎬 Video
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Images */}
+                    {viewingAd.images && viewingAd.images.map((image, index) => (
+                      <div key={index} className="relative">
+                        <img
+                          src={image}
+                          alt={`${viewingAd.title} - Image ${index + 1}`}
+                          className="w-full h-48 object-cover rounded-lg hover:scale-105 transition-transform duration-300"
+                        />
+                        {/* Image Badge */}
+                        <div className="absolute top-2 left-2">
+                          <div className="bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium">
+                            📷 Image {index + 1}
+                          </div>
+                        </div>
+                      </div>
                     ))}
                   </div>
                 </div>

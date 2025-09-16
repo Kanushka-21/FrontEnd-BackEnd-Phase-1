@@ -42,6 +42,8 @@ public class Advertisement {
     
     private List<String> images;
     
+    private String video; // Field to store video file path/URL
+    
     @Indexed
     private String approved;
     
@@ -58,7 +60,7 @@ public class Advertisement {
     }
     
     public Advertisement(String title, String category, String description, String price, 
-                        String mobileNo, String email, String userId, List<String> images) {
+                        String mobileNo, String email, String userId, List<String> images, String video) {
         this();
         this.title = title;
         this.category = category;
@@ -68,6 +70,7 @@ public class Advertisement {
         this.email = email;
         this.userId = userId;
         this.images = images;
+        this.video = video;
     }
 
     // Getters and Setters
@@ -139,6 +142,14 @@ public class Advertisement {
 
     public void setImages(List<String> images) {
         this.images = images;
+    }
+
+    public String getVideo() {
+        return video;
+    }
+
+    public void setVideo(String video) {
+        this.video = video;
     }
 
     public String getApproved() {

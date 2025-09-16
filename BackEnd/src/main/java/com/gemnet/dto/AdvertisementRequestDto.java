@@ -28,8 +28,9 @@ public class AdvertisementRequestDto {
     @NotNull(message = "User ID is required")
     private String userId;
 
-    @NotNull(message = "Images required")
-    private List<MultipartFile> images;
+    private List<MultipartFile> images; // Optional images
+
+    private MultipartFile video; // Optional video file
 
     private String approved;
 
@@ -38,7 +39,7 @@ public class AdvertisementRequestDto {
 
     public AdvertisementRequestDto(String title, String category, String description,
                                   String price, String mobileNo, String email, String userId,
-                                  List<MultipartFile> images, String approved) {
+                                  List<MultipartFile> images, MultipartFile video, String approved) {
         this.title = title;
         this.category = category;
         this.description = description;
@@ -47,6 +48,7 @@ public class AdvertisementRequestDto {
         this.email = email;
         this.userId = userId;
         this.images = images;
+        this.video = video;
         this.approved = approved;
     }
     
@@ -111,6 +113,14 @@ public class AdvertisementRequestDto {
     
     public void setImages(List<MultipartFile> images) { 
         this.images = images; 
+    }
+    
+    public MultipartFile getVideo() {
+        return video;
+    }
+    
+    public void setVideo(MultipartFile video) {
+        this.video = video;
     }
     
     public String getApproved() {

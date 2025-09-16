@@ -40,16 +40,26 @@ public class AdvertisementService {
     /**
      * Create new advertisement
      */
-    public Advertisement createAdvertisement(AdvertisementRequestDto requestDto, List<MultipartFile> images) throws IOException {
+    public Advertisement createAdvertisement(AdvertisementRequestDto requestDto, List<MultipartFile> images, MultipartFile video) throws IOException {
         // Validate required fields
         validateAdvertisementRequest(requestDto);
         
-        if (images == null || images.isEmpty()) {
-            throw new IllegalArgumentException("At least one image is required");
+        // Validate that at least one media (image OR video) is provided
+        if ((images == null || images.isEmpty()) && (video == null || video.isEmpty())) {
+            throw new IllegalArgumentException("At least one image or video is required");
         }
 
-        // Store images
-        List<String> imagePaths = fileStorageService.storeAdvertisementImages(images, requestDto.getUserId());
+        // Store images if provided
+        List<String> imagePaths = null;
+        if (images != null && !images.isEmpty()) {
+            imagePaths = fileStorageService.storeAdvertisementImages(images, requestDto.getUserId());
+        }
+
+        // Store video if provided
+        String videoPath = null;
+        if (video != null && !video.isEmpty()) {
+            videoPath = fileStorageService.storeAdvertisementVideo(video, requestDto.getUserId());
+        }
 
         // Create advertisement entity
         Advertisement advertisement = new Advertisement();
@@ -61,6 +71,7 @@ public class AdvertisementService {
         advertisement.setEmail(requestDto.getEmail().trim());
         advertisement.setUserId(requestDto.getUserId().trim());
         advertisement.setImages(imagePaths);
+        advertisement.setVideo(videoPath);
         advertisement.setApproved("pending");
 
 
@@ -190,6 +201,19 @@ public class AdvertisementService {
         }
         // If no new images provided, keep existing images unchanged
         
+        // Handle video updates - only if new video is provided
+        if (requestDto.getVideo() != null && !requestDto.getVideo().isEmpty()) {
+            // Delete old video if exists
+            if (advertisement.getVideo() != null && !advertisement.getVideo().isEmpty()) {
+                fileStorageService.deleteFile(advertisement.getVideo());
+            }
+            
+            // Store new video
+            String videoPath = fileStorageService.storeAdvertisementVideo(requestDto.getVideo(), advertisement.getUserId());
+            advertisement.setVideo(videoPath);
+        }
+        // If no new video provided, keep existing video unchanged
+        
         // Update timestamp
         advertisement.updateTimestamp();
 
@@ -229,6 +253,12 @@ public class AdvertisementService {
                     .collect(Collectors.toList());
             advertisement.setImages(webUrls);
         }
+        
+        // Transform video path to URL if present
+        if (advertisement.getVideo() != null && !advertisement.getVideo().isEmpty()) {
+            advertisement.setVideo(convertVideoPathToUrl(advertisement.getVideo()));
+        }
+        
         return advertisement;
     }
     
@@ -247,6 +277,23 @@ public class AdvertisementService {
             return String.format("%s:%s/uploads/%s/%s", baseUrl, serverPort, directory, fileName);
         } catch (Exception e) {
             System.err.println("❌ Error converting file path to URL: " + filePath + " - " + e.getMessage());
+            // Return the original path as fallback
+            return filePath;
+        }
+    }
+    
+    /**
+     * Convert video file system path to web-accessible URL
+     */
+    private String convertVideoPathToUrl(String filePath) {
+        try {
+            // Extract filename from the full path
+            String fileName = Paths.get(filePath).getFileName().toString();
+            
+            // Construct web URL for videos
+            return String.format("%s:%s/uploads/advertisement-videos/%s", baseUrl, serverPort, fileName);
+        } catch (Exception e) {
+            System.err.println("❌ Error converting video path to URL: " + filePath + " - " + e.getMessage());
             // Return the original path as fallback
             return filePath;
         }

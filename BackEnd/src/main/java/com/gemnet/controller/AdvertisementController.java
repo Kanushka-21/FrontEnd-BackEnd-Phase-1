@@ -43,7 +43,8 @@ public class AdvertisementController {
             @RequestParam("email") String email,
             @RequestParam("mobileNo") String mobileNo,
             @RequestParam("userId") String userId,
-            @RequestParam("images") List<MultipartFile> images) {
+            @RequestParam("images") List<MultipartFile> images,
+            @RequestParam(value = "video", required = false) MultipartFile video) {
 
         try {
             // Validate required parameters
@@ -59,9 +60,10 @@ public class AdvertisementController {
                 return ResponseEntity.badRequest()
                         .body(ApiResponse.error("User ID is required"));
             }
-            if (images == null || images.isEmpty()) {
+            // Validate that at least one media (image OR video) is provided
+            if ((images == null || images.isEmpty()) && (video == null || video.isEmpty())) {
                 return ResponseEntity.badRequest()
-                        .body(ApiResponse.error("At least one image is required"));
+                        .body(ApiResponse.error("At least one image or video is required"));
             }
 
             AdvertisementRequestDto advertisementRequestDto = new AdvertisementRequestDto();
@@ -73,8 +75,9 @@ public class AdvertisementController {
             advertisementRequestDto.setMobileNo(mobileNo);
             advertisementRequestDto.setUserId(userId);
             advertisementRequestDto.setImages(images);
+            advertisementRequestDto.setVideo(video);
 
-            Advertisement savedAdvertisement = advertisementService.createAdvertisement(advertisementRequestDto, advertisementRequestDto.getImages());
+            Advertisement savedAdvertisement = advertisementService.createAdvertisement(advertisementRequestDto, advertisementRequestDto.getImages(), advertisementRequestDto.getVideo());
 
             return ResponseEntity.ok(
                     ApiResponse.success("Advertisement created successfully", savedAdvertisement));
@@ -190,7 +193,8 @@ public class AdvertisementController {
             @RequestParam("email") String email,
             @RequestParam("mobileNo") String mobileNo,
             @RequestParam("userId") String userId,
-            @RequestParam(value = "images", required = false) List<MultipartFile> image) {
+            @RequestParam(value = "images", required = false) List<MultipartFile> image,
+            @RequestParam(value = "video", required = false) MultipartFile video) {
 
         try {
 
@@ -219,6 +223,10 @@ public class AdvertisementController {
             // Only set images if they are provided
             if (image != null && !image.isEmpty()) {
                 advertisementRequestDto.setImages(image);
+            }
+            // Only set video if it is provided
+            if (video != null && !video.isEmpty()) {
+                advertisementRequestDto.setVideo(video);
             }
             
             // Update advertisement using service
