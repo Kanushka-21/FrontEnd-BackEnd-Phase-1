@@ -1,18 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNotifications } from '@/contexts/NotificationContext';
+import NotificationBadge from '@/components/ui/NotificationBadge';
 import { useLocation } from 'react-router-dom';
 import { 
   ShoppingBag, User, 
-  TrendingUp, Menu, Home, Calendar, MessageCircle
+  Menu, Home, Calendar, MessageCircle
 } from 'lucide-react';
 import RoleAwareDashboardLayout from '@/components/layout/RoleAwareDashboardLayout';
-import NotificationComponent from '@/components/ui/NotificationComponent';
 
 // Import modular components
 import {
   Overview,
   Purchases,
-  Bids,
   Profile
 } from './BuyerDashboardComponents';
 
@@ -25,6 +25,7 @@ import FeedbackForm from '../Feedback/FeedbackPage';
 
 const BuyerDashboard = () => {
   const { user, loading } = useAuth();
+  const { getNotificationCount } = useNotifications();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState('overview');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
@@ -36,7 +37,7 @@ const BuyerDashboard = () => {
     
     console.log('🔧 BuyerDashboard URL params:', { section, pathname: location.pathname });
     
-    if (section && ['overview', 'purchases', 'bids', 'meetings', 'profile'].includes(section)) {
+    if (section && ['overview', 'purchases', 'reserved', 'meetings', 'profile'].includes(section)) {
       console.log('🔧 Setting active tab from URL parameter:', section);
       setActiveTab(section);
     }
@@ -53,12 +54,36 @@ const BuyerDashboard = () => {
 
   // Sidebar navigation items
   const sidebarItems: SidebarItem[] = [
-    { id: 'overview', label: 'Overview', icon: <Home size={24} /> },
-    { id: 'purchases', label: 'Purchases', icon: <ShoppingBag size={24} /> },
-    { id: 'bids', label: 'My Bids', icon: <TrendingUp size={24} /> },
-    { id: 'meetings', label: 'Meetings', icon: <Calendar size={24} /> },
-    { id: 'feedback', label: 'Feedback', icon: <MessageCircle size={24} /> },
-    { id: 'profile', label: 'Profile', icon: <User size={24} /> }
+    { 
+      id: 'overview', 
+      label: 'Overview', 
+      icon: <Home size={24} />,
+      notificationCount: getNotificationCount('buyer', 'overview') || 0
+    },
+    { 
+      id: 'reserved', 
+      label: 'Reserved Items', 
+      icon: <ShoppingBag size={24} />,
+      notificationCount: getNotificationCount('buyer', 'reservedItems') || 0
+    },
+    { 
+      id: 'meetings', 
+      label: 'Meetings', 
+      icon: <Calendar size={24} />,
+      notificationCount: getNotificationCount('buyer', 'meetings') || 0
+    },
+    { 
+      id: 'feedback', 
+      label: 'Feedback', 
+      icon: <MessageCircle size={24} />,
+      notificationCount: getNotificationCount('buyer', 'feedback') || 0
+    },
+    { 
+      id: 'profile', 
+      label: 'Profile', 
+      icon: <User size={24} />,
+      notificationCount: getNotificationCount('buyer', 'profile') || 0
+    }
   ];
 
   // Render content based on active tab
@@ -66,10 +91,9 @@ const BuyerDashboard = () => {
     switch (activeTab) {
       case 'overview':
         return <Overview user={user} />;
-      case 'purchases':
+      case 'reserved':
+      case 'purchases': // Keep backward compatibility
         return <Purchases user={user} />;
-      case 'bids':
-        return <Bids />;
       case 'meetings':
         return <MeetingManager user={user} />;
       case 'feedback':
@@ -153,8 +177,15 @@ const BuyerDashboard = () => {
               }`}
               title={sidebarCollapsed ? item.label : undefined}
             >
-              <div className={`flex-shrink-0 ${sidebarCollapsed ? '' : ''}`}>
+              <div className={`flex-shrink-0 relative ${sidebarCollapsed ? '' : ''}`}>
                 {item.icon}
+                {item.notificationCount && item.notificationCount > 0 ? (
+                  <NotificationBadge 
+                    count={item.notificationCount} 
+                    size="sm"
+                    variant="danger"
+                  />
+                ) : null}
               </div>
               {!sidebarCollapsed && (
                 <span className="text-base font-medium truncate">{item.label}</span>
@@ -187,16 +218,9 @@ const BuyerDashboard = () => {
               </div>
             </div>
             
-            {/* Right side - Notifications */}
+            {/* Right side - Dashboard controls */}
             <div className="flex items-center space-x-4">
-              {user?.userId && (
-                <NotificationComponent 
-                  userId={user.userId} 
-                  context="buyer"
-                  maxNotifications={5}
-                  user={user}
-                />
-              )}
+              {/* Dashboard-specific controls can be added here if needed */}
             </div>
           </div>
         </header>

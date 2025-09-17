@@ -1,0 +1,1034 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  Calendar, 
+  Clock, 
+  Search, 
+  CheckCircle, 
+  XCircle, 
+  AlertTriangle,
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  FileText,
+  Eye,
+  Save,
+  AlertCircle,
+  Package,
+  DollarSign
+} from 'lucide-react';
+
+interface Meeting {
+  id: string;
+  meetingDisplayId?: string;
+  purchaseId?: string;
+  gemName: string;
+  gemType: string;
+  gemCertificateNumber?: string;
+  primaryImageUrl?: string;
+  finalPrice?: number;
+  gem?: {
+    id?: string;
+    name?: string;
+    images?: string[];
+    primaryImageUrl?: string;
+  };
+  buyerId: string;
+  buyerName: string;
+  buyerEmail: string;
+  buyerPhone?: string;
+  sellerId: string;
+  sellerName: string;
+  sellerEmail: string;
+  sellerPhone?: string;
+  meetingDate: string;
+  meetingTime: string;
+  meetingLocation: string;
+  meetingType?: string;
+  proposedDateTime?: string;
+  confirmedDateTime?: string;
+  status: string;
+  buyerAttended?: boolean;
+  sellerAttended?: boolean;
+  adminVerified?: boolean;
+  adminNotes?: string;
+  buyerNotes?: string;
+  sellerNotes?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  // No-show reason fields
+  buyerReasonSubmission?: string;
+  sellerReasonSubmission?: string;
+  buyerReasonSubmittedAt?: string;
+  sellerReasonSubmittedAt?: string;
+  buyerReasonAccepted?: boolean;
+  sellerReasonAccepted?: boolean;
+}
+
+interface MeetingAttendanceManagementProps {
+  user: any;
+}
+
+const MeetingAttendanceManagement: React.FC<MeetingAttendanceManagementProps> = ({ user }) => {
+  const [meetings, setMeetings] = useState<Meeting[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
+  const [showAttendanceModal, setShowAttendanceModal] = useState(false);
+  const [attendanceData, setAttendanceData] = useState({
+    buyerAttended: false,
+    sellerAttended: false,
+    adminNotes: ''
+  });
+
+  // Get proper image URL - using the exact same logic as AdminMeetingDashboard
+  const getImageUrl = (imageUrl?: string, gemName?: string) => {
+    console.log('🖼️ getImageUrl called with:', { imageUrl, gemName });
+    
+    if (imageUrl) {
+      // If it's already a full URL, return as is
+      if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+        console.log('🖼️ Using full URL:', imageUrl);
+        return imageUrl;
+      }
+      // If it's a relative path, prepend the backend URL
+      if (imageUrl.startsWith('/uploads/') || imageUrl.startsWith('uploads/')) {
+        const finalUrl = `http://localhost:9092/${imageUrl.startsWith('/') ? imageUrl.slice(1) : imageUrl}`;
+        console.log('🖼️ Using uploads path:', finalUrl);
+        return finalUrl;
+      }
+      // Try different possible paths
+      const possiblePaths = [
+        `http://localhost:9092/uploads/gem-images/${imageUrl}`,
+        `http://localhost:9092/uploads/listing-images/${imageUrl}`,
+        `http://localhost:9092/uploads/${imageUrl}`,
+        `http://localhost:9092/api/uploads/gem-images/${imageUrl}`
+      ];
+      console.log('🖼️ Trying first possible path:', possiblePaths[0]);
+      return possiblePaths[0];
+    }
+    
+    // Fallback images based on gem type
+    const gemType = gemName?.toLowerCase() || '';
+    console.log('🖼️ Using fallback for gem type:', gemType);
+    if (gemType.includes('ruby')) {
+      return 'https://images.unsplash.com/photo-1506792006437-256b665541e2?w=300&h=200&fit=crop';
+    } else if (gemType.includes('sapphire')) {
+      return 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=300&h=200&fit=crop';
+    } else if (gemType.includes('emerald')) {
+      return 'https://images.unsplash.com/photo-1544829099-b9a0c5303bea?w=300&h=200&fit=crop';
+    } else {
+      return 'https://images.unsplash.com/photo-1506792006437-256b665541e2?w=300&h=200&fit=crop';
+    }
+  };
+
+  // Format currency
+  const formatCurrency = (amount?: number) => {
+    if (!amount) return 'N/A';
+    return new Intl.NumberFormat('en-LK', {
+      style: 'currency',
+      currency: 'LKR'
+    }).format(amount);
+  };
+
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [pendingAttendanceAction, setPendingAttendanceAction] = useState<any>(null);
+  const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize] = useState(10);
+  const [totalElements, setTotalElements] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [submittingAttendance, setSubmittingAttendance] = useState(false);
+
+  useEffect(() => {
+    fetchMeetings();
+  }, [currentPage, searchTerm]);
+
+  const fetchMeetings = async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        size: pageSize.toString(),
+      });
+      
+      if (searchTerm.trim()) {
+        params.append('search', searchTerm.trim());
+      }
+
+      const response = await fetch(`http://localhost:9092/api/admin/no-show/meetings?${params}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        setMeetings(data.meetings || []);
+        setTotalElements(data.totalElements || 0);
+        setTotalPages(data.totalPages || 0);
+        
+        if (data.meetings?.length > 0) {
+          setMessage({ type: 'success', text: `Loaded ${data.meetings.length} confirmed meetings from backend` });
+        } else {
+          setMessage({ type: 'info', text: 'No confirmed meetings found' });
+        }
+      } else {
+        setMessage({ type: 'error', text: data.message || 'Failed to load meetings' });
+        setMeetings([]);
+      }
+    } catch (error) {
+      console.error('Error fetching meetings:', error);
+      setMessage({ type: 'error', text: 'Failed to connect to backend. Please check if the server is running.' });
+      setMeetings([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const markAttendance = async () => {
+    if (!selectedMeeting) return;
+
+    // Check if any user is marked as not attended (no-show)
+    const hasNoShow = !attendanceData.buyerAttended || !attendanceData.sellerAttended;
+    
+    if (hasNoShow) {
+      // Show confirmation modal for no-show
+      const noShowUsers = [];
+      if (!attendanceData.buyerAttended) noShowUsers.push(selectedMeeting.buyerName + ' (Buyer)');
+      if (!attendanceData.sellerAttended) noShowUsers.push(selectedMeeting.sellerName + ' (Seller)');
+      
+      setPendingAttendanceAction({
+        meetingId: selectedMeeting.id,
+        buyerAttended: attendanceData.buyerAttended,
+        sellerAttended: attendanceData.sellerAttended,
+        adminNotes: attendanceData.adminNotes,
+        noShowUsers
+      });
+      setShowConfirmationModal(true);
+      return;
+    }
+
+    // If everyone attended, proceed directly
+    await submitAttendance();
+  };
+
+  const submitAttendance = async () => {
+    if (!selectedMeeting && !pendingAttendanceAction) return;
+
+    const data = pendingAttendanceAction || {
+      meetingId: selectedMeeting.id,
+      buyerAttended: attendanceData.buyerAttended,
+      sellerAttended: attendanceData.sellerAttended,
+      adminNotes: attendanceData.adminNotes
+    };
+
+    setSubmittingAttendance(true);
+    try {
+      const response = await fetch('http://localhost:9092/api/admin/no-show/mark-attendance', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          meetingId: data.meetingId,
+          adminId: user?.id || 'admin',
+          buyerAttended: data.buyerAttended,
+          sellerAttended: data.sellerAttended,
+          adminNotes: data.adminNotes
+        })
+      });
+
+      const responseData = await response.json();
+      if (responseData.success) {
+        setMessage({ type: 'success', text: 'Attendance marked successfully! Notifications sent to users.' });
+        setShowAttendanceModal(false);
+        setShowConfirmationModal(false);
+        setSelectedMeeting(null);
+        setPendingAttendanceAction(null);
+        setAttendanceData({ buyerAttended: false, sellerAttended: false, adminNotes: '' });
+        await fetchMeetings(); // Refresh the list
+      } else {
+        setMessage({ type: 'error', text: `Failed to mark attendance: ${responseData.message}` });
+      }
+    } catch (error) {
+      console.error('Error marking attendance:', error);
+      setMessage({ type: 'error', text: 'Error marking attendance. Please try again.' });
+    } finally {
+      setSubmittingAttendance(false);
+    }
+  };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+    setCurrentPage(0); // Reset to first page when searching
+  };
+
+  const filteredMeetings = meetings.filter(meeting => 
+    !searchTerm || 
+    meeting.meetingDisplayId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    meeting.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    meeting.gemName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    meeting.buyerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    meeting.sellerName.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const getAttendanceStatus = (meeting: Meeting) => {
+    if (meeting.adminVerified) {
+      if (meeting.buyerAttended && meeting.sellerAttended) {
+        return { text: 'Both Attended', color: 'bg-green-100 text-green-800 border-green-200', icon: CheckCircle };
+      } else if (!meeting.buyerAttended && !meeting.sellerAttended) {
+        return { text: 'Both No-Show', color: 'bg-red-100 text-red-800 border-red-200', icon: XCircle };
+      } else {
+        return { text: 'Partial Attendance', color: 'bg-yellow-100 text-yellow-800 border-yellow-200', icon: AlertTriangle };
+      }
+    }
+    return { text: 'Pending Verification', color: 'bg-gray-100 text-gray-800 border-gray-200', icon: Clock };
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading confirmed meetings...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Message Display */}
+        {message && (
+          <div className={`mb-6 p-4 rounded-lg border-l-4 ${
+            message.type === 'success' ? 'bg-green-50 border-green-400 text-green-700' :
+            message.type === 'error' ? 'bg-red-50 border-red-400 text-red-700' :
+            'bg-blue-50 border-blue-400 text-blue-700'
+          }`}>
+            <div className="flex items-center justify-between">
+              <span>{message.text}</span>
+              <button
+                onClick={() => setMessage(null)}
+                className="ml-3 text-gray-400 hover:text-gray-600"
+              >
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Header */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 flex items-center">
+                <Calendar className="w-8 h-8 text-blue-600 mr-3" />
+                Meeting Attendance Management
+              </h1>
+              <p className="text-gray-600 mt-1">Mark attendance for confirmed meetings and manage no-shows</p>
+            </div>
+            <div className="text-sm text-gray-500">
+              {totalElements} meeting{totalElements !== 1 ? 's' : ''} found
+            </div>
+          </div>
+        </div>
+
+        {/* Search Bar */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <input
+              type="text"
+              placeholder="Search by Meeting ID, Gem Name, or User Name..."
+              value={searchTerm}
+              onChange={handleSearchChange}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+        </div>
+
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center">
+              <Calendar className="w-8 h-8 text-blue-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Meetings</p>
+                <p className="text-2xl font-bold text-gray-900">{totalElements}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center">
+              <CheckCircle className="w-8 h-8 text-green-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Verified</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {meetings.filter(m => m.adminVerified).length}
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center">
+              <Clock className="w-8 h-8 text-yellow-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Pending</p>
+                <p className="text-2xl font-bold text-yellow-600">
+                  {meetings.filter(m => !m.adminVerified).length}
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center">
+              <XCircle className="w-8 h-8 text-red-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">No-Shows</p>
+                <p className="text-2xl font-bold text-red-600">
+                  {meetings.filter(m => m.adminVerified && (!m.buyerAttended || !m.sellerAttended)).length}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Meetings Table */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Meeting Details
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Participants
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Schedule
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Attendance Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredMeetings.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-12 text-center">
+                      <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                      <p className="text-gray-500">
+                        {searchTerm ? `No meetings found for "${searchTerm}"` : 'No confirmed meetings found'}
+                      </p>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredMeetings.map((meeting) => {
+                    const status = getAttendanceStatus(meeting);
+                    const StatusIcon = status.icon;
+                    
+                    return (
+                      <tr key={meeting.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4">
+                          <div className="flex items-start space-x-3">
+                            {/* Gem Image */}
+                            <div className="flex-shrink-0">
+                              <img
+                                src={getImageUrl(meeting.primaryImageUrl || meeting.gem?.primaryImageUrl || meeting.gem?.images?.[0], meeting.gemName)}
+                                alt={meeting.gemName || 'Gem'}
+                                className="w-16 h-16 rounded-lg object-cover border border-gray-200"
+                                onError={(e) => {
+                                  console.log('🖼️ Image load error for:', meeting.gemName);
+                                  console.log('🖼️ Attempted URL:', e.currentTarget.src);
+                                  console.log('🖼️ Meeting image data:', {
+                                    primaryImageUrl: meeting.primaryImageUrl,
+                                    gemImages: meeting.gem?.images,
+                                    gemPrimaryImageUrl: meeting.gem?.primaryImageUrl
+                                  });
+                                  
+                                  const target = e.target as HTMLImageElement;
+                                  const currentSrc = target.src;
+                                  
+                                  // Try alternative image paths if not already tried
+                                  const imageUrl = meeting.primaryImageUrl || meeting.gem?.primaryImageUrl || meeting.gem?.images?.[0];
+                                  if (imageUrl && !currentSrc.includes('placeholder') && !currentSrc.includes('unsplash')) {
+                                    const alternativePaths = [
+                                      `http://localhost:9092/uploads/listing-images/${imageUrl}`,
+                                      `http://localhost:9092/uploads/${imageUrl}`,
+                                      `http://localhost:9092/api/uploads/gem-images/${imageUrl}`,
+                                      `http://localhost:9092/uploads/images/${imageUrl}`
+                                    ];
+                                    
+                                    // Find a path we haven't tried yet
+                                    const nextPath = alternativePaths.find(path => path !== currentSrc);
+                                    if (nextPath) {
+                                      console.log('🖼️ Trying alternative path:', nextPath);
+                                      target.src = nextPath;
+                                      return;
+                                    }
+                                  }
+                                  
+                                  // Fall back to type-based fallback image
+                                  target.src = getImageUrl(undefined, meeting.gemName);
+                                }}
+                              />
+                            </div>
+                            
+                            {/* Meeting Information */}
+                            <div className="flex-1 min-w-0">
+                              <div className="space-y-1">
+                                {/* Meeting ID */}
+                                <div className="flex items-center space-x-2">
+                                  <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
+                                    {meeting.meetingDisplayId || `GEM-${meeting.id.slice(-8)}`}
+                                  </span>
+                                  {meeting.status && (
+                                    <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${
+                                      meeting.status === 'CONFIRMED' ? 'bg-green-100 text-green-800' :
+                                      meeting.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                                      meeting.status === 'COMPLETED' ? 'bg-blue-100 text-blue-800' :
+                                      'bg-gray-100 text-gray-800'
+                                    }`}>
+                                      {meeting.status}
+                                    </span>
+                                  )}
+                                </div>
+                                
+                                {/* Gem Details */}
+                                <div>
+                                  <div className="text-sm font-medium text-gray-900">{meeting.gemName}</div>
+                                  <div className="text-xs text-gray-500">{meeting.gemType}</div>
+                                  {meeting.gemCertificateNumber && (
+                                    <div className="text-xs text-gray-400">Cert: {meeting.gemCertificateNumber}</div>
+                                  )}
+                                </div>
+                                
+                                {/* Price Information */}
+                                {meeting.finalPrice && (
+                                  <div className="flex items-center space-x-1">
+                                    <DollarSign className="w-3 h-3 text-green-600" />
+                                    <span className="text-sm font-semibold text-green-600">
+                                      {formatCurrency(meeting.finalPrice)}
+                                    </span>
+                                  </div>
+                                )}
+                                
+                                {/* Additional IDs */}
+                                <div className="space-y-1 text-xs text-gray-400">
+                                  {meeting.purchaseId && (
+                                    <div>Purchase: {meeting.purchaseId.slice(-8)}</div>
+                                  )}
+                                  <div>Meeting: {meeting.id.slice(-8)}</div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        
+                        <td className="px-6 py-4">
+                          <div className="space-y-1">
+                            <div className="text-sm text-gray-900 font-medium">
+                              Meeting Participants
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              <div>👤 {meeting.buyerName} (Buyer)</div>
+                              <div>🏪 {meeting.sellerName} (Seller)</div>
+                            </div>
+                          </div>
+                        </td>
+                        
+                        <td className="px-6 py-4">
+                          <div className="space-y-2">
+                            {/* Date and Time */}
+                            <div>
+                              <div className="flex items-center text-sm text-gray-900">
+                                <Calendar className="w-4 h-4 text-gray-400 mr-2" />
+                                <span className="font-medium">
+                                  {meeting.confirmedDateTime ? (
+                                    new Date(meeting.confirmedDateTime).toLocaleDateString('en-GB', {
+                                      weekday: 'short',
+                                      year: 'numeric',
+                                      month: 'short',
+                                      day: 'numeric'
+                                    })
+                                  ) : meeting.proposedDateTime ? (
+                                    new Date(meeting.proposedDateTime).toLocaleDateString('en-GB', {
+                                      weekday: 'short',
+                                      year: 'numeric',
+                                      month: 'short',
+                                      day: 'numeric'
+                                    })
+                                  ) : meeting.meetingDate ? (
+                                    new Date(meeting.meetingDate).toLocaleDateString('en-GB', {
+                                      weekday: 'short',
+                                      year: 'numeric',
+                                      month: 'short',
+                                      day: 'numeric'
+                                    })
+                                  ) : 'Date TBD'}
+                                </span>
+                              </div>
+                              <div className="flex items-center text-sm text-gray-600 mt-1">
+                                <Clock className="w-4 h-4 text-gray-400 mr-2" />
+                                <span>
+                                  {meeting.confirmedDateTime ? (
+                                    new Date(meeting.confirmedDateTime).toLocaleTimeString('en-GB', {
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })
+                                  ) : meeting.proposedDateTime ? (
+                                    new Date(meeting.proposedDateTime).toLocaleTimeString('en-GB', {
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })
+                                  ) : meeting.meetingTime || 'Time TBD'}
+                                </span>
+                              </div>
+                            </div>
+                            
+                            {/* Location and Type */}
+                            <div>
+                              <div className="flex items-center text-sm text-gray-500">
+                                <MapPin className="w-4 h-4 text-gray-400 mr-2" />
+                                <span>{meeting.meetingLocation || 'Location TBD'}</span>
+                              </div>
+                              {meeting.meetingType && (
+                                <div className="mt-1">
+                                  <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800">
+                                    {meeting.meetingType}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        
+                        <td className="px-6 py-4">
+                          <div className={`inline-flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-medium border ${status.color}`}>
+                            <StatusIcon className="w-4 h-4" />
+                            <span>{status.text}</span>
+                          </div>
+                          {meeting.adminVerified && (
+                            <div className="mt-2 space-y-1">
+                              <div className="text-xs text-gray-600">
+                                Buyer: {meeting.buyerAttended ? '✅ Attended' : '❌ No-show'}
+                              </div>
+                              <div className="text-xs text-gray-600">
+                                Seller: {meeting.sellerAttended ? '✅ Attended' : '❌ No-show'}
+                              </div>
+                            </div>
+                          )}
+                        </td>
+                        
+                        <td className="px-6 py-4">
+                          <div className="flex items-center space-x-2">
+                            {!meeting.adminVerified ? (
+                              <button
+                                onClick={() => {
+                                  setSelectedMeeting(meeting);
+                                  setAttendanceData({
+                                    buyerAttended: meeting.buyerAttended || false,
+                                    sellerAttended: meeting.sellerAttended || false,
+                                    adminNotes: meeting.adminNotes || ''
+                                  });
+                                  setShowAttendanceModal(true);
+                                }}
+                                className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition-colors flex items-center space-x-1"
+                              >
+                                <CheckCircle className="w-4 h-4" />
+                                <span>Mark Attendance</span>
+                              </button>
+                            ) : (
+                              <span className="text-xs text-green-600 font-medium">Verified</span>
+                            )}
+                            
+                            <button
+                              onClick={() => {
+                                setSelectedMeeting(meeting);
+                                setShowAttendanceModal(true);
+                              }}
+                              className="text-gray-600 hover:text-gray-800 text-sm"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="px-6 py-3 border-t border-gray-200 flex items-center justify-between">
+              <div className="text-sm text-gray-700">
+                Showing {currentPage * pageSize + 1} to {Math.min((currentPage + 1) * pageSize, totalElements)} of {totalElements} results
+              </div>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
+                  disabled={currentPage === 0}
+                  className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                >
+                  Previous
+                </button>
+                <span className="px-3 py-1 text-sm text-gray-600">
+                  Page {currentPage + 1} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
+                  disabled={currentPage === totalPages - 1}
+                  className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Attendance Modal */}
+        {showAttendanceModal && selectedMeeting && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-bold text-gray-900">Mark Meeting Attendance</h3>
+                  <button
+                    onClick={() => {
+                      setShowAttendanceModal(false);
+                      setSelectedMeeting(null);
+                    }}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <XCircle className="w-6 h-6" />
+                  </button>
+                </div>
+
+                <div className="space-y-6">
+                  {/* Meeting Info */}
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h4 className="font-semibold text-gray-900 mb-3">Meeting Information</h4>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="font-medium text-gray-700">Meeting ID:</span>
+                        <span className="ml-2">{selectedMeeting.meetingDisplayId || `GEM-2025-${selectedMeeting.id.slice(-3)}`}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-700">Gem:</span>
+                        <span className="ml-2">{selectedMeeting.gemName}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-700">Date:</span>
+                        <span className="ml-2">{
+                          (() => {
+                            // Try different date sources
+                            const confirmedDateTime = selectedMeeting.confirmedDateTime ? new Date(selectedMeeting.confirmedDateTime) : null;
+                            const proposedDateTime = selectedMeeting.proposedDateTime ? new Date(selectedMeeting.proposedDateTime) : null;
+                            const meetingDate = selectedMeeting.meetingDate ? new Date(selectedMeeting.meetingDate) : null;
+                            
+                            const validDate = confirmedDateTime && !isNaN(confirmedDateTime.getTime()) ? confirmedDateTime :
+                                            proposedDateTime && !isNaN(proposedDateTime.getTime()) ? proposedDateTime :
+                                            meetingDate && !isNaN(meetingDate.getTime()) ? meetingDate : null;
+                            
+                            return validDate ? validDate.toLocaleDateString('en-GB') : 'TBD';
+                          })()
+                        }</span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-700">Time:</span>
+                        <span className="ml-2">{
+                          (() => {
+                            // Try different time sources
+                            const confirmedDateTime = selectedMeeting.confirmedDateTime ? new Date(selectedMeeting.confirmedDateTime) : null;
+                            const proposedDateTime = selectedMeeting.proposedDateTime ? new Date(selectedMeeting.proposedDateTime) : null;
+                            const meetingTime = selectedMeeting.meetingTime;
+                            
+                            if (confirmedDateTime && !isNaN(confirmedDateTime.getTime())) {
+                              return confirmedDateTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+                            } else if (proposedDateTime && !isNaN(proposedDateTime.getTime())) {
+                              return proposedDateTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+                            } else if (meetingTime) {
+                              return meetingTime;
+                            } else {
+                              return 'TBD';
+                            }
+                          })()
+                        }</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Submitted No-Show Reasons */}
+                  {(selectedMeeting.buyerReasonSubmission || selectedMeeting.sellerReasonSubmission) && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
+                        <AlertTriangle className="w-5 h-5 text-yellow-600 mr-2" />
+                        Submitted No-Show Reasons
+                      </h4>
+                      
+                      <div className="space-y-3">
+                        {/* Buyer Reason */}
+                        {selectedMeeting.buyerReasonSubmission && (
+                          <div className="bg-white border border-gray-200 rounded-lg p-3">
+                            <div className="flex items-start justify-between mb-2">
+                              <span className="font-medium text-gray-900">Buyer ({selectedMeeting.buyerName})</span>
+                              {selectedMeeting.buyerReasonSubmittedAt && (
+                                <span className="text-xs text-gray-500">
+                                  {new Date(selectedMeeting.buyerReasonSubmittedAt).toLocaleString()}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm text-gray-700 bg-gray-50 p-2 rounded border">
+                              {selectedMeeting.buyerReasonSubmission}
+                            </p>
+                          </div>
+                        )}
+                        
+                        {/* Seller Reason */}
+                        {selectedMeeting.sellerReasonSubmission && (
+                          <div className="bg-white border border-gray-200 rounded-lg p-3">
+                            <div className="flex items-start justify-between mb-2">
+                              <span className="font-medium text-gray-900">Seller ({selectedMeeting.sellerName})</span>
+                              {selectedMeeting.sellerReasonSubmittedAt && (
+                                <span className="text-xs text-gray-500">
+                                  {new Date(selectedMeeting.sellerReasonSubmittedAt).toLocaleString()}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm text-gray-700 bg-gray-50 p-2 rounded border">
+                              {selectedMeeting.sellerReasonSubmission}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Attendance Marking */}
+                  <div className="space-y-4">
+                    <h4 className="font-semibold text-gray-900">Mark Attendance</h4>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Buyer Attendance */}
+                      <div className="border border-gray-200 rounded-lg p-4">
+                        <div className="mb-3">
+                          <div>
+                            <h5 className="font-medium text-gray-900">Buyer</h5>
+                            <p className="text-sm text-gray-600">{selectedMeeting.buyerName}</p>
+                            <p className="text-xs text-gray-500">{selectedMeeting.buyerEmail}</p>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={attendanceData.buyerAttended}
+                              onChange={(e) => setAttendanceData({
+                                ...attendanceData,
+                                buyerAttended: e.target.checked
+                              })}
+                              className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                            />
+                            <span className="ml-2 text-sm text-green-700 font-medium">✅ Attended</span>
+                          </label>
+                          <label className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={!attendanceData.buyerAttended}
+                              onChange={(e) => setAttendanceData({
+                                ...attendanceData,
+                                buyerAttended: !e.target.checked
+                              })}
+                              className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
+                            />
+                            <span className="ml-2 text-sm text-red-700 font-medium">❌ Not Attended</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* Seller Attendance */}
+                      <div className="border border-gray-200 rounded-lg p-4">
+                        <div className="mb-3">
+                          <div>
+                            <h5 className="font-medium text-gray-900">Seller</h5>
+                            <p className="text-sm text-gray-600">{selectedMeeting.sellerName}</p>
+                            <p className="text-xs text-gray-500">{selectedMeeting.sellerEmail}</p>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={attendanceData.sellerAttended}
+                              onChange={(e) => setAttendanceData({
+                                ...attendanceData,
+                                sellerAttended: e.target.checked
+                              })}
+                              className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                            />
+                            <span className="ml-2 text-sm text-green-700 font-medium">✅ Attended</span>
+                          </label>
+                          <label className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={!attendanceData.sellerAttended}
+                              onChange={(e) => setAttendanceData({
+                                ...attendanceData,
+                                sellerAttended: !e.target.checked
+                              })}
+                              className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
+                            />
+                            <span className="ml-2 text-sm text-red-700 font-medium">❌ Not Attended</span>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Admin Notes */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Admin Notes (Optional)
+                      </label>
+                      <textarea
+                        value={attendanceData.adminNotes}
+                        onChange={(e) => setAttendanceData({
+                          ...attendanceData,
+                          adminNotes: e.target.value
+                        })}
+                        placeholder="Add any notes about the meeting attendance..."
+                        rows={3}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end space-x-3">
+                    <button
+                      onClick={() => {
+                        setShowAttendanceModal(false);
+                        setSelectedMeeting(null);
+                      }}
+                      className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={markAttendance}
+                      disabled={submittingAttendance}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {submittingAttendance ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          <span>Processing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4" />
+                          <span>Save Attendance</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Confirmation Modal for No-Shows */}
+        {showConfirmationModal && pendingAttendanceAction && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-md w-full">
+              <div className="p-6">
+                <div className="flex items-center justify-center mb-4">
+                  <div className="bg-red-100 rounded-full p-3">
+                    <AlertCircle className="w-8 h-8 text-red-600" />
+                  </div>
+                </div>
+                
+                <h3 className="text-xl font-bold text-gray-900 text-center mb-4">
+                  Confirm No-Show Action
+                </h3>
+                
+                <div className="mb-6">
+                  <p className="text-gray-700 text-center mb-4">
+                    You are about to mark the following users as no-show:
+                  </p>
+                  <div className="bg-red-50 rounded-lg p-4 border border-red-200">
+                    <ul className="space-y-2">
+                      {pendingAttendanceAction.noShowUsers.map((user: string, index: number) => (
+                        <li key={index} className="flex items-center text-red-800">
+                          <XCircle className="w-4 h-4 mr-2" />
+                          <span className="font-medium">{user}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-4 text-center">
+                    This action will:
+                  </p>
+                  <ul className="text-sm text-gray-600 mt-2 space-y-1">
+                    <li>• Send email notifications to no-show users</li>
+                    <li>• Update their no-show count</li>
+                    <li>• Apply warning or blocking status if applicable</li>
+                    <li>• Cannot be undone once confirmed</li>
+                  </ul>
+                </div>
+
+                <div className="flex justify-center space-x-3">
+                  <button
+                    onClick={() => {
+                      setShowConfirmationModal(false);
+                      setPendingAttendanceAction(null);
+                    }}
+                    className="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={submitAttendance}
+                    disabled={submittingAttendance}
+                    className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {submittingAttendance ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <span>Processing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle className="w-4 h-4" />
+                        <span>Confirm No-Show</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default MeetingAttendanceManagement;

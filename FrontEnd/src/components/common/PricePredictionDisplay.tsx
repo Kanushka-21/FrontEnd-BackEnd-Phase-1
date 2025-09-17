@@ -102,16 +102,19 @@ const PricePredictionDisplay: React.FC<PricePredictionDisplayProps> = ({
           </p>
         </div>
 
-        <div>
-          <span className="text-xs text-gray-600">Price Range</span>
-          <p className="text-sm text-gray-700">
-            {PricePredictionService.formatPriceRange(
-              prediction.minPrice,
-              prediction.maxPrice,
-              prediction.currency
-            )}
-          </p>
-        </div>
+        {/* Only show price range if minPrice and maxPrice are different */}
+        {prediction.minPrice !== prediction.maxPrice && (
+          <div>
+            <span className="text-xs text-gray-600">Price Range</span>
+            <p className="text-sm text-gray-700">
+              {PricePredictionService.formatPriceRange(
+                prediction.minPrice,
+                prediction.maxPrice,
+                prediction.currency
+              )}
+            </p>
+          </div>
+        )}
 
         {showDetails && (
           <div className="pt-2 border-t border-blue-200">

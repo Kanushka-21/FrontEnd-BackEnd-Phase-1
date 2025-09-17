@@ -17,7 +17,7 @@ const API_BASE_URL = 'http://localhost:9092';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000, // 10 seconds default timeout - reduced from 30s
+  timeout: 15000, // 15 seconds for general requests
   headers: {
     'Content-Type': 'application/json',
   },
@@ -96,7 +96,9 @@ export const authAPI = {
 
   // Register new user
   register: async (userData: UserRegistrationRequest): Promise<ApiResponse<string>> => {
-    const response: AxiosResponse<ApiResponse<string>> = await api.post('/api/auth/register', userData);
+    const response: AxiosResponse<ApiResponse<string>> = await api.post('/api/auth/register', userData, {
+      timeout: 25000 // 25 seconds for registration only
+    });
     return response.data;
   },
 
@@ -886,6 +888,31 @@ const extendedAPI = {
     }
   },
 
+  // User Dashboard Stats APIs
+  getUserStats: {
+    // Get seller dashboard statistics
+    getSellerStats: async (userId: string): Promise<ApiResponse<any>> => {
+      try {
+        const response = await api.get(`/api/user-stats/seller/${userId}`);
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching seller stats:', error);
+        return { success: false, message: apiUtils.formatErrorMessage(error) };
+      }
+    },
+
+    // Get buyer dashboard statistics  
+    getBuyerStats: async (userId: string): Promise<ApiResponse<any>> => {
+      try {
+        const response = await api.get(`/api/user-stats/buyer/${userId}`);
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching buyer stats:', error);
+        return { success: false, message: apiUtils.formatErrorMessage(error) };
+      }
+    },
+  },
+
   // Machine Learning Price Prediction
   predictPrice: async (attributes: PriceAttributes): Promise<ApiResponse<PricePrediction>> => {
     const response = await api.post('/api/ml/predict-price', attributes);
@@ -1090,7 +1117,10 @@ const extendedAPI = {
       bidType?: string;
     }): Promise<ApiResponse<any>> => {
       try {
-        const response = await api.post('/api/bidding/place-bid', bidRequest);
+        // Use extended timeout for bid placement due to complex notification processing
+        const response = await api.post('/api/bidding/place-bid', bidRequest, {
+          timeout: 30000 // 30 seconds for bid placement
+        });
         return response.data;
       } catch (error) {
         console.error('Error placing bid:', error);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, User, Phone, Mail, MessageSquare, CheckCircle, XCircle, AlertCircle, Edit, Archive } from 'lucide-react';
+import { Calendar, Clock, MapPin, CheckCircle, XCircle, Edit, AlertTriangle, FileText, Ban, Search, Download } from 'lucide-react';
 
 interface Meeting {
   id: string;
@@ -31,16 +31,28 @@ interface Meeting {
   };
   createdAt: string;
   updatedAt: string;
+  // No-show management fields
+  buyerAttended?: boolean;
+  sellerAttended?: boolean;
+  buyerAbsenceReason?: string;
+  sellerAbsenceReason?: string;
+  adminVerified?: boolean;
+  adminNotes?: string;
+  buyerNoShowCount?: number;
+  sellerNoShowCount?: number;
+  meetingDisplayId?: string;
 }
 
 interface MeetingManagerProps {
   user: any;
+  userType?: 'buyer' | 'seller';
 }
 
-const MeetingManager: React.FC<MeetingManagerProps> = ({ user }) => {
+const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer' }) => {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -52,6 +64,25 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user }) => {
     sellerNotes: ''
   });
   const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
+  const [confirmingMeeting, setConfirmingMeeting] = useState<string | null>(null); // Track which meeting is being confirmed
+  const [deletingMeeting, setDeletingMeeting] = useState<string | null>(null); // Track which meeting is being deleted
+  const [reschedulingMeeting, setReschedulingMeeting] = useState<string | null>(null); // Track which meeting is being rescheduled
+  
+  // No-show management state
+  const [showAttendanceModal, setShowAttendanceModal] = useState(false);
+  const [showAbsenceReasonModal, setShowAbsenceReasonModal] = useState(false);
+  const [showNoShowModal, setShowNoShowModal] = useState(false);
+  const [attendanceData, setAttendanceData] = useState({
+    attended: false,
+    reason: ''
+  });
+  const [absenceReason, setAbsenceReason] = useState('');
+  const [noShowData, setNoShowData] = useState({
+    reason: ''
+  });
+  
+  // Confirmation modal state
+  const [showConfirmNoShowModal, setShowConfirmNoShowModal] = useState(false);
 
   // Fetch meetings
   useEffect(() => {
@@ -77,8 +108,15 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user }) => {
 
   // Filter meetings
   const filteredMeetings = meetings.filter(meeting => {
-    if (filter === 'ALL') return true;
-    return meeting.status === filter;
+    // First filter by status
+    const statusMatch = filter === 'ALL' || meeting.status === filter;
+    
+    // Then filter by search query (meeting ID)
+    const searchMatch = !searchQuery || 
+      meeting.id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      meeting.meetingId?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    return statusMatch && searchMatch;
   });
 
   // Get status color
@@ -110,6 +148,34 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user }) => {
     }).format(amount);
   };
 
+  // Get proper image URL
+  const getImageUrl = (imageUrl?: string, gemName?: string) => {
+    if (imageUrl) {
+      // If it's already a full URL, return as is
+      if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+        return imageUrl;
+      }
+      // If it's a relative path, prepend the backend URL
+      if (imageUrl.startsWith('/uploads/') || imageUrl.startsWith('uploads/')) {
+        return `http://localhost:9092/${imageUrl.startsWith('/') ? imageUrl.slice(1) : imageUrl}`;
+      }
+      // If it's just a filename, assume it's in gem-images
+      return `http://localhost:9092/uploads/gem-images/${imageUrl}`;
+    }
+    
+    // Fallback images based on gem type
+    const gemType = gemName?.toLowerCase() || '';
+    if (gemType.includes('ruby')) {
+      return 'https://images.unsplash.com/photo-1506792006437-256b665541e2?w=300&h=200&fit=crop';
+    } else if (gemType.includes('sapphire')) {
+      return 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=300&h=200&fit=crop';
+    } else if (gemType.includes('emerald')) {
+      return 'https://images.unsplash.com/photo-1544829099-b9a0c5303bea?w=300&h=200&fit=crop';
+    } else {
+      return 'https://images.unsplash.com/photo-1506792006437-256b665541e2?w=300&h=200&fit=crop';
+    }
+  };
+
   // Check if user is seller for this meeting
   const isUserSeller = (meeting: Meeting) => {
     return meeting.sellerId === (user.userId || user.id);
@@ -118,6 +184,10 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user }) => {
   // Handle confirm meeting
   const handleConfirmMeeting = async () => {
     if (!selectedMeeting) return;
+
+    setConfirmingMeeting(selectedMeeting.id);
+    setShowConfirmModal(false);
+    setMessage({ type: 'info', text: 'Confirming meeting...' });
 
     try {
       const sellerId = user.userId || user.id;
@@ -139,13 +209,11 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user }) => {
       
       if (data.success) {
         console.log('✅ Meeting confirmed successfully');
-        await fetchMeetings();
-        setShowConfirmModal(false);
-        setSelectedMeeting(null);
+        setMessage({ type: 'success', text: 'Meeting confirmed successfully! The buyer has been notified.' });
         setConfirmData({ sellerNotes: '' });
         
-        // Show success message
-        setMessage({ type: 'success', text: 'Meeting confirmed successfully! The buyer has been notified.' });
+        // Refresh data in background
+        await fetchMeetings();
       } else {
         console.error('❌ Failed to confirm meeting:', data.message);
         setMessage({ type: 'error', text: `Failed to confirm meeting: ${data.message}` });
@@ -153,7 +221,141 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user }) => {
     } catch (error) {
       console.error('❌ Error confirming meeting:', error);
       setMessage({ type: 'error', text: 'Error confirming meeting. Please try again.' });
+    } finally {
+      setConfirmingMeeting(null);
+      setSelectedMeeting(null);
     }
+  };
+
+  // Handle delete meeting (only for buyers and only for pending meetings)
+  const handleDeleteMeeting = async (meetingId: string) => {
+    if (!confirm('Are you sure you want to delete this meeting request? This action cannot be undone.')) return;
+
+    setDeletingMeeting(meetingId);
+    setMessage({ type: 'info', text: 'Deleting meeting...' });
+
+    try {
+      const userId = user.userId || user.id;
+      console.log('🔄 Deleting meeting with user ID:', userId);
+      
+      const response = await fetch(`http://localhost:9092/api/meetings/${meetingId}/delete`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: userId
+        })
+      });
+
+      const data = await response.json();
+      console.log('📤 Meeting deletion response:', data);
+      
+      if (data.success) {
+        console.log('✅ Meeting deleted successfully');
+        setMessage({ type: 'success', text: 'Meeting request deleted successfully.' });
+        
+        // Refresh data
+        await fetchMeetings();
+      } else {
+        console.error('❌ Failed to delete meeting:', data.message);
+        setMessage({ type: 'error', text: `Failed to delete meeting: ${data.message}` });
+      }
+    } catch (error) {
+      console.error('❌ Error deleting meeting:', error);
+      setMessage({ type: 'error', text: 'Error deleting meeting. Please try again.' });
+    } finally {
+      setDeletingMeeting(null);
+    }
+  };
+
+  // Handle download meeting card
+  const handleDownloadMeetingCard = (meeting: Meeting) => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Set canvas size
+    canvas.width = 800;
+    canvas.height = 600;
+
+    // Background
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Header background
+    ctx.fillStyle = '#3B82F6';
+    ctx.fillRect(0, 0, canvas.width, 80);
+
+    // Title
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 24px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('GemNet Meeting Card', canvas.width / 2, 35);
+    ctx.font = '14px Arial';
+    ctx.fillText('Official Meeting Verification Document', canvas.width / 2, 60);
+
+    // Content
+    ctx.fillStyle = '#1F2937';
+    ctx.textAlign = 'left';
+    ctx.font = 'bold 18px Arial';
+    
+    const isSeller = isUserSeller(meeting);
+    const userRole = isSeller ? 'Seller' : 'Buyer';
+    const otherParty = isSeller ? meeting.buyerName : meeting.sellerName;
+    const datetime = formatDateTime(meeting.confirmedDateTime || meeting.proposedDateTime);
+
+    // Meeting Information
+    ctx.fillText('Meeting Information', 50, 130);
+    ctx.font = '14px Arial';
+    ctx.fillStyle = '#374151';
+    
+    const info = [
+      `Meeting ID: ${meeting.meetingDisplayId || `GEM-2025-${meeting.id.slice(-3)}`}`,
+      `Purchase ID: ${meeting.purchaseId.slice(-8)}`,
+      `Gem: ${meeting.gemName} (${meeting.gemType})`,
+      `Price: LKR ${meeting.finalPrice.toLocaleString()}`,
+      `Date: ${datetime.date}`,
+      `Time: ${datetime.time}`,
+      `Location: ${meeting.location}`,
+      `Status: ${meeting.status}`,
+      `Your Role: ${userRole}`,
+      `Meeting With: ${otherParty}`
+    ];
+
+    info.forEach((line, index) => {
+      ctx.fillText(line, 50, 160 + (index * 25));
+    });
+
+    // Instructions
+    ctx.fillStyle = '#DC2626';
+    ctx.font = 'bold 14px Arial';
+    ctx.fillText('Important Instructions:', 50, 420);
+    ctx.fillStyle = '#374151';
+    ctx.font = '12px Arial';
+    
+    const instructions = [
+      '• Present this card during the meeting for verification',
+      '• Admin can verify this meeting using the Meeting ID',
+      '• Contact admin team for any changes or issues',
+      '• Keep this card safe as proof of scheduled meeting'
+    ];
+
+    instructions.forEach((line, index) => {
+      ctx.fillText(line, 50, 445 + (index * 20));
+    });
+
+    // Footer
+    ctx.fillStyle = '#6B7280';
+    ctx.font = '10px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(`Generated on ${new Date().toLocaleDateString()} | GemNet Official Document`, canvas.width / 2, 570);
+
+    // Download
+    const link = document.createElement('a');
+    link.download = `GemNet-Meeting-${meeting.meetingDisplayId || meeting.id.slice(-8)}.png`;
+    link.href = canvas.toDataURL();
+    link.click();
   };
 
   // Handle reschedule meeting
@@ -161,6 +363,9 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user }) => {
     if (!selectedMeeting || !rescheduleData.newDateTime) return;
 
     try {
+      // Set loading state
+      setReschedulingMeeting(selectedMeeting.id);
+      
       const userId = user.userId || user.id;
       console.log('🔄 Rescheduling meeting with user ID:', userId);
       
@@ -194,7 +399,10 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user }) => {
       }
     } catch (error) {
       console.error('❌ Error rescheduling meeting:', error);
-      setMessage({ type: 'error', text: 'Error rescheduling meeting. Please try again.' });
+      setMessage({ type: 'error', text: 'An error occurred while rescheduling the meeting.' });
+    } finally {
+      // Clear loading state
+      setReschedulingMeeting(null);
     }
   };
 
@@ -228,33 +436,145 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user }) => {
     }
   };
 
-  // Handle complete meeting
-  const handleCompleteMeeting = async (meetingId: string) => {
-    if (!confirm('Mark this meeting as completed?')) return;
+  // Handle attendance marking
+  const handleMarkAttendance = async (meetingId: string, attended: boolean, reason?: string) => {
+    // Immediate UI feedback - close modal instantly
+    setShowAttendanceModal(false);
+    setSelectedMeeting(null);
+    setAttendanceData({ attended: true, reason: '' });
+    
+    // Show immediate feedback message
+    setMessage({ 
+      type: 'info', 
+      text: attended ? 'Marking attendance...' : 'Reporting no-show...' 
+    });
 
     try {
       const userId = user.userId || user.id;
-      const response = await fetch(`http://localhost:9092/api/meetings/${meetingId}/complete`, {
-        method: 'PUT',
+      const response = await fetch(`http://localhost:9092/api/no-show/mark-attendance`, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          userId: userId
+          meetingId,
+          userId,
+          userType,
+          attended,
+          reason
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        // Update success message
+        setMessage({ 
+          type: 'success', 
+          text: attended ? 'Attendance marked successfully!' : 'No-show reported successfully!' 
+        });
+        
+        // Refresh data in background
+        await fetchMeetings();
+      } else {
+        setMessage({ type: 'error', text: `Failed to mark attendance: ${data.message}` });
+      }
+    } catch (error) {
+      console.error('Error marking attendance:', error);
+      setMessage({ type: 'error', text: 'Error marking attendance. Please try again.' });
+    }
+  };
+
+  // Handle absence reason submission
+  const handleSubmitAbsenceReason = async (meetingId: string, reason: string) => {
+    try {
+      const userId = user.userId || user.id;
+      const response = await fetch(`http://localhost:9092/api/no-show/submit-reason`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          meetingId,
+          userId,
+          userType,
+          reason
         })
       });
 
       const data = await response.json();
       if (data.success) {
         await fetchMeetings();
-        // Use proper UI message instead of browser alert
-        setMessage({ type: 'success', text: 'Meeting marked as completed!' });
+        setShowAbsenceReasonModal(false);
+        setSelectedMeeting(null);
+        setAbsenceReason('');
+        setMessage({ type: 'success', text: 'Absence reason submitted successfully!' });
       } else {
-        setMessage({ type: 'error', text: `Failed to complete meeting: ${data.message}` });
+        setMessage({ type: 'error', text: `Failed to submit reason: ${data.message}` });
       }
     } catch (error) {
-      console.error('Error completing meeting:', error);
-      setMessage({ type: 'error', text: 'Error completing meeting. Please try again.' });
+      console.error('Error submitting absence reason:', error);
+      setMessage({ type: 'error', text: 'Error submitting reason. Please try again.' });
+    }
+  };
+
+  // Handle report no-show functionality
+  const handleReportNoShow = async (meetingId: string, reason?: string) => {
+    // Immediate UI feedback - close modal instantly
+    setShowNoShowModal(false);
+    setSelectedMeeting(null);
+    setNoShowData({ reason: '' });
+    
+    // Show immediate feedback message
+    setMessage({ 
+      type: 'info', 
+      text: 'Reporting no-show...' 
+    });
+
+    try {
+      const userId = user.userId || user.id;
+      const response = await fetch(`http://localhost:9092/api/no-show/mark-attendance`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          meetingId,
+          userId,
+          userType,
+          attended: false, // This is a no-show report
+          reason: reason || 'No-show reported by user'
+        })
+      });
+
+      // Check if response is ok first
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Try to parse JSON, but handle empty responses
+      let data;
+      const responseText = await response.text();
+      try {
+        data = responseText ? JSON.parse(responseText) : { success: false, message: 'Empty response from server' };
+      } catch (parseError) {
+        throw new Error(`Invalid JSON response: ${responseText}`);
+      }
+
+      if (data.success) {
+        // Update success message
+        setMessage({ 
+          type: 'success', 
+          text: 'No-show reported successfully!' 
+        });
+        
+        // Refresh data in background
+        await fetchMeetings();
+      } else {
+        setMessage({ type: 'error', text: `Failed to report no-show: ${data.message}` });
+      }
+    } catch (error) {
+      console.error('Error reporting no-show:', error);
+      setMessage({ type: 'error', text: 'Error reporting no-show. Please try again.' });
     }
   };
 
@@ -302,6 +622,28 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user }) => {
             </div>
           </div>
 
+          {/* Search Bar */}
+          <div className="mb-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="text"
+                placeholder="Search by Meeting ID..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <XCircle className="w-5 h-5" />
+                </button>
+              )}
+            </div>
+          </div>
+
           {/* Filter Tabs */}
           <div className="flex space-x-2 overflow-x-auto">
             {['ALL', 'PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED'].map((status) => (
@@ -339,16 +681,19 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user }) => {
             {filteredMeetings.map((meeting) => {
               const isSeller = isUserSeller(meeting);
               const datetime = formatDateTime(meeting.confirmedDateTime || meeting.proposedDateTime);
-              const contact = isSeller ? meeting.buyerContact : meeting.sellerContact;
               
               return (
                 <div key={meeting.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-start space-x-4">
                       <img
-                        src={meeting.primaryImageUrl || 'https://images.unsplash.com/photo-1506792006437-256b665541e2?w=300&h=200&fit=crop'}
+                        src={getImageUrl(meeting.primaryImageUrl, meeting.gemName)}
                         alt={meeting.gemName}
                         className="w-20 h-20 object-cover rounded-lg"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = getImageUrl(undefined, meeting.gemName);
+                        }}
                       />
                       <div>
                         <h3 className="font-semibold text-gray-900">{meeting.gemName}</h3>
@@ -388,26 +733,65 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user }) => {
                     </div>
                   </div>
 
-                  {/* Contact Information (only shown for confirmed meetings) */}
-                  {meeting.status === 'CONFIRMED' && contact && (
-                    <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                      <h4 className="font-medium text-gray-900 mb-2">Contact Information</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                        <div className="flex items-center space-x-2">
-                          <User className="w-4 h-4 text-gray-400" />
-                          <span>{contact.fullName}</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Mail className="w-4 h-4 text-gray-400" />
-                          <span>{contact.email}</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Phone className="w-4 h-4 text-gray-400" />
-                          <span>{contact.phoneNumber}</span>
-                        </div>
+                  {/* Contact Information - Hidden for privacy */}
+                  {meeting.status === 'CONFIRMED' && (
+                    <div className="bg-amber-50 rounded-lg p-4 mb-4 border border-amber-200">
+                      <div className="flex items-center space-x-2">
+                        <AlertTriangle className="w-5 h-5 text-amber-600" />
+                        <h4 className="font-medium text-amber-800">Meeting Coordination</h4>
+                      </div>
+                      <p className="text-sm text-amber-700 mt-2">
+                        For privacy and security, all meeting coordination and contact exchange 
+                        must be handled through the admin team. The admin will facilitate 
+                        communication between both parties for this confirmed meeting.
+                      </p>
+                      <div className="mt-3 text-xs text-amber-600">
+                        <span className="font-medium">Meeting ID:</span> {meeting.meetingDisplayId || meeting.id.slice(-8)}
                       </div>
                     </div>
                   )}
+
+                  {/* No-Show Notification Alert */}
+                  {meeting.status === 'CONFIRMED' && (
+                    ((!isSeller && meeting.sellerReasonSubmission) || 
+                     (isSeller && meeting.buyerReasonSubmission)) && (
+                    <div className="bg-orange-50 rounded-lg p-4 mb-4 border border-orange-200">
+                      <div className="flex items-start space-x-2">
+                        <AlertTriangle className="w-5 h-5 text-orange-600 mt-0.5" />
+                        <div className="flex-1">
+                          <h4 className="font-medium text-orange-800">
+                            {isSeller ? 'Buyer' : 'Seller'} Reported No-Show
+                          </h4>
+                          <p className="text-sm text-orange-700 mt-1">
+                            The {isSeller ? 'buyer' : 'seller'} has reported they could not attend this meeting.
+                          </p>
+                          <div className="mt-2 p-3 bg-orange-100 rounded-md">
+                            <p className="text-sm text-orange-800">
+                              <span className="font-medium">Reason provided:</span>
+                            </p>
+                            <p className="text-sm text-orange-700 mt-1">
+                              "{isSeller ? meeting.buyerReasonSubmission : meeting.sellerReasonSubmission}"
+                            </p>
+                          </div>
+                          <div className="mt-3 flex items-center space-x-2">
+                            <button
+                              onClick={() => {
+                                setSelectedMeeting(meeting);
+                                setShowRescheduleModal(true);
+                              }}
+                              className="px-3 py-1 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors text-sm flex items-center space-x-1"
+                            >
+                              <Calendar className="w-4 h-4" />
+                              <span>Reschedule Meeting</span>
+                            </button>
+                            <span className="text-xs text-orange-600">
+                              You can reschedule to a new time that works for both parties
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
 
                   {/* Notes */}
                   {(meeting.buyerNotes || meeting.sellerNotes) && (
@@ -430,6 +814,17 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user }) => {
 
                   {/* Action Buttons */}
                   <div className="flex items-center justify-end space-x-2">
+                    {/* Download Meeting Card - Available for confirmed meetings */}
+                    {meeting.status === 'CONFIRMED' && (
+                      <button
+                        onClick={() => handleDownloadMeetingCard(meeting)}
+                        className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors text-sm flex items-center space-x-1"
+                      >
+                        <Download className="w-4 h-4" />
+                        <span>Download Card</span>
+                      </button>
+                    )}
+
                     {meeting.status === 'PENDING' && isSeller && (
                       <>
                         <button
@@ -437,10 +832,24 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user }) => {
                             setSelectedMeeting(meeting);
                             setShowConfirmModal(true);
                           }}
-                          className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm flex items-center space-x-1"
+                          disabled={confirmingMeeting === meeting.id}
+                          className={`px-4 py-2 ${
+                            confirmingMeeting === meeting.id
+                              ? 'bg-gray-400 cursor-not-allowed'
+                              : 'bg-green-600 hover:bg-green-700'
+                          } text-white rounded-md transition-colors text-sm flex items-center space-x-1`}
                         >
-                          <CheckCircle className="w-4 h-4" />
-                          <span>Confirm</span>
+                          {confirmingMeeting === meeting.id ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                              <span>Confirming...</span>
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle className="w-4 h-4" />
+                              <span>Confirm</span>
+                            </>
+                          )}
                         </button>
                         <button
                           onClick={() => {
@@ -455,14 +864,123 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user }) => {
                       </>
                     )}
 
+                    {/* Delete option for buyers (only for pending meetings) */}
+                    {meeting.status === 'PENDING' && !isSeller && (
+                      <button
+                        onClick={() => handleDeleteMeeting(meeting.id)}
+                        disabled={deletingMeeting === meeting.id}
+                        className={`px-4 py-2 ${
+                          deletingMeeting === meeting.id
+                            ? 'bg-gray-400 cursor-not-allowed'
+                            : 'bg-red-600 hover:bg-red-700'
+                        } text-white rounded-md transition-colors text-sm flex items-center space-x-1`}
+                      >
+                        {deletingMeeting === meeting.id ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                            <span>Deleting...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Ban className="w-4 h-4" />
+                            <span>Delete</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+
+                    {/* Reschedule option for confirmed meetings */}
                     {meeting.status === 'CONFIRMED' && (
                       <button
-                        onClick={() => handleCompleteMeeting(meeting.id)}
+                        onClick={() => {
+                          setSelectedMeeting(meeting);
+                          setShowRescheduleModal(true);
+                        }}
                         className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm flex items-center space-x-1"
                       >
-                        <Archive className="w-4 h-4" />
-                        <span>Mark Complete</span>
+                        <Edit className="w-4 h-4" />
+                        <span>Reschedule</span>
                       </button>
+                    )}
+
+                    {meeting.status === 'CONFIRMED' && (
+                      <>
+                        {/* Report No-Show Button - Prominent Design */}
+                        <button
+                          onClick={() => {
+                            setSelectedMeeting(meeting);
+                            setShowNoShowModal(true);
+                            setNoShowData({ reason: '' });
+                          }}
+                          className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm flex items-center space-x-1 font-medium"
+                        >
+                          <AlertTriangle className="w-4 h-4" />
+                          <span>Report No-Show</span>
+                        </button>
+                      </>
+                    )}
+
+                    {/* No-Show Management Buttons */}
+                    {meeting.status === 'CONFIRMED' && new Date(meeting.confirmedDateTime || meeting.proposedDateTime) <= new Date() && (
+                      <>
+                        {/* Mark Attendance Button */}
+                        <button
+                          onClick={() => {
+                            setSelectedMeeting(meeting);
+                            setShowAttendanceModal(true);
+                            setAttendanceData({ attended: true, reason: '' });
+                          }}
+                          className="px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm flex items-center space-x-1"
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          <span>Attended</span>
+                        </button>
+                        
+                        {/* Mark No-Show Button */}
+                        <button
+                          onClick={() => {
+                            setSelectedMeeting(meeting);
+                            setShowAttendanceModal(true);
+                            setAttendanceData({ attended: false, reason: '' });
+                          }}
+                          className="px-3 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors text-sm flex items-center space-x-1"
+                        >
+                          <AlertTriangle className="w-4 h-4" />
+                          <span>No-Show</span>
+                        </button>
+                      </>
+                    )}
+
+                    {/* Submit Absence Reason Button */}
+                    {meeting.status === 'CONFIRMED' && 
+                     ((userType === 'buyer' && meeting.buyerAttended === false && !meeting.buyerAbsenceReason) ||
+                      (userType === 'seller' && meeting.sellerAttended === false && !meeting.sellerAbsenceReason)) && (
+                      <button
+                        onClick={() => {
+                          setSelectedMeeting(meeting);
+                          setShowAbsenceReasonModal(true);
+                        }}
+                        className="px-3 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 transition-colors text-sm flex items-center space-x-1"
+                      >
+                        <FileText className="w-4 h-4" />
+                        <span>Submit Reason</span>
+                      </button>
+                    )}
+
+                    {/* Show No-Show Status */}
+                    {meeting.status === 'CONFIRMED' && (meeting.buyerAttended !== undefined || meeting.sellerAttended !== undefined) && (
+                      <div className="text-xs text-gray-600">
+                        {userType === 'buyer' && meeting.buyerAttended !== undefined && (
+                          <span className={`px-2 py-1 rounded ${meeting.buyerAttended ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                            {meeting.buyerAttended ? 'You Attended' : 'You No-Show'}
+                          </span>
+                        )}
+                        {userType === 'seller' && meeting.sellerAttended !== undefined && (
+                          <span className={`px-2 py-1 rounded ${meeting.sellerAttended ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                            {meeting.sellerAttended ? 'You Attended' : 'You No-Show'}
+                          </span>
+                        )}
+                      </div>
                     )}
 
                     {['PENDING', 'CONFIRMED'].includes(meeting.status) && (
@@ -570,10 +1088,217 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user }) => {
                 </button>
                 <button
                   onClick={handleRescheduleMeeting}
-                  disabled={!rescheduleData.newDateTime}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                  disabled={!rescheduleData.newDateTime || reschedulingMeeting === selectedMeeting.id}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center space-x-2"
                 >
-                  Reschedule
+                  {reschedulingMeeting === selectedMeeting.id ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Rescheduling...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Edit className="w-4 h-4" />
+                      <span>Reschedule</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Attendance Modal */}
+        {showAttendanceModal && selectedMeeting && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                {attendanceData.attended ? 'Confirm Attendance' : 'Report No-Show'}
+              </h3>
+              
+              <p className="text-sm text-gray-600 mb-4">
+                {attendanceData.attended 
+                  ? `Confirm that you attended the meeting with ${userType === 'buyer' ? selectedMeeting.sellerName : selectedMeeting.buyerName}.`
+                  : `Report that the other party (${userType === 'buyer' ? selectedMeeting.sellerName : selectedMeeting.buyerName}) did not attend the meeting.`
+                }
+              </p>
+
+              {!attendanceData.attended && (
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Reason for No-Show (Optional)
+                  </label>
+                  <textarea
+                    value={attendanceData.reason}
+                    onChange={(e) => setAttendanceData({ ...attendanceData, reason: e.target.value })}
+                    placeholder="Please describe what happened..."
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              )}
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => {
+                    setShowAttendanceModal(false);
+                    setSelectedMeeting(null);
+                    setAttendanceData({ attended: false, reason: '' });
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleMarkAttendance(selectedMeeting.id, attendanceData.attended, attendanceData.reason)}
+                  className={`px-4 py-2 text-white rounded-md ${
+                    attendanceData.attended 
+                      ? 'bg-green-600 hover:bg-green-700' 
+                      : 'bg-orange-600 hover:bg-orange-700'
+                  }`}
+                >
+                  {attendanceData.attended ? 'Confirm Attendance' : 'Report No-Show'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Absence Reason Modal */}
+        {showAbsenceReasonModal && selectedMeeting && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Submit Absence Reason</h3>
+              
+              <p className="text-sm text-gray-600 mb-4">
+                Please provide a reason for your absence. This will be reviewed by the admin.
+              </p>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Reason for Absence <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={absenceReason}
+                  onChange={(e) => setAbsenceReason(e.target.value)}
+                  placeholder="Please explain why you couldn't attend the meeting..."
+                  rows={4}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 mb-4">
+                <div className="flex">
+                  <AlertTriangle className="w-5 h-5 text-yellow-400 mr-2 mt-0.5" />
+                  <div className="text-sm text-yellow-800">
+                    <p className="font-medium">Important:</p>
+                    <p>This reason will be reviewed by an admin. Providing a valid reason may help avoid penalties.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => {
+                    setShowAbsenceReasonModal(false);
+                    setSelectedMeeting(null);
+                    setAbsenceReason('');
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleSubmitAbsenceReason(selectedMeeting.id, absenceReason)}
+                  disabled={!absenceReason.trim()}
+                  className="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 disabled:opacity-50"
+                >
+                  Submit Reason
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Report No-Show Modal */}
+        {showNoShowModal && selectedMeeting && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Report No-Show</h3>
+              
+              <p className="text-sm text-gray-600 mb-4">
+                Report that the other party ({userType === 'buyer' ? selectedMeeting.sellerName : selectedMeeting.buyerName}) did not attend the meeting.
+              </p>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Reason for No-Show (Optional)
+                </label>
+                <textarea
+                  value={noShowData.reason}
+                  onChange={(e) => setNoShowData({ reason: e.target.value })}
+                  placeholder="Please describe what happened..."
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => {
+                    setShowNoShowModal(false);
+                    setSelectedMeeting(null);
+                    setNoShowData({ reason: '' });
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => setShowConfirmNoShowModal(true)}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                >
+                  Report No-Show
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Confirmation Modal for No-Show Report */}
+        {showConfirmNoShowModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+              <div className="flex items-center mb-4">
+                <AlertTriangle className="h-6 w-6 text-orange-500 mr-3" />
+                <h3 className="text-lg font-semibold text-gray-900">Confirm No-Show Report</h3>
+              </div>
+              
+              <div className="mb-6">
+                <p className="text-gray-700 mb-3">
+                  Are you sure you want to report this meeting as a no-show?
+                </p>
+                <p className="text-sm text-gray-600">
+                  This action will notify the admin and may affect meeting statistics.
+                </p>
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => setShowConfirmNoShowModal(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    setShowConfirmNoShowModal(false);
+                    handleReportNoShow(selectedMeeting.id, noShowData.reason);
+                  }}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                >
+                  Yes, Report No-Show
                 </button>
               </div>
             </div>

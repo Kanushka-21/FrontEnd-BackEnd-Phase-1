@@ -54,10 +54,14 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(authz -> authz
+                .requestMatchers("/", "/health", "/status").permitAll() // Allow basic health endpoints
+                .requestMatchers("/api/health", "/api/status").permitAll() // Allow API health endpoints
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/admin/dashboard-stats").permitAll() // Allow dashboard stats for quick loading
                 .requestMatchers("/api/admin/users").permitAll() // Allow user management data
                 .requestMatchers("/api/admin/pending-listings").permitAll() // Allow pending listings data
+                .requestMatchers("/api/admin/no-show/**").permitAll() // Allow admin no-show management endpoints
+                .requestMatchers("/api/no-show/**").permitAll() // Allow user no-show reporting endpoints
                 .requestMatchers("/api/feedbacks/**").permitAll() // Allow feedback endpoints
                 .requestMatchers("/api/gemsData/**").permitAll()
                 .requestMatchers("/api/advertisements/**").permitAll()

@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto py-8">
+        <h1 class="text-3xl font-bold mb-8">Admin Dashboard Functionality Test</h1>
+        
+        <!-- Test Results -->
+        <div id="results" class="space-y-4">
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h2 class="text-xl font-semibold mb-4">API Tests</h2>
+                <div id="api-results"></div>
+            </div>
+            
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h2 class="text-xl font-semibold mb-4">Search Test</h2>
+                <input type="text" id="search-input" placeholder="Search by Meeting ID..." 
+                       class="w-full p-2 border rounded mb-4">
+                <div id="search-results"></div>
+            </div>
+            
+            <div class="bg-white p-6 rounded-lg shadow">
+                <h2 class="text-xl font-semibold mb-4">Image Test</h2>
+                <div id="image-tests" class="grid grid-cols-2 gap-4"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Test API endpoints
+        async function testAPIs() {
+            const apiResults = document.getElementById('api-results');
+            
+            // Test no-show records endpoint
+            try {
+                const response = await fetch('http://localhost:9092/api/admin/no-show/records');
+                const data = await response.json();
+                apiResults.innerHTML += `
+                    <div class="mb-2">
+                        <span class="font-medium">No-Show Records API:</span> 
+                        <span class="text-green-600">✓ Success</span>
+                        <div class="text-sm text-gray-600">Records: ${data.totalRecords || 0}</div>
+                    </div>
+                `;
+            } catch (error) {
+                apiResults.innerHTML += `
+                    <div class="mb-2">
+                        <span class="font-medium">No-Show Records API:</span> 
+                        <span class="text-red-600">✗ Failed</span>
+                        <div class="text-sm text-gray-600">${error.message}</div>
+                    </div>
+                `;
+            }
+            
+            // Test health endpoint
+            try {
+                const response = await fetch('http://localhost:9092/api/auth/health');
+                const data = await response.json();
+                apiResults.innerHTML += `
+                    <div class="mb-2">
+                        <span class="font-medium">Health API:</span> 
+                        <span class="text-green-600">✓ Success</span>
+                        <div class="text-sm text-gray-600">Status: ${data.status}</div>
+                    </div>
+                `;
+            } catch (error) {
+                apiResults.innerHTML += `
+                    <div class="mb-2">
+                        <span class="font-medium">Health API:</span> 
+                        <span class="text-red-600">✗ Failed</span>
+                        <div class="text-sm text-gray-600">${error.message}</div>
+                    </div>
+                `;
+            }
+        }
+        
+        // Test search functionality
+        function testSearch() {
+            const searchInput = document.getElementById('search-input');
+            const searchResults = document.getElementById('search-results');
+            
+            searchInput.addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase();
+                const mockMeetings = [
+                    { id: 'MTG001', gem: 'Ruby', status: 'CONFIRMED' },
+                    { id: 'MTG002', gem: 'Sapphire', status: 'PENDING' },
+                    { id: 'MTG003', gem: 'Emerald', status: 'COMPLETED' }
+                ];
+                
+                const filtered = mockMeetings.filter(meeting => 
+                    meeting.id.toLowerCase().includes(query) ||
+                    meeting.gem.toLowerCase().includes(query)
+                );
+                
+                searchResults.innerHTML = filtered.length > 0 
+                    ? filtered.map(m => `
+                        <div class="p-2 border rounded mb-2">
+                            <strong>ID:</strong> ${m.id} | 
+                            <strong>Gem:</strong> ${m.gem} | 
+                            <strong>Status:</strong> ${m.status}
+                        </div>
+                    `).join('')
+                    : '<div class="text-gray-500">No meetings found</div>';
+            });
+        }
+        
+        // Test image loading
+        function testImages() {
+            const imageTests = document.getElementById('image-tests');
+            const testImages = [
+                {
+                    name: 'Backend Static File',
+                    url: 'http://localhost:9092/uploads/gem-images/ruby-sample.jpg'
+                },
+                {
+                    name: 'Fallback Image',
+                    url: 'https://images.unsplash.com/photo-1506792006437-256b665541e2?w=300&h=200&fit=crop'
+                }
+            ];
+            
+            testImages.forEach(test => {
+                const div = document.createElement('div');
+                div.className = 'border rounded p-2';
+                div.innerHTML = `
+                    <h3 class="font-medium mb-2">${test.name}</h3>
+                    <img src="${test.url}" 
+                         alt="${test.name}" 
+                         class="w-full h-32 object-cover rounded"
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
+                    <div class="text-red-500 text-sm hidden">Failed to load image</div>
+                `;
+                imageTests.appendChild(div);
+            });
+        }
+        
+        // Run all tests
+        document.addEventListener('DOMContentLoaded', () => {
+            testAPIs();
+            testSearch();
+            testImages();
+        });
+    </script>
+</body>
+</html>

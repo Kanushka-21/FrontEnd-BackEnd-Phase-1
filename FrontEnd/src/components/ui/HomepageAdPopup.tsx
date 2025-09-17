@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Modal, Button, Card, Image, Typography, Tag, Space, Carousel } from 'antd';
 import { CloseOutlined, PhoneOutlined, MailOutlined, LeftOutlined, RightOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -14,6 +14,7 @@ interface Advertisement {
   mobileNo: string;
   email: string;
   images: string[];
+  video?: string; // Optional video URL
   approved: boolean;
   createdOn: string;
 }
@@ -32,9 +33,33 @@ const HomepageAdPopup: React.FC<HomepageAdPopupProps> = ({
   shouldShow = false
 }) => {
   const [currentAdIndex, setCurrentAdIndex] = useState(0);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [currentMediaIndex, setCurrentMediaIndex] = useState(0); // Changed from currentImageIndex
   const [visible, setVisible] = useState(false);
   const [hasBeenClosed, setHasBeenClosed] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null); // Ref to control video playback
+
+  // Helper function to create media array (video first, then images)
+  const createMediaArray = (ad: Advertisement) => {
+    const media: Array<{ type: 'video' | 'image'; url: string }> = [];
+    
+    // Add video first if available
+    if (ad.video) {
+      // Format video URL to use full backend URL
+      const videoUrl = ad.video.startsWith('http') 
+        ? ad.video 
+        : `http://localhost:8080/advertisements/videos/${ad.video}`;
+      media.push({ type: 'video', url: videoUrl });
+      console.log('📹 Video added to media array:', videoUrl);
+    }
+    
+    // Add images after video
+    ad.images.forEach(image => {
+      media.push({ type: 'image', url: image });
+    });
+    
+    console.log('🎬 Media array created:', media.length, 'items');
+    return media;
+  };
 
   // Show popup after a short delay when advertisements are available
   useEffect(() => {
@@ -61,10 +86,27 @@ const HomepageAdPopup: React.FC<HomepageAdPopupProps> = ({
     }
   }, [shouldShow, advertisements.length]);
 
-  // Reset image index when advertisement changes
+  // Reset media index when advertisement changes
   useEffect(() => {
-    setCurrentImageIndex(0);
+    setCurrentMediaIndex(0);
   }, [currentAdIndex]);
+
+  // Stop video when switching media or when modal becomes invisible
+  useEffect(() => {
+    if (!visible && videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.currentTime = 0;
+      console.log('🛑 Video stopped due to modal close');
+    }
+  }, [visible]);
+
+  // Stop video when switching to different media
+  useEffect(() => {
+    if (videoRef.current && currentMedia?.type !== 'video') {
+      videoRef.current.pause();
+      console.log('🛑 Video stopped due to media switch');
+    }
+  }, [currentMediaIndex]);
 
   console.log('🔍 HomepageAdPopup render - advertisements length:', advertisements.length, 'visible:', visible);
 
@@ -74,8 +116,17 @@ const HomepageAdPopup: React.FC<HomepageAdPopupProps> = ({
   }
 
   const currentAd = advertisements[currentAdIndex];
+  const mediaArray = createMediaArray(currentAd);
+  const currentMedia = mediaArray[currentMediaIndex];
 
   const handleClose = () => {
+    // Stop video playback if video is currently playing
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.currentTime = 0; // Reset video to beginning
+      console.log('🛑 Video stopped and reset');
+    }
+    
     setVisible(false);
     
     // If this is the first time closing, call onFirstClose
@@ -97,15 +148,15 @@ const HomepageAdPopup: React.FC<HomepageAdPopupProps> = ({
     );
   };
 
-  const nextImage = () => {
-    setCurrentImageIndex((prev) => 
-      (prev + 1) % currentAd.images.length
+  const nextMedia = () => {
+    setCurrentMediaIndex((prev) => 
+      (prev + 1) % mediaArray.length
     );
   };
 
-  const prevImage = () => {
-    setCurrentImageIndex((prev) => 
-      prev === 0 ? currentAd.images.length - 1 : prev - 1
+  const prevMedia = () => {
+    setCurrentMediaIndex((prev) => 
+      prev === 0 ? mediaArray.length - 1 : prev - 1
     );
   };
 
@@ -160,54 +211,75 @@ const HomepageAdPopup: React.FC<HomepageAdPopupProps> = ({
 
             {/* Main Content - Horizontal Layout */}
             <div className="flex flex-col md:flex-row">
-              {/* Image Section */}
+              {/* Media Section */}
               <div className="md:w-1/2 relative bg-gray-100">
-                {currentAd.images.length > 0 ? (
+                {mediaArray.length > 0 ? (
                   <div className="relative group">
                     <div className="aspect-square overflow-hidden">
-                      <Image
-                        src={currentAd.images[currentImageIndex]}
-                        alt={currentAd.title}
-                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-                        fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
-                      />
+                      {currentMedia?.type === 'video' ? (
+                        <video
+                          ref={videoRef}
+                          src={currentMedia.url}
+                          className="w-full h-full object-cover"
+                          autoPlay
+                          muted
+                          loop
+                          controls
+                          onLoadStart={() => console.log('🎬 Video loading started:', currentMedia.url)}
+                          onCanPlay={() => console.log('▶️ Video can play:', currentMedia.url)}
+                          onError={(e) => console.error('❌ Video error:', e, currentMedia.url)}
+                          onPause={() => console.log('⏸️ Video paused')}
+                          onPlay={() => console.log('▶️ Video playing')}
+                          style={{ maxWidth: '100%', maxHeight: '100%' }}
+                        >
+                          Your browser does not support the video tag.
+                        </video>
+                      ) : (
+                        <Image
+                          src={currentMedia?.url || ''}
+                          alt={currentAd.title}
+                          className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                          fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+                        />
+                      )}
                       
                       {/* Sale Badge */}
                       <div className="absolute top-4 left-4">
                         <div className="bg-red-500 text-white px-3 py-1 rounded-full text-sm font-bold transform -rotate-12 shadow-lg">
-                          HOT DEAL!
+                          {currentMedia?.type === 'video' ? '🎬 VIDEO!' : 'HOT DEAL!'}
                         </div>
                       </div>
                     </div>
 
-                    {/* Image Navigation */}
-                    {currentAd.images.length > 1 && (
+                    {/* Media Navigation */}
+                    {mediaArray.length > 1 && (
                       <>
                         <Button
                           type="text"
                           icon={<LeftOutlined />}
-                          onClick={prevImage}
+                          onClick={prevMedia}
                           className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white border-0 rounded-full w-10 h-10 opacity-0 group-hover:opacity-100 transition-opacity"
                         />
                         <Button
                           type="text"
                           icon={<RightOutlined />}
-                          onClick={nextImage}
+                          onClick={nextMedia}
                           className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white border-0 rounded-full w-10 h-10 opacity-0 group-hover:opacity-100 transition-opacity"
                         />
 
-                        {/* Image Dots */}
+                        {/* Media Dots */}
                         <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
                           <div className="flex space-x-2">
-                            {currentAd.images.map((_, index) => (
+                            {mediaArray.map((media, index) => (
                               <button
                                 key={index}
-                                onClick={() => setCurrentImageIndex(index)}
+                                onClick={() => setCurrentMediaIndex(index)}
                                 className={`w-2 h-2 rounded-full transition-all ${
-                                  index === currentImageIndex 
+                                  index === currentMediaIndex 
                                     ? 'bg-white scale-125' 
                                     : 'bg-white/60 hover:bg-white/80'
                                 }`}
+                                title={media.type === 'video' ? '🎬 Video' : '📷 Image'}
                               />
                             ))}
                           </div>
@@ -219,7 +291,7 @@ const HomepageAdPopup: React.FC<HomepageAdPopupProps> = ({
                   <div className="aspect-square bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
                     <div className="text-center text-gray-500">
                       <div className="text-4xl mb-2">📷</div>
-                      <Text>No Image Available</Text>
+                      <Text>No Media Available</Text>
                     </div>
                   </div>
                 )}

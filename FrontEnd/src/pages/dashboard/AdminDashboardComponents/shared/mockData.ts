@@ -158,15 +158,8 @@ export const recentTransactions: Transaction[] = [
   }
 ];
 
-// Helper function to format price in LKR
-export const formatLKR = (price: number): string => {
-  return new Intl.NumberFormat('si-LK', {
-    style: 'currency',
-    currency: 'LKR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(price);
-};
+// Import enhanced formatter that handles large numbers
+export { formatLKR, formatLKRExact, formatNumberCompact } from '../../../../utils/formatLKR';
 
 // Helper function to map approval status to display status
 export const mapApprovalToStatus = (approved: boolean | string | null | undefined): 'approved' | 'pending' | 'rejected' => {

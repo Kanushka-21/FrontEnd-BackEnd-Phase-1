@@ -82,6 +82,45 @@ public class Meeting {
     @Field("paymentStatus")
     private String paymentStatus; // "PENDING", "PAID", "COMMISSION_DEDUCTED"
     
+    // No-show tracking fields
+    @Field("buyerAttended")
+    private Boolean buyerAttended; // null = not verified, true = attended, false = no-show
+    
+    @Field("sellerAttended")
+    private Boolean sellerAttended; // null = not verified, true = attended, false = no-show
+    
+    @Field("adminVerified")
+    private Boolean adminVerified = false; // Whether admin has verified attendance
+    
+    @Field("verifiedAt")
+    private LocalDateTime verifiedAt; // When admin verified attendance
+    
+    @Field("verifiedBy")
+    private String verifiedBy; // Admin ID who verified
+    
+    // Reason submission fields
+    @Field("buyerReasonSubmission")
+    private String buyerReasonSubmission; // Reason why buyer cannot attend
+    
+    @Field("sellerReasonSubmission")
+    private String sellerReasonSubmission; // Reason why seller cannot attend
+    
+    @Field("buyerReasonSubmittedAt")
+    private LocalDateTime buyerReasonSubmittedAt;
+    
+    @Field("sellerReasonSubmittedAt")
+    private LocalDateTime sellerReasonSubmittedAt;
+    
+    @Field("buyerReasonAccepted")
+    private Boolean buyerReasonAccepted; // Whether admin accepted buyer's reason
+    
+    @Field("sellerReasonAccepted")
+    private Boolean sellerReasonAccepted; // Whether admin accepted seller's reason
+    
+    // Meeting ID generation for easier search
+    @Field("meetingDisplayId")
+    private String meetingDisplayId; // Human-readable meeting ID like "GEM-2025-001"
+    
     // Constructors
     public Meeting() {
         this.createdAt = LocalDateTime.now();
@@ -292,6 +331,53 @@ public class Meeting {
     public void setPaymentStatus(String paymentStatus) {
         this.paymentStatus = paymentStatus;
     }
+    
+    // No-show tracking getters and setters
+    public Boolean getBuyerAttended() { return buyerAttended; }
+    public void setBuyerAttended(Boolean buyerAttended) { this.buyerAttended = buyerAttended; }
+    
+    public Boolean getSellerAttended() { return sellerAttended; }
+    public void setSellerAttended(Boolean sellerAttended) { this.sellerAttended = sellerAttended; }
+    
+    public Boolean getAdminVerified() { return adminVerified; }
+    public void setAdminVerified(Boolean adminVerified) { this.adminVerified = adminVerified; }
+    
+    public LocalDateTime getVerifiedAt() { return verifiedAt; }
+    public void setVerifiedAt(LocalDateTime verifiedAt) { this.verifiedAt = verifiedAt; }
+    
+    public String getVerifiedBy() { return verifiedBy; }
+    public void setVerifiedBy(String verifiedBy) { this.verifiedBy = verifiedBy; }
+    
+    public String getBuyerReasonSubmission() { return buyerReasonSubmission; }
+    public void setBuyerReasonSubmission(String buyerReasonSubmission) { 
+        this.buyerReasonSubmission = buyerReasonSubmission;
+        if (buyerReasonSubmission != null) {
+            this.buyerReasonSubmittedAt = LocalDateTime.now();
+        }
+    }
+    
+    public String getSellerReasonSubmission() { return sellerReasonSubmission; }
+    public void setSellerReasonSubmission(String sellerReasonSubmission) { 
+        this.sellerReasonSubmission = sellerReasonSubmission;
+        if (sellerReasonSubmission != null) {
+            this.sellerReasonSubmittedAt = LocalDateTime.now();
+        }
+    }
+    
+    public LocalDateTime getBuyerReasonSubmittedAt() { return buyerReasonSubmittedAt; }
+    public void setBuyerReasonSubmittedAt(LocalDateTime buyerReasonSubmittedAt) { this.buyerReasonSubmittedAt = buyerReasonSubmittedAt; }
+    
+    public LocalDateTime getSellerReasonSubmittedAt() { return sellerReasonSubmittedAt; }
+    public void setSellerReasonSubmittedAt(LocalDateTime sellerReasonSubmittedAt) { this.sellerReasonSubmittedAt = sellerReasonSubmittedAt; }
+    
+    public Boolean getBuyerReasonAccepted() { return buyerReasonAccepted; }
+    public void setBuyerReasonAccepted(Boolean buyerReasonAccepted) { this.buyerReasonAccepted = buyerReasonAccepted; }
+    
+    public Boolean getSellerReasonAccepted() { return sellerReasonAccepted; }
+    public void setSellerReasonAccepted(Boolean sellerReasonAccepted) { this.sellerReasonAccepted = sellerReasonAccepted; }
+    
+    public String getMeetingDisplayId() { return meetingDisplayId; }
+    public void setMeetingDisplayId(String meetingDisplayId) { this.meetingDisplayId = meetingDisplayId; }
     
     @Override
     public String toString() {

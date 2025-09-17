@@ -28,6 +28,7 @@ public class FileStorageService {
     private Path nicImagesPath;
     private Path extractedPhotosPath;
     private Path advertisementImagesPath;
+    private Path advertisementVideosPath;
     private Path gemImagesPath;
     private Path gemCertificatesPath;
     
@@ -40,6 +41,7 @@ public class FileStorageService {
             nicImagesPath = basePath.resolve("nic-images");
             extractedPhotosPath = basePath.resolve("extracted-photos");
             advertisementImagesPath = basePath.resolve("advertisement-images");
+            advertisementVideosPath = basePath.resolve("advertisement-videos");
             gemImagesPath = basePath.resolve("gems");
             gemCertificatesPath = basePath.resolve("gemstone-certificates");
             
@@ -48,6 +50,7 @@ public class FileStorageService {
             Files.createDirectories(nicImagesPath);
             Files.createDirectories(extractedPhotosPath);
             Files.createDirectories(advertisementImagesPath);
+            Files.createDirectories(advertisementVideosPath);
             Files.createDirectories(gemImagesPath);
             Files.createDirectories(gemCertificatesPath);
             
@@ -112,6 +115,20 @@ public class FileStorageService {
         
         String filename = generateFileName(userId, "advertisement", getFileExtension(file.getOriginalFilename()));
         Path targetPath = advertisementImagesPath.resolve(filename);
+        
+        Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
+        
+        return targetPath.toString();
+    }
+    
+    /**
+     * Store advertisement video
+     */
+    public String storeAdvertisementVideo(MultipartFile file, String userId) throws IOException {
+        validateVideoFile(file);
+        
+        String filename = generateFileName(userId, "advertisement_video", getFileExtension(file.getOriginalFilename()));
+        Path targetPath = advertisementVideosPath.resolve(filename);
         
         Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
         
@@ -216,6 +233,41 @@ public class FileStorageService {
     }
     
     /**
+     * Validate video file
+     */
+    private void validateVideoFile(MultipartFile file) throws IOException {
+        if (file.isEmpty()) {
+            throw new IOException("File is empty");
+        }
+        
+        // Check file size (max 50MB for videos)
+        long maxSizeBytes = 50 * 1024 * 1024; // 50MB
+        if (file.getSize() > maxSizeBytes) {
+            throw new IOException("Video file size exceeds maximum limit of 50MB");
+        }
+        
+        // Check file type
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("video/")) {
+            throw new IOException("File must be a video");
+        }
+        
+        // Check allowed video types
+        String[] allowedTypes = {"video/mp4", "video/avi", "video/mov", "video/wmv", "video/webm"};
+        boolean isAllowedType = false;
+        for (String allowedType : allowedTypes) {
+            if (allowedType.equals(contentType)) {
+                isAllowedType = true;
+                break;
+            }
+        }
+        
+        if (!isAllowedType) {
+            throw new IOException("Only MP4, AVI, MOV, WMV, and WebM videos are allowed");
+        }
+    }
+    
+    /**
      * Delete file
      */
     public boolean deleteFile(String filePath) {
@@ -230,6 +282,8 @@ public class FileStorageService {
                 // Determine which directory to use based on URL path
                 if (filePath.contains("/advertisement-images/")) {
                     path = advertisementImagesPath.resolve(filename);
+                } else if (filePath.contains("/advertisement-videos/")) {
+                    path = advertisementVideosPath.resolve(filename);
                 } else if (filePath.contains("/face-images/")) {
                     path = faceImagesPath.resolve(filename);
                 } else if (filePath.contains("/nic-images/")) {

@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, Button, Alert, List, Avatar, Tag, message } from 'antd';
+import { Card, Row, Col, Button, Alert, message } from 'antd';
 import { 
   UserOutlined, FileTextOutlined, DollarOutlined, 
-  NotificationOutlined, BarChartOutlined 
+  NotificationOutlined, BarChartOutlined, CheckCircleOutlined,
+  ClockCircleOutlined, TeamOutlined, ShoppingOutlined,
+  CalendarOutlined, TrophyOutlined
 } from '@ant-design/icons';
-import dayjs from 'dayjs';
-import { AdminComponentProps, StatsCard, pendingUsers, recentTransactions, formatLKR } from './shared';
-import NotificationSummary from '@/components/admin/NotificationSummary';
+import { AdminComponentProps, StatsCard, formatLKR } from './shared';
 import { api } from '@/services/api';
 
 const Overview: React.FC<AdminComponentProps> = ({ user, onTabChange }) => {
@@ -17,15 +17,34 @@ const Overview: React.FC<AdminComponentProps> = ({ user, onTabChange }) => {
     totalRevenue: 48750,
     commissionRate: 10,
     totalCommission: 4875,
-    activeAdvertisements: 1
+    activeAdvertisements: 1,
+    // New comprehensive admin statistics
+    verifiedUsers: 0,
+    activeUsers: 0,
+    pendingVerificationUsers: 0,
+    pendingListings: 0,
+    approvedListings: 0,
+    rejectedListings: 0,
+    activeListings: 0,
+    soldListings: 0,
+    totalAdvertisements: 0,
+    pendingAdvertisements: 0,
+    rejectedAdvertisements: 0,
+    totalMeetings: 0,
+    pendingMeetings: 0,
+    confirmedMeetings: 0,
+    completedMeetings: 0,
+    totalBids: 0,
+    activeBids: 0,
+    pendingPercentage: 0,
+    approvedPercentage: 0,
+    rejectedPercentage: 0
   });
-  const [loading, setLoading] = useState(true);
 
   // Fetch dashboard statistics on component mount
   useEffect(() => {
     const fetchDashboardStats = async () => {
       try {
-        setLoading(true);
         console.log('🔄 Fetching dashboard statistics...');
         
         const response = await api.admin.getDashboardStats();
@@ -41,7 +60,28 @@ const Overview: React.FC<AdminComponentProps> = ({ user, onTabChange }) => {
             totalRevenue: response.data.totalRevenue || 0,
             commissionRate: response.data.commissionRate || 10,
             totalCommission: response.data.totalCommission || 0,
-            activeAdvertisements: response.data.activeAdvertisements || 0
+            activeAdvertisements: response.data.activeAdvertisements || 0,
+            // Comprehensive admin statistics
+            verifiedUsers: response.data.verifiedUsers || 0,
+            activeUsers: response.data.activeUsers || 0,
+            pendingVerificationUsers: response.data.pendingVerificationUsers || 0,
+            pendingListings: response.data.pendingListings || 0,
+            approvedListings: response.data.approvedListings || 0,
+            rejectedListings: response.data.rejectedListings || 0,
+            activeListings: response.data.activeListings || 0,
+            soldListings: response.data.soldListings || 0,
+            totalAdvertisements: response.data.totalAdvertisements || 0,
+            pendingAdvertisements: response.data.pendingAdvertisements || 0,
+            rejectedAdvertisements: response.data.rejectedAdvertisements || 0,
+            totalMeetings: response.data.totalMeetings || 0,
+            pendingMeetings: response.data.pendingMeetings || 0,
+            confirmedMeetings: response.data.confirmedMeetings || 0,
+            completedMeetings: response.data.completedMeetings || 0,
+            totalBids: response.data.totalBids || 0,
+            activeBids: response.data.activeBids || 0,
+            pendingPercentage: response.data.pendingPercentage || 0,
+            approvedPercentage: response.data.approvedPercentage || 0,
+            rejectedPercentage: response.data.rejectedPercentage || 0
           });
         } else {
           console.error('❌ Failed to fetch dashboard stats:', response.message);
@@ -50,8 +90,6 @@ const Overview: React.FC<AdminComponentProps> = ({ user, onTabChange }) => {
       } catch (error) {
         console.error('❌ Error fetching dashboard stats:', error);
         message.error('Error loading dashboard statistics');
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -136,9 +174,133 @@ const Overview: React.FC<AdminComponentProps> = ({ user, onTabChange }) => {
         </Col>
       </Row>
 
-      {/* Notification Summary */}
+      {/* User Management Statistics */}
       <div className="mb-6">
-        <NotificationSummary onTabChange={onTabChange || (() => {})} />
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">👥 User Management Analytics</h3>
+        <Row gutter={[16, 16]}>
+          <Col xs={24} sm={12} lg={6}>
+            <StatsCard
+              title="Verified Users"
+              value={stats.verifiedUsers}
+              icon={<CheckCircleOutlined style={{ fontSize: '24px', color: '#10b981' }} />}
+              color="#10b981"
+              description={`${stats.pendingVerificationUsers} pending verification`}
+            />
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <StatsCard
+              title="Active Users"
+              value={stats.activeUsers}
+              icon={<TeamOutlined style={{ fontSize: '24px', color: '#3b82f6' }} />}
+              color="#3b82f6"
+              description="Currently active on platform"
+            />
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <StatsCard
+              title="Pending Verification"
+              value={stats.pendingVerificationUsers}
+              icon={<ClockCircleOutlined style={{ fontSize: '24px', color: '#f59e0b' }} />}
+              color="#f59e0b"
+              description="Awaiting admin approval"
+            />
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <StatsCard
+              title="User Growth"
+              value={`${Math.round((stats.verifiedUsers / Math.max(stats.totalUsers, 1)) * 100)}%`}
+              icon={<BarChartOutlined style={{ fontSize: '24px', color: '#8b5cf6' }} />}
+              color="#8b5cf6"
+              description="Verification rate"
+            />
+          </Col>
+        </Row>
+      </div>
+
+      {/* Listing Management Statistics */}
+      <div className="mb-6">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">💎 Listing Management Analytics</h3>
+        <Row gutter={[16, 16]}>
+          <Col xs={24} sm={12} lg={6}>
+            <StatsCard
+              title="Pending Listings"
+              value={stats.pendingListings}
+              icon={<ClockCircleOutlined style={{ fontSize: '24px', color: '#f59e0b' }} />}
+              color="#f59e0b"
+              description={`${stats.pendingPercentage}% of total listings`}
+            />
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <StatsCard
+              title="Approved Listings"
+              value={stats.approvedListings}
+              icon={<CheckCircleOutlined style={{ fontSize: '24px', color: '#10b981' }} />}
+              color="#10b981"
+              description={`${stats.approvedPercentage}% of total listings`}
+            />
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <StatsCard
+              title="Sold Listings"
+              value={stats.soldListings}
+              icon={<ShoppingOutlined style={{ fontSize: '24px', color: '#6366f1' }} />}
+              color="#6366f1"
+              description="Completed transactions"
+            />
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <StatsCard
+              title="Success Rate"
+              value={`${Math.round((stats.soldListings / Math.max(stats.totalListings, 1)) * 100)}%`}
+              icon={<TrophyOutlined style={{ fontSize: '24px', color: '#f59e0b' }} />}
+              color="#f59e0b"
+              description="Sales conversion rate"
+            />
+          </Col>
+        </Row>
+      </div>
+
+      {/* Platform Activity Statistics */}
+      <div className="mb-6">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">📊 Platform Activity Analytics</h3>
+        <Row gutter={[16, 16]}>
+          <Col xs={24} sm={12} lg={6}>
+            <StatsCard
+              title="Total Bids"
+              value={stats.totalBids}
+              icon={<TrophyOutlined style={{ fontSize: '24px', color: '#ef4444' }} />}
+              color="#ef4444"
+              description={`${stats.activeBids} currently active`}
+            />
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <StatsCard
+              title="Total Meetings"
+              value={stats.totalMeetings}
+              icon={<CalendarOutlined style={{ fontSize: '24px', color: '#8b5cf6' }} />}
+              color="#8b5cf6"
+              description={`${stats.pendingMeetings} pending approval`}
+            />
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <StatsCard
+              title="Advertisement Stats"
+              value={`${stats.activeAdvertisements}/${stats.totalAdvertisements}`}
+              icon={<NotificationOutlined style={{ fontSize: '24px', color: '#06b6d4' }} />}
+              color="#06b6d4"
+              description={`${stats.pendingAdvertisements} pending review`}
+            />
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <StatsCard
+              title="Commission Earned"
+              value={formatLKR(stats.totalCommission)}
+              icon={<DollarOutlined style={{ fontSize: '24px', color: '#10b981' }} />}
+              color="#10b981"
+              description={`${stats.commissionRate}% commission rate`}
+            />
+          </Col>
+        </Row>
       </div>
 
       {/* Quick Actions */}
@@ -182,47 +344,6 @@ const Overview: React.FC<AdminComponentProps> = ({ user, onTabChange }) => {
           </Button>
         </div>
       </Card>
-
-      {/* Recent Activity */}
-      <Row gutter={[16, 16]}>
-        <Col xs={24} lg={12}>
-          <Card title="Recent User Registrations" extra={<Button type="link" onClick={() => onTabChange?.('users')}>View All</Button>}>
-            <List
-              dataSource={pendingUsers.slice(0, 3)}
-              renderItem={(user: any) => (
-                <List.Item>
-                  <List.Item.Meta
-                    avatar={<Avatar icon={<UserOutlined />} />}
-                    title={user.name}
-                    description={`${user.role} • ${dayjs(user.joinDate).format('MMM DD, YYYY')}`}
-                  />
-                  <Tag color="gold">Pending</Tag>
-                </List.Item>
-              )}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} lg={12}>
-          <Card title="Recent Transactions" extra={<Button type="link" onClick={() => onTabChange?.('transactions')}>View All</Button>}>
-            <List
-              dataSource={recentTransactions.slice(0, 3)}
-              renderItem={(transaction: any) => (
-                <List.Item>
-                  <List.Item.Meta
-                    avatar={<Avatar src={transaction.image} />}
-                    title={transaction.gemstone}
-                    description={`${transaction.buyer} → ${transaction.seller}`}
-                  />
-                  <div className="text-right">
-                    <div className="font-semibold">{formatLKR(transaction.amount)}</div>
-                    <Tag color="green">{transaction.status}</Tag>
-                  </div>
-                </List.Item>
-              )}
-            />
-          </Card>
-        </Col>
-      </Row>
     </div>
   );
 };

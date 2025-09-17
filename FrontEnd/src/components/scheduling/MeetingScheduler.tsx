@@ -28,6 +28,8 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
   });
   const [errors, setErrors] = useState<any>({});
   const [submitting, setSubmitting] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmationData, setConfirmationData] = useState<any>(null);
 
   // Fetch seller information with multiple fallback strategies
   useEffect(() => {
@@ -184,7 +186,7 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
     return Object.keys(newErrors).length === 0;
   };
 
-  // Handle form submission
+  // Handle form submission - show confirmation modal first
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -192,10 +194,26 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
       return;
     }
 
+    // Prepare confirmation data
+    const proposedDateTime = `${formData.proposedDate}T${formData.proposedTime}:00`;
+    const confirmData = {
+      ...formData,
+      proposedDateTime,
+      sellerInfo,
+      purchase
+    };
+    
+    setConfirmationData(confirmData);
+    setShowConfirmModal(true);
+  };
+
+  // Actual submission after confirmation
+  const confirmSubmission = async () => {
     setSubmitting(true);
+    setShowConfirmModal(false);
 
     try {
-      const proposedDateTime = `${formData.proposedDate}T${formData.proposedTime}:00`;
+      const proposedDateTime = confirmationData.proposedDateTime;
       
       // Enhanced buyer ID extraction with multiple fallback strategies
       let buyerId = null;
@@ -798,6 +816,158 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
             </p>
           </div>
         </div>
+
+        {/* Confirmation Modal for Meeting Request */}
+        {showConfirmModal && confirmationData && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                {/* Modal Header */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center">
+                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                      <CheckCircle className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900">Confirm Meeting Request</h3>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowConfirmModal(false);
+                      setConfirmationData(null);
+                    }}
+                    className="text-gray-400 hover:text-gray-600 p-1"
+                  >
+                    <XCircle className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Modal Content */}
+                <div className="mb-6">
+                  <p className="text-gray-700 mb-4">
+                    Please review your meeting request details before sending to the seller.
+                  </p>
+                  
+                  {/* Meeting Details Summary */}
+                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 mb-4">
+                    <h4 className="font-medium text-gray-900 mb-3 flex items-center">
+                      <Calendar className="w-4 h-4 mr-2 text-blue-600" />
+                      Meeting Details
+                    </h4>
+                    
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Date:</span>
+                        <span className="font-medium text-gray-900">
+                          {new Date(confirmationData.proposedDate).toLocaleDateString('en-GB', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Time:</span>
+                        <span className="font-medium text-gray-900">{confirmationData.proposedTime}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Location:</span>
+                        <span className="font-medium text-gray-900">{confirmationData.location}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Meeting Type:</span>
+                        <span className="font-medium text-gray-900">{confirmationData.meetingType}</span>
+                      </div>
+                      {confirmationData.buyerNotes && (
+                        <div className="pt-2 border-t border-gray-200">
+                          <span className="text-gray-600">Your Notes:</span>
+                          <p className="font-medium text-gray-900 mt-1">{confirmationData.buyerNotes}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Purchase & Seller Info */}
+                  <div className="bg-blue-50 rounded-lg p-4 border border-blue-200 mb-4">
+                    <h4 className="font-medium text-gray-900 mb-3 flex items-center">
+                      <User className="w-4 h-4 mr-2 text-blue-600" />
+                      Purchase & Seller Information
+                    </h4>
+                    
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Gem:</span>
+                        <span className="font-medium text-gray-900">{confirmationData.purchase.gemName}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Type:</span>
+                        <span className="font-medium text-gray-900">{confirmationData.purchase.gemType}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Final Price:</span>
+                        <span className="font-medium text-green-600">
+                          LKR {confirmationData.purchase.finalPrice?.toLocaleString() || 'N/A'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Seller:</span>
+                        <span className="font-medium text-gray-900">
+                          {confirmationData.sellerInfo?.fullName || 'Seller'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Important Warning */}
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <div className="flex items-start">
+                      <MessageSquare className="w-5 h-5 text-yellow-600 mt-0.5 mr-2 flex-shrink-0" />
+                      <div className="text-sm text-yellow-800">
+                        <p className="font-medium mb-2">Important Commitment:</p>
+                        <ul className="space-y-1">
+                          <li>• This request will be sent directly to the seller</li>
+                          <li>• You are committing to attend if the seller confirms</li>
+                          <li>• No-shows may affect your account standing</li>
+                          <li>• Please ensure your availability before confirming</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Modal Actions */}
+                <div className="flex justify-end space-x-3">
+                  <button
+                    onClick={() => {
+                      setShowConfirmModal(false);
+                      setConfirmationData(null);
+                    }}
+                    className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmSubmission}
+                    disabled={submitting}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                  >
+                    {submitting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <span>Sending Request...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="w-4 h-4" />
+                        <span>Yes, Send Meeting Request</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

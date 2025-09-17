@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { api } from '@/services/api';
+import { useAuth } from './AuthContext';
 
 // Notification types for different admin sections
 export interface AdminNotifications {
@@ -10,28 +11,75 @@ export interface AdminNotifications {
   systemAlerts: number;         // System alerts
 }
 
+// Notification types for seller dashboard
+export interface SellerNotifications {
+  overview: number;              // Overview notifications
+  listings: number;              // New bids, listing updates
+  advertisements: number;        // Advertisement approvals/rejections
+  bids: number;                 // New bids received
+  meetings: number;             // Meeting requests/updates
+  feedback: number;             // New feedback/reviews
+  profile: number;              // Profile verification/updates
+}
+
+// Notification types for buyer dashboard
+export interface BuyerNotifications {
+  overview: number;             // General overview updates
+  reservedItems: number;        // Items won/status updates
+  meetings: number;             // Meeting confirmations/changes
+  feedback: number;             // Feedback reminders
+  profile: number;              // Profile/account updates
+}
+
+// Combined notification types
+export interface AllNotifications {
+  admin: AdminNotifications;
+  seller: SellerNotifications;
+  buyer: BuyerNotifications;
+}
+
 // Context type
 interface NotificationContextType {
-  notifications: AdminNotifications;
+  notifications: AllNotifications;
   totalNotifications: number;
   loading: boolean;
   refreshNotifications: () => Promise<void>;
-  markAsRead: (section: keyof AdminNotifications, count?: number) => void;
+  markAsRead: (role: keyof AllNotifications, section: string, count?: number) => void;
+  getNotificationCount: (role: keyof AllNotifications, section: string) => number;
 }
 
 // Create context
 const NotificationContext = createContext<NotificationContextType>({
   notifications: {
-    userManagement: 0,
-    listingManagement: 0,
-    advertisements: 0,
-    meetingRequests: 0,
-    systemAlerts: 0,
+    admin: {
+      userManagement: 0,
+      listingManagement: 0,
+      advertisements: 0,
+      meetingRequests: 0,
+      systemAlerts: 0,
+    },
+    seller: {
+      overview: 0,
+      listings: 0,
+      advertisements: 0,
+      bids: 0,
+      meetings: 0,
+      feedback: 0,
+      profile: 0,
+    },
+    buyer: {
+      overview: 0,
+      reservedItems: 0,
+      meetings: 0,
+      feedback: 0,
+      profile: 0,
+    },
   },
   totalNotifications: 0,
   loading: false,
   refreshNotifications: async () => {},
   markAsRead: () => {},
+  getNotificationCount: () => 0,
 });
 
 // Hook to use notification context
@@ -43,97 +91,210 @@ interface NotificationProviderProps {
 }
 
 export const NotificationProvider: React.FC<NotificationProviderProps> = ({ children }) => {
-  const [notifications, setNotifications] = useState<AdminNotifications>({
-    userManagement: 0,
-    listingManagement: 0,
-    advertisements: 0,
-    meetingRequests: 0,
-    systemAlerts: 0,
+  const { user } = useAuth();
+  const [notifications, setNotifications] = useState<AllNotifications>({
+    admin: {
+      userManagement: 0,
+      listingManagement: 0,
+      advertisements: 0,
+      meetingRequests: 0,
+      systemAlerts: 0,
+    },
+    seller: {
+      overview: 0,
+      listings: 0,
+      advertisements: 0,
+      bids: 0,
+      meetings: 0,
+      feedback: 0,
+      profile: 0,
+    },
+    buyer: {
+      overview: 0,
+      reservedItems: 0,
+      meetings: 0,
+      feedback: 0,
+      profile: 0,
+    },
   });
   const [loading, setLoading] = useState(false);
 
-  // Calculate total notifications
-  const totalNotifications = Object.values(notifications).reduce((sum, count) => sum + count, 0);
+  // Calculate total notifications based on user role
+  const totalNotifications = user?.role 
+    ? Object.values(notifications[user.role.toLowerCase() as keyof AllNotifications] || {}).reduce((sum, count) => sum + count, 0)
+    : 0;
 
-  // Fetch notification counts from API
+  // Fetch notification counts from API based on user role
   const fetchNotificationCounts = async () => {
+    if (!user?.userId || !user?.role) return;
+    
     setLoading(true);
     try {
-      // Fetch all notification counts in parallel
-      const [
-        pendingUsers,
-        pendingListings,
-        pendingAdvertisements,
-        pendingMeetings,
-        systemAlerts
-      ] = await Promise.allSettled([
-        api.getUsers(), // Get all users to filter pending verifications
-        api.admin.getPendingListings(0, 1), // Just get count, not actual data
-        api.getAllAdvertisements('false'), // Pending advertisements
-        api.getMeetings(),
-        api.getSystemAlerts() // Use main API method
-      ]);
-
-      const newNotifications: AdminNotifications = {
-        userManagement: 0,
-        listingManagement: 0,
-        advertisements: 0,
-        meetingRequests: 0,
-        systemAlerts: 0,
-      };
-
-      // Process pending user verifications
-      if (pendingUsers.status === 'fulfilled' && pendingUsers.value.success) {
-        // Filter users needing verification (exclude admins)
-        const users = Array.isArray(pendingUsers.value.data) ? pendingUsers.value.data : [];
-        newNotifications.userManagement = users.filter((user: any) => 
-          user.role?.toLowerCase() !== 'admin' && (
-            user.verificationStatus === 'pending' || 
-            user.verificationStatus === 'PENDING' ||
-            !user.isVerified
-          )
-        ).length;
+      const userRole = user.role.toLowerCase() as keyof AllNotifications;
+      
+      if (userRole === 'admin') {
+        await fetchAdminNotifications();
+      } else if (userRole === 'seller') {
+        await fetchSellerNotifications();
+      } else if (userRole === 'buyer') {
+        await fetchBuyerNotifications();
       }
-
-      // Process pending listings
-      if (pendingListings.status === 'fulfilled' && pendingListings.value.success) {
-        newNotifications.listingManagement = pendingListings.value.data?.totalElements || 0;
-      }
-
-      // Process pending advertisements
-      if (pendingAdvertisements.status === 'fulfilled' && pendingAdvertisements.value.success) {
-        newNotifications.advertisements = Array.isArray(pendingAdvertisements.value.data)
-          ? pendingAdvertisements.value.data.filter((ad: any) => ad.status === 'pending' || ad.approved === false).length
-          : 0;
-      }
-
-      // Process pending meetings
-      if (pendingMeetings.status === 'fulfilled' && pendingMeetings.value.success) {
-        newNotifications.meetingRequests = Array.isArray(pendingMeetings.value.data)
-          ? pendingMeetings.value.data.filter((meeting: any) => meeting.status === 'pending').length
-          : 0;
-      }
-
-      // Process system alerts
-      if (systemAlerts.status === 'fulfilled' && systemAlerts.value.success) {
-        newNotifications.systemAlerts = Array.isArray(systemAlerts.value.data)
-          ? systemAlerts.value.data.filter((alert: any) => !alert.dismissed).length
-          : 0;
-      }
-
-      setNotifications(newNotifications);
     } catch (error) {
       console.error('Error fetching notification counts:', error);
-      // Set default mock data for development
-      setNotifications({
-        userManagement: 3,
-        listingManagement: 7,
-        advertisements: 5,
-        meetingRequests: 2,
-        systemAlerts: 1,
-      });
+      // Set mock data for development
+      setMockNotifications();
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fetch admin notifications
+  const fetchAdminNotifications = async () => {
+    const [
+      pendingUsers,
+      pendingListings,
+      pendingAdvertisements,
+      pendingMeetings,
+      systemAlerts
+    ] = await Promise.allSettled([
+      api.getUsers(),
+      api.admin.getPendingListings(0, 1),
+      api.getAllAdvertisements('false'),
+      api.getMeetings(),
+      api.getSystemAlerts()
+    ]);
+
+    const adminNotifications: AdminNotifications = {
+      userManagement: 0,
+      listingManagement: 0,
+      advertisements: 0,
+      meetingRequests: 0,
+      systemAlerts: 0,
+    };
+
+    // Process results
+    if (pendingUsers.status === 'fulfilled' && pendingUsers.value.success) {
+      const users = Array.isArray(pendingUsers.value.data) ? pendingUsers.value.data : [];
+      adminNotifications.userManagement = users.filter((user: any) => 
+        user.role?.toLowerCase() !== 'admin' && (
+          user.verificationStatus === 'pending' || 
+          user.verificationStatus === 'PENDING' ||
+          !user.isVerified
+        )
+      ).length;
+    }
+
+    if (pendingListings.status === 'fulfilled' && pendingListings.value.success) {
+      adminNotifications.listingManagement = pendingListings.value.data?.totalElements || 0;
+    }
+
+    if (pendingAdvertisements.status === 'fulfilled' && pendingAdvertisements.value.success) {
+      adminNotifications.advertisements = Array.isArray(pendingAdvertisements.value.data)
+        ? pendingAdvertisements.value.data.filter((ad: any) => ad.status === 'pending' || ad.approved === false).length
+        : 0;
+    }
+
+    if (pendingMeetings.status === 'fulfilled' && pendingMeetings.value.success) {
+      adminNotifications.meetingRequests = Array.isArray(pendingMeetings.value.data)
+        ? pendingMeetings.value.data.filter((meeting: any) => meeting.status === 'pending').length
+        : 0;
+    }
+
+    if (systemAlerts.status === 'fulfilled' && systemAlerts.value.success) {
+      adminNotifications.systemAlerts = Array.isArray(systemAlerts.value.data)
+        ? systemAlerts.value.data.filter((alert: any) => !alert.dismissed).length
+        : 0;
+    }
+
+    setNotifications(prev => ({
+      ...prev,
+      admin: adminNotifications
+    }));
+  };
+
+  // Fetch seller notifications
+  const fetchSellerNotifications = async () => {
+    try {
+      // Mock API calls for seller notifications
+      const sellerNotifications: SellerNotifications = {
+        overview: 0,
+        listings: Math.floor(Math.random() * 4), // 0-3 listing updates
+        advertisements: Math.floor(Math.random() * 2), // 0-1 ad updates
+        bids: Math.floor(Math.random() * 7) + 1, // 1-7 new bids
+        meetings: Math.floor(Math.random() * 3), // 0-2 meeting requests
+        feedback: Math.floor(Math.random() * 2), // 0-1 new feedback
+        profile: 0,
+      };
+
+      setNotifications(prev => ({
+        ...prev,
+        seller: sellerNotifications
+      }));
+    } catch (error) {
+      console.error('Error fetching seller notifications:', error);
+    }
+  };
+
+  // Fetch buyer notifications
+  const fetchBuyerNotifications = async () => {
+    try {
+      // Mock API calls for buyer notifications
+      const buyerNotifications: BuyerNotifications = {
+        overview: 0,
+        reservedItems: Math.floor(Math.random() * 3), // 0-2 item updates
+        meetings: Math.floor(Math.random() * 2), // 0-1 meeting updates
+        feedback: Math.floor(Math.random() * 1), // 0 feedback reminders
+        profile: 0,
+      };
+
+      setNotifications(prev => ({
+        ...prev,
+        buyer: buyerNotifications
+      }));
+    } catch (error) {
+      console.error('Error fetching buyer notifications:', error);
+    }
+  };
+
+  // Set mock notifications for development
+  const setMockNotifications = () => {
+    const userRole = user?.role?.toLowerCase() as keyof AllNotifications;
+    
+    if (userRole === 'admin') {
+      setNotifications(prev => ({
+        ...prev,
+        admin: {
+          userManagement: 3,
+          listingManagement: 7,
+          advertisements: 5,
+          meetingRequests: 2,
+          systemAlerts: 1,
+        }
+      }));
+    } else if (userRole === 'seller') {
+      setNotifications(prev => ({
+        ...prev,
+        seller: {
+          overview: 0,
+          listings: 2,
+          advertisements: 1,
+          bids: 5,
+          meetings: 2,
+          feedback: 1,
+          profile: 0,
+        }
+      }));
+    } else if (userRole === 'buyer') {
+      setNotifications(prev => ({
+        ...prev,
+        buyer: {
+          overview: 0,
+          reservedItems: 2,
+          meetings: 1,
+          feedback: 0,
+          profile: 0,
+        }
+      }));
     }
   };
 
@@ -143,11 +304,19 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   };
 
   // Mark notifications as read
-  const markAsRead = (section: keyof AdminNotifications, count: number = 1) => {
+  const markAsRead = (role: keyof AllNotifications, section: string, count: number = 1) => {
     setNotifications(prev => ({
       ...prev,
-      [section]: Math.max(0, prev[section] - count)
+      [role]: {
+        ...prev[role],
+        [section]: Math.max(0, (prev[role] as any)[section] - count)
+      }
     }));
+  };
+
+  // Get notification count for specific role and section
+  const getNotificationCount = (role: keyof AllNotifications, section: string): number => {
+    return (notifications[role] as any)?.[section] || 0;
   };
 
   // Fetch notifications on mount and set up polling
@@ -168,6 +337,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
         loading,
         refreshNotifications,
         markAsRead,
+        getNotificationCount,
       }}
     >
       {children}

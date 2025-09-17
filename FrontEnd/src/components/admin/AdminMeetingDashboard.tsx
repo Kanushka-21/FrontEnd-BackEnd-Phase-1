@@ -45,6 +45,36 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
   const [updatingMeeting, setUpdatingMeeting] = useState<string | null>(null);
+  const [showCompleteConfirmModal, setShowCompleteConfirmModal] = useState(false);
+  const [meetingToComplete, setMeetingToComplete] = useState<Meeting | null>(null);
+
+  // Get proper image URL
+  const getImageUrl = (imageUrl?: string, gemName?: string) => {
+    if (imageUrl) {
+      // If it's already a full URL, return as is
+      if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+        return imageUrl;
+      }
+      // If it's a relative path, prepend the backend URL
+      if (imageUrl.startsWith('/uploads/') || imageUrl.startsWith('uploads/')) {
+        return `http://localhost:9092/${imageUrl.startsWith('/') ? imageUrl.slice(1) : imageUrl}`;
+      }
+      // If it's just a filename, assume it's in gem-images
+      return `http://localhost:9092/uploads/gem-images/${imageUrl}`;
+    }
+    
+    // Fallback images based on gem type
+    const gemType = gemName?.toLowerCase() || '';
+    if (gemType.includes('ruby')) {
+      return 'https://images.unsplash.com/photo-1506792006437-256b665541e2?w=300&h=200&fit=crop';
+    } else if (gemType.includes('sapphire')) {
+      return 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=300&h=200&fit=crop';
+    } else if (gemType.includes('emerald')) {
+      return 'https://images.unsplash.com/photo-1544829099-b9a0c5303bea?w=300&h=200&fit=crop';
+    } else {
+      return 'https://images.unsplash.com/photo-1506792006437-256b665541e2?w=300&h=200&fit=crop';
+    }
+  };
 
   // Statistics
   const stats = {
@@ -224,12 +254,16 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
       if (data.success) {
         setMessage({ 
           type: 'success', 
-          text: 'Meeting marked as completed successfully. Notifications sent to both parties.' 
+          text: 'Meeting completed successfully! Both parties have been notified. Commission details (6%) have been sent to the buyer.' 
         });
-        setTimeout(() => setMessage(null), 5000);
+        setTimeout(() => setMessage(null), 8000);
         
         // Refresh meetings to get updated data
         fetchAllMeetings();
+        
+        // Close confirmation modal
+        setShowCompleteConfirmModal(false);
+        setMeetingToComplete(null);
       } else {
         throw new Error(data.message || 'Failed to update meeting status');
       }
@@ -246,9 +280,24 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
     }
   };
 
+  // Show confirmation modal before completing meeting
+  const handleCompleteButtonClick = (meeting: Meeting) => {
+    setMeetingToComplete(meeting);
+    setShowCompleteConfirmModal(true);
+  };
+
+  // Confirm completion action
+  const confirmCompletion = async () => {
+    if (meetingToComplete) {
+      await markAsCompleted(meetingToComplete.id);
+    }
+  };
+
   // Filter meetings
   const filteredMeetings = meetings.filter(meeting => {
     const matchesSearch = !searchTerm || 
+      meeting.id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      meeting.purchaseId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       meeting.gemName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       meeting.buyerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       meeting.sellerName?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -272,11 +321,11 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
   }
 
   return (
-    <div className={`bg-gray-50 p-6 ${className}`}>
+    <div className={`bg-gray-50 p-3 ${className}`}>
       <div className="max-w-7xl mx-auto">
         {/* Message Display */}
         {message && (
-          <div className={`mb-6 p-4 rounded-lg border-l-4 ${
+          <div className={`mb-3 p-3 rounded border-l-4 ${
             message.type === 'success' ? 'bg-green-50 border-green-400 text-green-700' :
             message.type === 'error' ? 'bg-red-50 border-red-400 text-red-700' :
             'bg-blue-50 border-blue-400 text-blue-700'
@@ -294,15 +343,15 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
         )}
 
         {/* Compact Header */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
+        <div className="bg-white rounded-md shadow-sm border border-gray-200 p-3 mb-3">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-xl font-bold text-gray-900">Meeting Management</h1>
-              <p className="text-sm text-gray-600 mt-1">All accepted meetings overview</p>
+              <p className="text-sm text-gray-600">All accepted meetings overview</p>
             </div>
             <button
               onClick={fetchAllMeetings}
-              className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+              className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
             >
               <RefreshCw className="w-4 h-4" />
               <span>Refresh</span>
@@ -311,46 +360,46 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
         </div>
 
         {/* Compact Statistics */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-3">
+          <div className="bg-white rounded-md shadow-sm border border-gray-200 p-2">
             <div className="text-center">
               <p className="text-xs font-medium text-gray-600">Total</p>
-              <p className="text-xl font-bold text-gray-900">{stats.total}</p>
+              <p className="text-lg font-bold text-gray-900">{stats.total}</p>
             </div>
           </div>
           
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
+          <div className="bg-white rounded-md shadow-sm border border-gray-200 p-2">
             <div className="text-center">
               <p className="text-xs font-medium text-gray-600">Pending</p>
-              <p className="text-xl font-bold text-yellow-600">{stats.pending}</p>
+              <p className="text-lg font-bold text-yellow-600">{stats.pending}</p>
             </div>
           </div>
           
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
+          <div className="bg-white rounded-md shadow-sm border border-gray-200 p-2">
             <div className="text-center">
               <p className="text-xs font-medium text-gray-600">Confirmed</p>
-              <p className="text-xl font-bold text-green-600">{stats.confirmed}</p>
+              <p className="text-lg font-bold text-green-600">{stats.confirmed}</p>
             </div>
           </div>
           
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
+          <div className="bg-white rounded-md shadow-sm border border-gray-200 p-2">
             <div className="text-center">
               <p className="text-xs font-medium text-gray-600">Completed</p>
-              <p className="text-xl font-bold text-blue-600">{stats.completed}</p>
+              <p className="text-lg font-bold text-blue-600">{stats.completed}</p>
             </div>
           </div>
           
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
+          <div className="bg-white rounded-md shadow-sm border border-gray-200 p-2">
             <div className="text-center">
               <p className="text-xs font-medium text-gray-600">Cancelled</p>
-              <p className="text-xl font-bold text-red-600">{stats.cancelled}</p>
+              <p className="text-lg font-bold text-red-600">{stats.cancelled}</p>
             </div>
           </div>
         </div>
 
         {/* Compact Filters */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+        <div className="bg-white rounded-md shadow-sm border border-gray-200 p-3 mb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
             {/* Search */}
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -359,7 +408,7 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
                 placeholder="Search meetings..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
 
@@ -369,7 +418,7 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
                 <button
                   key={status}
                   onClick={() => setStatusFilter(status)}
-                  className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                  className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
                     statusFilter === status
                       ? 'bg-blue-600 text-white'
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
@@ -390,8 +439,8 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
         </div>
 
         {/* All Accepted Meetings - User Friendly Design */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="p-4 border-b border-gray-200">
+        <div className="bg-white rounded-md shadow-sm border border-gray-200">
+          <div className="p-3 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900">All Accepted Meetings</h2>
               <div className="text-sm text-gray-500">
@@ -404,27 +453,27 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="text-left p-3 font-medium text-gray-700 text-sm">Item & Participants</th>
-                  <th className="text-left p-3 font-medium text-gray-700 text-sm">Meeting Details</th>
-                  <th className="text-left p-3 font-medium text-gray-700 text-sm">Price</th>
-                  <th className="text-left p-3 font-medium text-gray-700 text-sm">Status</th>
-                  <th className="text-left p-3 font-medium text-gray-700 text-sm">Actions</th>
+                  <th className="text-left p-2 font-medium text-gray-700 text-sm">Item & Participants</th>
+                  <th className="text-left p-2 font-medium text-gray-700 text-sm">Meeting Details</th>
+                  <th className="text-left p-2 font-medium text-gray-700 text-sm">Price</th>
+                  <th className="text-left p-2 font-medium text-gray-700 text-sm">Status</th>
+                  <th className="text-left p-2 font-medium text-gray-700 text-sm">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {loading ? (
                   <tr>
-                    <td colSpan="5" className="p-8 text-center">
+                    <td colSpan="5" className="p-6 text-center">
                       <div className="flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-3"></div>
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mr-3"></div>
                         <span className="text-gray-500">Loading meetings...</span>
                       </div>
                     </td>
                   </tr>
                 ) : filteredMeetings.length === 0 ? (
                   <tr>
-                    <td colSpan="5" className="p-8 text-center text-gray-500">
-                      <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                    <td colSpan="5" className="p-6 text-center text-gray-500">
+                      <Calendar className="w-8 h-8 text-gray-300 mx-auto mb-2" />
                       <p>No meetings found matching your criteria</p>
                     </td>
                   </tr>
@@ -436,39 +485,43 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
                     return (
                       <tr key={meeting.id} className="hover:bg-gray-50 transition-colors">
                         {/* Item & Participants Column */}
-                        <td className="p-3">
-                          <div className="flex items-start space-x-3">
+                        <td className="p-2">
+                          <div className="flex items-start space-x-2">
                             {/* Item Image */}
                             <div className="flex-shrink-0">
                               <img
-                                src={meeting.primaryImageUrl || '/api/placeholder/60/60'}
+                                src={getImageUrl(meeting.primaryImageUrl, meeting.gemName)}
                                 alt={meeting.gemName || 'Gem'}
-                                className="w-14 h-14 rounded-lg object-cover border border-gray-200"
+                                className="w-10 h-10 rounded object-cover border border-gray-200"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.src = getImageUrl(undefined, meeting.gemName);
+                                }}
                               />
                             </div>
                             
                             {/* Item and Participants Info */}
                             <div className="flex-1 min-w-0">
-                              <div className="text-sm font-medium text-gray-900 truncate mb-1">
+                              <div className="text-sm font-medium text-gray-900 truncate">
                                 {meeting.gemName || 'Unknown Gem'}
                               </div>
-                              <div className="text-xs text-gray-500 mb-2">
+                              <div className="text-xs text-gray-500 mb-1">
                                 {meeting.gemType || 'Gemstone'}
                               </div>
                               
                               {/* Participants */}
-                              <div className="space-y-1">
+                              <div className="space-y-0.5">
                                 <div className="flex items-center text-xs">
-                                  <span className="w-2 h-2 bg-green-400 rounded-full mr-2"></span>
-                                  <span className="text-green-700 font-medium">Buyer:</span>
-                                  <span className="text-gray-600 ml-1 truncate max-w-[120px]">
+                                  <span className="w-1.5 h-1.5 bg-green-400 rounded-full mr-1.5"></span>
+                                  <span className="text-green-700 font-medium">B:</span>
+                                  <span className="text-gray-600 ml-1 truncate max-w-[100px]">
                                     {meeting.buyerName || 'N/A'}
                                   </span>
                                 </div>
                                 <div className="flex items-center text-xs">
-                                  <span className="w-2 h-2 bg-blue-400 rounded-full mr-2"></span>
-                                  <span className="text-blue-700 font-medium">Seller:</span>
-                                  <span className="text-gray-600 ml-1 truncate max-w-[120px]">
+                                  <span className="w-1.5 h-1.5 bg-blue-400 rounded-full mr-1.5"></span>
+                                  <span className="text-blue-700 font-medium">S:</span>
+                                  <span className="text-gray-600 ml-1 truncate max-w-[100px]">
                                     {meeting.sellerName || 'N/A'}
                                   </span>
                                 </div>
@@ -478,15 +531,17 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
                         </td>
 
                         {/* Meeting Details Column */}
-                        <td className="p-3">
-                          <div className="space-y-1">
+                        <td className="p-2">
+                          <div className="space-y-0.5">
                             {/* Date and Time */}
                             <div className="flex items-center text-xs text-gray-600">
                               <Calendar className="w-3 h-3 mr-1 text-gray-400" />
                               <span>
                                 {proposedDateTime ? proposedDateTime.toLocaleDateString('en-GB') : 'TBD'}
                               </span>
-                              <Clock className="w-3 h-3 ml-2 mr-1 text-gray-400" />
+                            </div>
+                            <div className="flex items-center text-xs text-gray-600">
+                              <Clock className="w-3 h-3 mr-1 text-gray-400" />
                               <span>
                                 {proposedDateTime ? proposedDateTime.toLocaleTimeString('en-GB', { 
                                   hour: '2-digit', 
@@ -498,35 +553,43 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
                             {/* Location */}
                             <div className="flex items-center text-xs text-gray-600">
                               <MapPin className="w-3 h-3 mr-1 text-gray-400" />
-                              <span className="truncate max-w-[140px]">
+                              <span className="truncate max-w-[100px]">
                                 {meeting.location || 'Location TBD'}
                               </span>
                             </div>
                             
                             {/* Meeting Type */}
                             <div className="text-xs">
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
                                 {meeting.meetingType || 'MEETING'}
                               </span>
+                            </div>
+                            
+                            {/* Additional IDs */}
+                            <div className="space-y-0.5 text-xs text-gray-400 mt-1">
+                              {meeting.purchaseId && (
+                                <div>P: {meeting.purchaseId.slice(-6)}</div>
+                              )}
+                              <div>M: {meeting.id.slice(-6)}</div>
                             </div>
                           </div>
                         </td>
 
                         {/* Price Column */}
-                        <td className="p-3">
+                        <td className="p-2">
                           <div className="text-sm font-semibold text-green-600">
                             LKR {meeting.finalPrice ? meeting.finalPrice.toLocaleString() : '0'}
                           </div>
                           {meeting.commissionAmount && (
                             <div className="text-xs text-gray-500">
-                              Commission: LKR {meeting.commissionAmount.toLocaleString()}
+                              Com: LKR {meeting.commissionAmount.toLocaleString()}
                             </div>
                           )}
                         </td>
 
                         {/* Status Column */}
-                        <td className="p-3">
-                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                        <td className="p-2">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
                             meeting.status === 'CONFIRMED' ? 'bg-green-100 text-green-800' :
                             meeting.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
                             meeting.status === 'COMPLETED' ? 'bg-blue-100 text-blue-800' :
@@ -538,14 +601,14 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
                         </td>
                         
                         {/* Actions Column */}
-                        <td className="p-3">
-                          <div className="flex items-center space-x-2">
+                        <td className="p-2">
+                          <div className="flex items-center space-x-1">
                             <button
                               onClick={() => {
                                 setSelectedMeeting(meeting);
                                 setShowDetailsModal(true);
                               }}
-                              className="flex items-center space-x-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors text-xs"
+                              className="flex items-center space-x-1 px-1.5 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors text-xs"
                             >
                               <Eye className="w-3 h-3" />
                               <span>Details</span>
@@ -554,9 +617,9 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
                             {/* Mark as Completed Button for Confirmed Meetings */}
                             {meeting.status === 'CONFIRMED' && (
                               <button
-                                onClick={() => markAsCompleted(meeting.id)}
+                                onClick={() => handleCompleteButtonClick(meeting)}
                                 disabled={updatingMeeting === meeting.id}
-                                className="flex items-center space-x-1 px-2 py-1 bg-green-100 text-green-700 rounded-md hover:bg-green-200 transition-colors text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="flex items-center space-x-1 px-1.5 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors text-xs disabled:opacity-50 disabled:cursor-not-allowed"
                               >
                                 {updatingMeeting === meeting.id ? (
                                   <div className="animate-spin rounded-full h-3 w-3 border-b border-green-700"></div>
@@ -592,7 +655,7 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
                     {/* Mark as Completed Button in Modal */}
                     {selectedMeeting.status === 'CONFIRMED' && (
                       <button
-                        onClick={() => markAsCompleted(selectedMeeting.id)}
+                        onClick={() => handleCompleteButtonClick(selectedMeeting)}
                         disabled={updatingMeeting === selectedMeeting.id}
                         className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
@@ -629,12 +692,12 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
                       {/* Large Item Image */}
                       <div className="mb-4">
                         <img
-                          src={selectedMeeting.primaryImageUrl || '/api/placeholder/250/250'}
+                          src={getImageUrl(selectedMeeting.primaryImageUrl, selectedMeeting.gemName)}
                           alt={selectedMeeting.gemName || 'Gem Image'}
                           className="w-full h-48 rounded-lg object-cover border-4 border-white shadow-lg"
                           onError={(e) => {
                             const target = e.target as HTMLImageElement;
-                            target.src = '/api/placeholder/250/250';
+                            target.src = getImageUrl(undefined, selectedMeeting.gemName);
                           }}
                         />
                       </div>
@@ -673,8 +736,8 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
                               </span>
                             </div>
                             <div className="text-xs space-y-1 text-gray-500">
-                              <p>Meeting ID: <span className="font-mono">{selectedMeeting.id}</span></p>
-                              <p>Purchase ID: <span className="font-mono">{selectedMeeting.purchaseId}</span></p>
+                              <p>Purchase: <span className="font-mono">{selectedMeeting.purchaseId?.slice(-8) || 'N/A'}</span></p>
+                              <p>Meeting: <span className="font-mono">{selectedMeeting.id?.slice(-8) || 'N/A'}</span></p>
                             </div>
                           </div>
                         </div>
@@ -872,6 +935,108 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
                       </div>
                     </div>
                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Confirmation Modal for Completing Meeting */}
+        {showCompleteConfirmModal && meetingToComplete && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl max-w-md w-full shadow-2xl">
+              <div className="p-6">
+                {/* Modal Header */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center">
+                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                      <Check className="w-5 h-5 text-green-600" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900">Complete Meeting</h3>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowCompleteConfirmModal(false);
+                      setMeetingToComplete(null);
+                    }}
+                    className="text-gray-400 hover:text-gray-600 p-1"
+                  >
+                    <XCircle className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Modal Content */}
+                <div className="mb-6">
+                  <p className="text-gray-700 mb-4">
+                    Are you sure you want to mark this meeting as completed?
+                  </p>
+                  
+                  {/* Meeting Details Summary */}
+                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <div className="flex items-center space-x-3 mb-3">
+                      <img
+                        src={getImageUrl(meetingToComplete.primaryImageUrl, meetingToComplete.gemName)}
+                        alt={meetingToComplete.gemName || 'Gem'}
+                        className="w-12 h-12 rounded-lg object-cover border border-gray-200"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = getImageUrl(undefined, meetingToComplete.gemName);
+                        }}
+                      />
+                      <div>
+                        <p className="font-medium text-gray-900">{meetingToComplete.gemName}</p>
+                        <p className="text-sm text-gray-600">
+                          {meetingToComplete.buyerName} ↔ {meetingToComplete.sellerName}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="text-sm text-gray-600">
+                      <p><span className="font-medium">Meeting ID:</span> {meetingToComplete.id.slice(-8)}</p>
+                      <p><span className="font-medium">Location:</span> {meetingToComplete.location}</p>
+                      <p><span className="font-medium">Final Price:</span> LKR {meetingToComplete.finalPrice?.toLocaleString()}</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <div className="flex items-start">
+                      <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5 mr-2 flex-shrink-0" />
+                      <div className="text-sm text-yellow-800">
+                        <p className="font-medium mb-1">Important:</p>
+                        <p>Once marked as completed, both parties will be notified and this action cannot be undone. The buyer will also receive commission details (6%, negotiable). Please ensure the meeting has actually taken place and all requirements have been fulfilled.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Modal Actions */}
+                <div className="flex justify-end space-x-3">
+                  <button
+                    onClick={() => {
+                      setShowCompleteConfirmModal(false);
+                      setMeetingToComplete(null);
+                    }}
+                    className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmCompletion}
+                    disabled={updatingMeeting === meetingToComplete.id}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                  >
+                    {updatingMeeting === meetingToComplete.id ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <span>Completing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-4 h-4" />
+                        <span>Yes, Complete Meeting</span>
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
             </div>

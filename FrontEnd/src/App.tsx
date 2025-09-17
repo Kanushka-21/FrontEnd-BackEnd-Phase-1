@@ -164,7 +164,9 @@ const AppRoutes: React.FC = () => {
             path="/buyer/dashboard"
             element={
               <RoleProtectedRoute allowedRoles={['buyer']}>
-                <BuyerDashboard />
+                <NotificationProvider>
+                  <BuyerDashboard />
+                </NotificationProvider>
               </RoleProtectedRoute>
             }
           />
@@ -194,7 +196,9 @@ const AppRoutes: React.FC = () => {
             path="/seller/dashboard"
             element={
               <RoleProtectedRoute allowedRoles={['seller']}>
-                <SellerDashboard />
+                <NotificationProvider>
+                  <SellerDashboard />
+                </NotificationProvider>
               </RoleProtectedRoute>
             }
           />

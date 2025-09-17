@@ -43,6 +43,12 @@ public class MeetingService {
     @Autowired
     private EmailService emailService;
     
+    @Autowired
+    private NoShowManagementService noShowManagementService;
+    
+    @Autowired
+    private MeetingReminderService meetingReminderService;
+    
     /**
      * Helper method to create meeting-related notifications for buyers and sellers
      */
@@ -202,6 +208,10 @@ public class MeetingService {
             meeting.setSellerEmail(seller.getEmail());
             meeting.setBuyerPhone(buyer.getPhoneNumber());
             meeting.setSellerPhone(seller.getPhoneNumber());
+            
+            // Generate human-readable meeting ID
+            String displayId = meetingReminderService.generateMeetingDisplayId(meeting);
+            meeting.setMeetingDisplayId(displayId);
             meeting.setStatus("PENDING");
             
             // Calculate commission (5% by default)
@@ -301,10 +311,142 @@ public class MeetingService {
     }
     
     /**
+     * Get enriched meetings for a user with gem listing details including images
+     */
+    public List<Map<String, Object>> getEnrichedMeetingsForUser(String userId) {
+        try {
+            List<Meeting> meetings = meetingRepository.findMeetingsByUserId(userId);
+            List<Map<String, Object>> enrichedMeetings = new ArrayList<>();
+            
+            for (Meeting meeting : meetings) {
+                Map<String, Object> meetingDetail = new HashMap<>();
+                
+                try {
+                    // Basic meeting information
+                    meetingDetail.put("id", meeting.getId());
+                    meetingDetail.put("purchaseId", meeting.getPurchaseId());
+                    meetingDetail.put("buyerId", meeting.getBuyerId());
+                    meetingDetail.put("sellerId", meeting.getSellerId());
+                    meetingDetail.put("gemName", meeting.getGemName());
+                    meetingDetail.put("gemType", meeting.getGemType());
+                    meetingDetail.put("finalPrice", meeting.getFinalPrice());
+                    
+                    // Fetch gem listing details to get the primary image
+                    String primaryImageUrl = null;
+                    try {
+                        if (meeting.getPurchaseId() != null) {
+                            Optional<GemListing> gemListingOpt = gemListingRepository.findById(meeting.getPurchaseId());
+                            if (gemListingOpt.isPresent()) {
+                                GemListing gemListing = gemListingOpt.get();
+                                if (gemListing.getImages() != null && !gemListing.getImages().isEmpty()) {
+                                    primaryImageUrl = gemListing.getImages().get(0).getImageUrl(); // Get first image URL as primary
+                                    logger.debug("✅ [MeetingService] Found primary image for meeting {}: {}", meeting.getId(), primaryImageUrl);
+                                } else {
+                                    logger.debug("⚠️ [MeetingService] No images found for gem listing {}", meeting.getPurchaseId());
+                                }
+                            } else {
+                                logger.warn("⚠️ [MeetingService] Gem listing not found for purchase ID: {}", meeting.getPurchaseId());
+                            }
+                        }
+                    } catch (Exception e) {
+                        logger.error("❌ [MeetingService] Error fetching gem listing image for meeting {}: {}", meeting.getId(), e.getMessage());
+                    }
+                    
+                    meetingDetail.put("primaryImageUrl", primaryImageUrl);
+                    meetingDetail.put("proposedDateTime", meeting.getProposedDateTime());
+                    meetingDetail.put("confirmedDateTime", meeting.getConfirmedDateTime());
+                    meetingDetail.put("location", meeting.getLocation());
+                    meetingDetail.put("meetingType", meeting.getMeetingType());
+                    meetingDetail.put("status", meeting.getStatus());
+                    meetingDetail.put("buyerNotes", meeting.getBuyerNotes());
+                    meetingDetail.put("sellerNotes", meeting.getSellerNotes());
+                    meetingDetail.put("createdAt", meeting.getCreatedAt());
+                    meetingDetail.put("updatedAt", meeting.getUpdatedAt());
+                    
+                    // Get buyer details
+                    try {
+                        Optional<User> buyerOpt = userRepository.findById(meeting.getBuyerId());
+                        if (buyerOpt.isPresent()) {
+                            User buyer = buyerOpt.get();
+                            meetingDetail.put("buyerName", buyer.getFirstName() + " " + buyer.getLastName());
+                            meetingDetail.put("buyerEmail", buyer.getEmail());
+                            meetingDetail.put("buyerPhone", buyer.getPhoneNumber());
+                            
+                            Map<String, Object> buyerContact = new HashMap<>();
+                            buyerContact.put("fullName", buyer.getFirstName() + " " + buyer.getLastName());
+                            buyerContact.put("email", buyer.getEmail());
+                            buyerContact.put("phoneNumber", buyer.getPhoneNumber());
+                            meetingDetail.put("buyerContact", buyerContact);
+                        } else {
+                            logger.warn("⚠️ [MeetingService] Buyer not found for ID: {}", meeting.getBuyerId());
+                            meetingDetail.put("buyerName", "Unknown Buyer");
+                            meetingDetail.put("buyerEmail", "N/A");
+                            meetingDetail.put("buyerPhone", "N/A");
+                        }
+                    } catch (Exception e) {
+                        logger.error("❌ [MeetingService] Error getting buyer details for meeting {}: {}", meeting.getId(), e.getMessage());
+                        meetingDetail.put("buyerName", "Unknown Buyer");
+                        meetingDetail.put("buyerEmail", "N/A");
+                        meetingDetail.put("buyerPhone", "N/A");
+                    }
+                    
+                    // Get seller details
+                    try {
+                        Optional<User> sellerOpt = userRepository.findById(meeting.getSellerId());
+                        if (sellerOpt.isPresent()) {
+                            User seller = sellerOpt.get();
+                            meetingDetail.put("sellerName", seller.getFirstName() + " " + seller.getLastName());
+                            meetingDetail.put("sellerEmail", seller.getEmail());
+                            meetingDetail.put("sellerPhone", seller.getPhoneNumber());
+                            
+                            Map<String, Object> sellerContact = new HashMap<>();
+                            sellerContact.put("fullName", seller.getFirstName() + " " + seller.getLastName());
+                            sellerContact.put("email", seller.getEmail());
+                            sellerContact.put("phoneNumber", seller.getPhoneNumber());
+                            meetingDetail.put("sellerContact", sellerContact);
+                        } else {
+                            logger.warn("⚠️ [MeetingService] Seller not found for ID: {}", meeting.getSellerId());
+                            meetingDetail.put("sellerName", "Unknown Seller");
+                            meetingDetail.put("sellerEmail", "N/A");
+                            meetingDetail.put("sellerPhone", "N/A");
+                        }
+                    } catch (Exception e) {
+                        logger.error("❌ [MeetingService] Error getting seller details for meeting {}: {}", meeting.getId(), e.getMessage());
+                        meetingDetail.put("sellerName", "Unknown Seller");
+                        meetingDetail.put("sellerEmail", "N/A");
+                        meetingDetail.put("sellerPhone", "N/A");
+                    }
+                    
+                    enrichedMeetings.add(meetingDetail);
+                    logger.debug("✅ [MeetingService] Successfully processed meeting: {}", meeting.getId());
+                    
+                } catch (Exception e) {
+                    logger.error("❌ [MeetingService] Error processing meeting {}: {}", meeting.getId(), e.getMessage(), e);
+                    // Continue processing other meetings
+                }
+            }
+            
+            logger.info("✅ [MeetingService] Successfully processed {} enriched meetings for user {}", enrichedMeetings.size(), userId);
+            return enrichedMeetings;
+            
+        } catch (Exception e) {
+            logger.error("❌ [MeetingService] Error in getEnrichedMeetingsForUser(): {}", e.getMessage(), e);
+            throw e;
+        }
+    }
+    
+    /**
      * Get meeting by ID
      */
     public Optional<Meeting> getMeetingById(String meetingId) {
         return meetingRepository.findById(meetingId);
+    }
+    
+    /**
+     * Get meeting by display ID
+     */
+    public Optional<Meeting> getMeetingByDisplayId(String displayId) {
+        return meetingRepository.findByMeetingDisplayId(displayId);
     }
     
     /**
@@ -672,7 +814,29 @@ public class MeetingService {
                     meetingDetail.put("gemName", meeting.getGemName());
                     meetingDetail.put("gemType", meeting.getGemType());
                     meetingDetail.put("finalPrice", meeting.getFinalPrice());
-                    meetingDetail.put("primaryImageUrl", null); // Not available in current Meeting model
+                    
+                    // Fetch gem listing details to get the primary image
+                    String primaryImageUrl = null;
+                    try {
+                        if (meeting.getPurchaseId() != null) {
+                            Optional<GemListing> gemListingOpt = gemListingRepository.findById(meeting.getPurchaseId());
+                            if (gemListingOpt.isPresent()) {
+                                GemListing gemListing = gemListingOpt.get();
+                                if (gemListing.getImages() != null && !gemListing.getImages().isEmpty()) {
+                                    primaryImageUrl = gemListing.getImages().get(0).getImageUrl(); // Get first image URL as primary
+                                    logger.debug("✅ [MeetingService] Found primary image for meeting {}: {}", meeting.getId(), primaryImageUrl);
+                                } else {
+                                    logger.debug("⚠️ [MeetingService] No images found for gem listing {}", meeting.getPurchaseId());
+                                }
+                            } else {
+                                logger.warn("⚠️ [MeetingService] Gem listing not found for purchase ID: {}", meeting.getPurchaseId());
+                            }
+                        }
+                    } catch (Exception e) {
+                        logger.error("❌ [MeetingService] Error fetching gem listing image for meeting {}: {}", meeting.getId(), e.getMessage());
+                    }
+                    
+                    meetingDetail.put("primaryImageUrl", primaryImageUrl);
                     meetingDetail.put("proposedDateTime", meeting.getProposedDateTime());
                     meetingDetail.put("confirmedDateTime", meeting.getConfirmedDateTime());
                     meetingDetail.put("location", meeting.getLocation());
@@ -805,6 +969,18 @@ public class MeetingService {
                 return response;
             }
             
+            // Calculate commission (6% of final price, can be negotiated later)
+            Double finalPrice = meeting.getFinalPrice();
+            Double commissionRate = 0.06; // 6% commission rate
+            Double commissionAmount = 0.0;
+            
+            if (finalPrice != null && finalPrice > 0) {
+                commissionAmount = finalPrice * commissionRate;
+                meeting.setCommissionAmount(commissionAmount);
+                logger.info("💰 [MeetingService] Commission calculated: LKR {} (6% of LKR {})", 
+                           commissionAmount, finalPrice);
+            }
+            
             // Update meeting status to COMPLETED
             meeting.setStatus("COMPLETED");
             meeting.setUpdatedAt(LocalDateTime.now());
@@ -876,6 +1052,48 @@ public class MeetingService {
                 logger.error("❌ [MeetingService] Failed to send notification to seller {}: {}", sellerId, e.getMessage());
             }
             
+            // Send commission notification to buyer (after both parties have confirmed and admin completed the meeting)
+            if (commissionAmount > 0) {
+                try {
+                    String commissionTitle = "💰 Commission Details - " + gemName;
+                    String commissionMessage = String.format(
+                        "Dear %s,\n\n" +
+                        "Your meeting for %s has been completed and approved by administration. " +
+                        "Please note the following commission details:\n\n" +
+                        "📊 Transaction Summary:\n" +
+                        "• Item: %s\n" +
+                        "• Final Price: LKR %,.2f\n" +
+                        "• Commission Rate: 6%% (negotiable)\n" +
+                        "• Commission Amount: LKR %,.2f\n\n" +
+                        "The commission is applied as per GemNet's standard terms and conditions. " +
+                        "If you wish to discuss or negotiate the commission rate, please contact our administration team.\n\n" +
+                        "Thank you for choosing GemNet for your gemstone transactions!",
+                        buyerName,
+                        gemName,
+                        gemName,
+                        finalPrice,
+                        commissionAmount
+                    );
+                    
+                    createMeetingNotification(
+                        buyerId,
+                        meetingId,
+                        gemName,
+                        "COMMISSION_NOTIFICATION",
+                        commissionTitle,
+                        commissionMessage,
+                        "admin",
+                        "Admin"
+                    );
+                    
+                    logger.info("💰 [MeetingService] Commission notification sent to buyer: {} (LKR {})", 
+                               buyerId, commissionAmount);
+                } catch (Exception e) {
+                    logger.error("❌ [MeetingService] Failed to send commission notification to buyer {}: {}", 
+                                buyerId, e.getMessage());
+                }
+            }
+            
             response.put("success", true);
             response.put("message", "Meeting marked as completed successfully. Notifications sent to both parties.");
             response.put("meeting", savedMeeting);
@@ -887,6 +1105,107 @@ public class MeetingService {
             logger.error("❌ [MeetingService] Error in adminCompleteMeeting(): {}", e.getMessage(), e);
             response.put("success", false);
             response.put("message", "Failed to complete meeting: " + e.getMessage());
+            response.put("error", e.getClass().getSimpleName());
+            return response;
+        }
+    }
+    
+    /**
+     * Delete a meeting (only allowed for buyers and only for pending meetings)
+     */
+    public Map<String, Object> deleteMeeting(String meetingId, String userId) {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            logger.info("🗑️ [MeetingService] Delete meeting request: meetingId={}, userId={}", meetingId, userId);
+            
+            // Get the meeting
+            Optional<Meeting> meetingOpt = meetingRepository.findById(meetingId);
+            if (!meetingOpt.isPresent()) {
+                response.put("success", false);
+                response.put("message", "Meeting not found");
+                return response;
+            }
+            
+            Meeting meeting = meetingOpt.get();
+            
+            // Check if user is the buyer (only buyers can delete meetings)
+            if (!meeting.getBuyerId().equals(userId)) {
+                response.put("success", false);
+                response.put("message", "Only the meeting requester (buyer) can delete this meeting");
+                return response;
+            }
+            
+            // Check if meeting is still pending (only pending meetings can be deleted)
+            if (!"PENDING".equals(meeting.getStatus())) {
+                response.put("success", false);
+                response.put("message", "Only pending meetings can be deleted. This meeting is " + meeting.getStatus());
+                return response;
+            }
+            
+            // Get seller information for notification
+            String sellerName = "Unknown Seller";
+            try {
+                Optional<User> sellerOpt = userRepository.findById(meeting.getSellerId());
+                if (sellerOpt.isPresent()) {
+                    User seller = sellerOpt.get();
+                    sellerName = seller.getFirstName() + " " + seller.getLastName();
+                }
+            } catch (Exception e) {
+                logger.warn("⚠️ [MeetingService] Could not get seller details for notification: {}", e.getMessage());
+            }
+            
+            // Get buyer information for notification
+            String buyerName = "Unknown Buyer";
+            try {
+                Optional<User> buyerOpt = userRepository.findById(meeting.getBuyerId());
+                if (buyerOpt.isPresent()) {
+                    User buyer = buyerOpt.get();
+                    buyerName = buyer.getFirstName() + " " + buyer.getLastName();
+                }
+            } catch (Exception e) {
+                logger.warn("⚠️ [MeetingService] Could not get buyer details for notification: {}", e.getMessage());
+            }
+            
+            // Delete the meeting
+            meetingRepository.delete(meeting);
+            
+            // Send notification to seller about meeting deletion
+            try {
+                String notificationMessage = String.format(
+                    "The meeting request for %s has been deleted by buyer %s. " +
+                    "The meeting was scheduled for %s at %s.",
+                    meeting.getGemName(),
+                    buyerName,
+                    meeting.getProposedDateTime().toString(),
+                    meeting.getLocation()
+                );
+                
+                createMeetingNotification(
+                    meeting.getSellerId(),
+                    meetingId,
+                    meeting.getGemName(),
+                    "MEETING_DELETED",
+                    "Meeting Request Deleted",
+                    notificationMessage,
+                    userId,
+                    buyerName
+                );
+                logger.info("✅ [MeetingService] Deletion notification sent to seller: {}", meeting.getSellerId());
+            } catch (Exception e) {
+                logger.error("❌ [MeetingService] Failed to send deletion notification to seller: {}", e.getMessage());
+            }
+            
+            response.put("success", true);
+            response.put("message", "Meeting deleted successfully. The seller has been notified.");
+            
+            logger.info("✅ [MeetingService] Meeting deleted successfully: {}", meetingId);
+            return response;
+            
+        } catch (Exception e) {
+            logger.error("❌ [MeetingService] Error in deleteMeeting(): {}", e.getMessage(), e);
+            response.put("success", false);
+            response.put("message", "Failed to delete meeting: " + e.getMessage());
             response.put("error", e.getClass().getSimpleName());
             return response;
         }

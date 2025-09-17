@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { 
   Card, Row, Col, Statistic, Table, Button, Tag, 
   Tabs, List, Rate, Modal, Form,
@@ -10,28 +10,15 @@ import {
   ExclamationCircleOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { AuthContext } from '../../context/AuthContext';
 
 const { TabPane } = Tabs;
 const { confirm } = Modal;
 
-// Helper function to format price in LKR
-const formatLKR = (price: number) => {
-  return new Intl.NumberFormat('si-LK', {
-    style: 'currency',
-    currency: 'LKR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(price);
-};
+// Import enhanced formatter that handles large numbers
+import { formatLKR, formatLKRExact, formatNumberCompact } from '../../utils/formatLKR';
 
 // Simple mock data
-const mockBids = [
-  { id: '1', gemstone: 'Blue Sapphire', image: 'https://via.placeholder.com/100', amount: 2500, status: 'active', date: '2025-06-01' },
-  { id: '2', gemstone: 'Ruby', image: 'https://via.placeholder.com/100', amount: 3750, status: 'won', date: '2025-06-05' },
-  { id: '3', gemstone: 'Emerald', image: 'https://via.placeholder.com/100', amount: 1850, status: 'lost', date: '2025-06-10' },
-  { id: '4', gemstone: 'Diamond', image: 'https://via.placeholder.com/100', amount: 5200, status: 'active', date: '2025-06-15' }
-];
-
 const mockMeetings = [
   { 
     id: '1',
@@ -109,6 +96,8 @@ const mockPurchaseHistory = [
 ];
 
 const BuyerDashboard: React.FC = (): React.ReactNode => {
+  const { user } = useContext(AuthContext);
+  
   // State for modals
   const [isViewGemstoneModalVisible, setIsViewGemstoneModalVisible] = useState(false);
   const [isPlaceBidModalVisible, setIsPlaceBidModalVisible] = useState(false);
@@ -133,6 +122,12 @@ const BuyerDashboard: React.FC = (): React.ReactNode => {
   
   // Function to handle opening the place bid modal
   const handleOpenPlaceBidModal = (gemstone: any) => {
+    // Check if user is admin
+    if (user?.role?.toLowerCase() === 'admin' || user?.userRole?.toLowerCase() === 'admin') {
+      message.error('Admin users cannot place bids on items');
+      return;
+    }
+    
     setSelectedGemstone(gemstone);
     setBidAmount(gemstone.price);
     setIsPlaceBidModalVisible(true);
@@ -140,6 +135,13 @@ const BuyerDashboard: React.FC = (): React.ReactNode => {
   
   // Function to handle submitting a bid
   const handlePlaceBid = (values: { bidAmount: number }) => {
+    // Check if user is admin
+    if (user?.role?.toLowerCase() === 'admin' || user?.userRole?.toLowerCase() === 'admin') {
+      message.error('Admin users cannot place bids on items');
+      setIsPlaceBidModalVisible(false);
+      return;
+    }
+    
     if (!values.bidAmount) {
       message.error('Please enter a bid amount');
       return;
@@ -181,18 +183,6 @@ const BuyerDashboard: React.FC = (): React.ReactNode => {
     message.success('Review submitted successfully');
     setIsReviewModalVisible(false);
     reviewForm.resetFields();
-  };
-  
-  // Function to handle withdrawing a bid
-  const handleWithdrawBid = (_: any) => {
-    confirm({
-      title: 'Withdraw Bid',
-      icon: <ExclamationCircleOutlined />,
-      content: 'Are you sure you want to withdraw this bid? This action cannot be undone.',
-      onOk() {
-        message.success(`Bid withdrawn successfully`);
-      },
-    });
   };
 
   // Return the JSX for the dashboard
@@ -309,7 +299,7 @@ const BuyerDashboard: React.FC = (): React.ReactNode => {
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500 mb-1">Purchase History</p>
+                <p className="text-sm font-medium text-gray-500 mb-1">Reserved Items History</p>
                 <h3 className="text-2xl font-bold text-gray-800">{stats.purchaseHistory}</h3>
               </div>
               <div className="w-12 h-12 flex items-center justify-center rounded-full bg-purple-100">
@@ -334,74 +324,6 @@ const BuyerDashboard: React.FC = (): React.ReactNode => {
           tabBarStyle={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb', padding: '0 16px' }}
         >
           <TabPane 
-            tab={<span className="flex items-center px-1"><TrophyOutlined className="mr-2" /> My Bids</span>} 
-            key="bids"
-          >            <Table 
-              dataSource={mockBids}
-              responsive
-              scroll={{ x: 'max-content' }}
-              columns={[
-                {
-                  title: 'Gemstone',
-                  key: 'gemstone',
-                  render: (_, record) => (
-                    <div className="flex items-center space-x-3">
-                      <img 
-                        src={record.image} 
-                        alt={record.gemstone}
-                        className="w-12 h-12 object-cover rounded-lg"
-                      />
-                      <span className="font-medium">{record.gemstone}</span>
-                    </div>
-                  ),
-                },
-                {                  title: 'Bid Amount',
-                  dataIndex: 'amount',
-                  key: 'amount',
-                  render: amount => formatLKR(amount)
-                },
-                {
-                  title: 'Status',
-                  dataIndex: 'status',
-                  key: 'status',
-                  render: (status: string) => {
-                    const statusColors: Record<string, string> = {
-                      active: 'blue',
-                      won: 'green',
-                      lost: 'red',
-                      withdrawn: 'gray'
-                    };
-                    return <Tag color={statusColors[status] || 'default'}>{status.toUpperCase()}</Tag>;
-                  }
-                },
-                {
-                  title: 'Date',
-                  dataIndex: 'date',
-                  key: 'date',
-                  render: date => dayjs(date).format('MMM DD, YYYY')
-                },
-                {
-                  title: 'Actions',
-                  key: 'actions',
-                  render: (_, record) => (
-                    <div className="space-x-2">
-                      <Button size="small" icon={<EyeOutlined />} onClick={() => handleViewGemstone(record)}>
-                        View
-                      </Button>
-                      {record.status === 'active' && (
-                        <Button size="small" danger onClick={() => handleWithdrawBid(record)}>Withdraw</Button>
-                      )}
-                      {record.status === 'won' && (
-                        <Button size="small" type="primary">Schedule Meeting</Button>
-                      )}
-                    </div>
-                  )
-                }
-              ]}
-              pagination={{ pageSize: 5 }}
-            />
-          </TabPane>
-            <TabPane 
             tab={<span className="flex items-center px-1"><CalendarOutlined className="mr-2" /> Meetings</span>} 
             key="meetings"
           >            <Table 
@@ -498,7 +420,7 @@ const BuyerDashboard: React.FC = (): React.ReactNode => {
               )}
             />
           </TabPane>          <TabPane 
-            tab={<span className="flex items-center px-1"><ShoppingOutlined className="mr-2" /> Purchase History</span>} 
+            tab={<span className="flex items-center px-1"><ShoppingOutlined className="mr-2" /> Reserved Items History</span>} 
             key="purchaseHistory"
           >            <Table 
               dataSource={mockPurchaseHistory}

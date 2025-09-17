@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useNotifications, NotificationBadge } from '@/contexts/NotificationContext';
+import { useNotifications } from '@/contexts/NotificationContext';
+import NotificationBadge from '@/components/ui/NotificationBadge';
 import { Modal, Divider, Alert } from 'antd';
 import dayjs from 'dayjs';
 import RoleAwareDashboardLayout from '@/components/layout/RoleAwareDashboardLayout';
-import { BarChart3, Users, Package, Clock, Settings, Menu as MenuIcon, MessageCircle, Search } from 'lucide-react';
-import AdminNotificationComponent from '@/components/ui/AdminNotificationComponent';
+import { BarChart3, Users, Package, Clock, Settings, Menu as MenuIcon, MessageCircle, Search, Shield, CheckSquare } from 'lucide-react';
 
 // Import modular components
 import {
@@ -20,9 +20,14 @@ import {
   formatLKR
 } from './AdminDashboardComponents';
 
+// Import no-show management components
+import NoShowManagement from '@/components/admin/NoShowManagement';
+import MeetingAttendanceManagement from '@/components/admin/MeetingAttendanceManagement';
+import BlockedUsersManagement from '@/components/admin/BlockedUsersManagement';
+
 const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
-  const { notifications, totalNotifications, refreshNotifications } = useNotifications();
+  const { notifications } = useNotifications();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [modalState, setModalState] = useState<ModalState>({
@@ -36,37 +41,59 @@ const AdminDashboard: React.FC = () => {
     selectedListing: null,
   });
 
+  // Get notifications from context
+  const { notifications: allNotifications, getNotificationCount } = useNotifications();
+  const adminNotifications = allNotifications.admin;
+
   // Sidebar items for admin with notification badges
   const sidebarItems = [
     { 
       id: 'overview', 
       label: 'Dashboard Overview', 
       icon: <BarChart3 size={24} />,
-      notificationCount: 0
+      notificationCount: getNotificationCount('admin', 'overview') || 0
     },
     { 
       id: 'users', 
       label: 'User Management', 
       icon: <Users size={24} />,
-      notificationCount: notifications.userManagement
+      notificationCount: getNotificationCount('admin', 'userManagement') || 0
     },
     { 
       id: 'listings', 
       label: 'Listing Management', 
       icon: <Package size={24} />,
-      notificationCount: notifications.listingManagement
+      notificationCount: getNotificationCount('admin', 'listingManagement') || 0
     },
     { 
       id: 'advertisements', 
       label: 'Manage Advertisement', 
       icon: <Package size={24} />,
-      notificationCount: notifications.advertisements
+      notificationCount: getNotificationCount('admin', 'advertisements') || 0
     },
     { 
       id: 'meetings', 
       label: 'Meeting Requests', 
       icon: <Clock size={24} />,
-      notificationCount: notifications.meetingRequests
+      notificationCount: getNotificationCount('admin', 'meetingRequests') || 0
+    },
+    { 
+      id: 'attendance', 
+      label: 'Meeting Attendance', 
+      icon: <CheckSquare size={24} />,
+      notificationCount: 0
+    },
+    { 
+      id: 'no-show', 
+      label: 'No-Show Management', 
+      icon: <Shield size={24} />,
+      notificationCount: 0
+    },
+    { 
+      id: 'blocked-users', 
+      label: 'Blocked Users', 
+      icon: <Users size={24} />,
+      notificationCount: 0
     },
     { 
       id: 'feedback', 
@@ -78,7 +105,7 @@ const AdminDashboard: React.FC = () => {
       id: 'settings', 
       label: 'System Settings', 
       icon: <Settings size={24} />,
-      notificationCount: notifications.systemAlerts
+      notificationCount: getNotificationCount('admin', 'systemAlerts') || 0
     }
   ];
 
@@ -111,6 +138,12 @@ const AdminDashboard: React.FC = () => {
         return <AdvertisementsManagement actionHandlers={actionHandlers} />;
       case 'meetings':
         return <Meetings actionHandlers={actionHandlers} />;
+      case 'attendance':
+        return <MeetingAttendanceManagement user={user} />;
+      case 'no-show':
+        return <NoShowManagement user={user} />;
+      case 'blocked-users':
+        return <BlockedUsersManagement />;
       case 'feedback':
         return <FeedbackManagement user={user} onTabChange={setActiveTab} />;
       case 'settings':
@@ -170,22 +203,13 @@ const AdminDashboard: React.FC = () => {
                   {item.notificationCount > 0 && (
                     <NotificationBadge 
                       count={item.notificationCount} 
-                      size="small"
-                      color="red"
+                      size="sm"
+                      variant="danger"
                     />
                   )}
                 </span>
                 {!sidebarCollapsed && (
                   <span className="text-sm font-medium flex-1">{item.label}</span>
-                )}
-                {!sidebarCollapsed && item.notificationCount > 0 && (
-                  <span className="ml-auto">
-                    <NotificationBadge 
-                      count={item.notificationCount} 
-                      size="small"
-                      color="red"
-                    />
-                  </span>
                 )}
               </button>
             ))}
@@ -203,14 +227,6 @@ const AdminDashboard: React.FC = () => {
                 </p>
               </div>
               <div className="flex items-center space-x-4">
-                {/* Admin Notification Component */}
-                {user?.userId && (
-                  <AdminNotificationComponent 
-                    userId={user.userId}
-                    maxNotifications={10}
-                    onSectionChange={(section) => setActiveTab(section)}
-                  />
-                )}
                 {/* Search */}
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />

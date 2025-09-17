@@ -358,10 +358,33 @@ public class UserService {
         try {
             System.out.println("🔑 Processing login for: " + request.getEmail());
             
+            // First try to find user by email only to check if user exists
+            Optional<User> userCheckOpt = userRepository.findByEmail(request.getEmail());
+            if (!userCheckOpt.isPresent()) {
+                System.err.println("❌ User not found with email: " + request.getEmail());
+                return ApiResponse.error("Invalid email or password");
+            }
+            
+            User userCheck = userCheckOpt.get();
+            System.out.println("🔍 Debug - User found: " + userCheck.getEmail());
+            System.out.println("🔍 Debug - User isActive: " + userCheck.getIsActive());
+            System.out.println("🔍 Debug - User verificationStatus: " + userCheck.getVerificationStatus());
+            System.out.println("🔍 Debug - User accountStatus: " + userCheck.getAccountStatus());
+            
+            // Now find user with isActive = true
             Optional<User> userOpt = userRepository.findByEmailAndIsActive(request.getEmail(), true);
             if (!userOpt.isPresent()) {
-                System.err.println("❌ User not found or inactive: " + request.getEmail());
-                return ApiResponse.error("Invalid email or password");
+                System.err.println("❌ User not active: " + request.getEmail() + " (isActive: " + userCheck.getIsActive() + ")");
+                
+                // If user exists but is not active, try to reactivate if they were unblocked
+                if ("ACTIVE".equals(userCheck.getAccountStatus()) && !userCheck.getIsActive()) {
+                    System.out.println("🔄 Reactivating unblocked user: " + request.getEmail());
+                    userCheck.setIsActive(true);
+                    userRepository.save(userCheck);
+                    userOpt = Optional.of(userCheck);
+                } else {
+                    return ApiResponse.error("Invalid email or password");
+                }
             }
             
             User user = userOpt.get();
@@ -380,6 +403,33 @@ public class UserService {
             if (user.getIsLocked()) {
                 System.err.println("❌ Account locked: " + request.getEmail());
                 return ApiResponse.error("Account is locked. Please contact support.");
+            }
+            
+            // Check account status for no-show management
+            String accountStatus = user.getAccountStatus();
+            System.out.println("🔍 Account status for " + request.getEmail() + ": " + accountStatus);
+            
+            if ("BLOCKED".equals(accountStatus)) {
+                System.err.println("❌ Account blocked due to no-shows: " + request.getEmail());
+                
+                // Refresh user from database to ensure we have latest status
+                Optional<User> refreshedUserOpt = userRepository.findById(user.getId());
+                if (refreshedUserOpt.isPresent()) {
+                    User refreshedUser = refreshedUserOpt.get();
+                    String refreshedStatus = refreshedUser.getAccountStatus();
+                    System.out.println("🔄 Refreshed account status: " + refreshedStatus);
+                    
+                    if (!"BLOCKED".equals(refreshedStatus)) {
+                        System.out.println("✅ User was unblocked, allowing login with refreshed status");
+                        user = refreshedUser; // Use refreshed user data
+                    } else {
+                        String blockingReason = refreshedUser.getBlockingReason() != null ? refreshedUser.getBlockingReason() : "repeated no-shows";
+                        return ApiResponse.error("Your account has been blocked due to " + blockingReason + ". Please contact support to resolve this issue.");
+                    }
+                } else {
+                    String blockingReason = user.getBlockingReason() != null ? user.getBlockingReason() : "repeated no-shows";
+                    return ApiResponse.error("Your account has been blocked due to " + blockingReason + ". Please contact support to resolve this issue.");
+                }
             }
             
             // Handle role extraction - check both userRole field and roles array
@@ -403,7 +453,13 @@ public class UserService {
             // Generate JWT token
             String token = jwtTokenProvider.generateToken(user.getEmail());
             
-            // Create response
+            // Prepare warning message for WARNED users
+            String warningMessage = null;
+            if ("WARNED".equals(accountStatus)) {
+                warningMessage = "You are now on the warning list because you were unable to participate in a meeting. If you do this again, you will be blocked from the system.";
+            }
+            
+            // Create response with account status information
             AuthenticationResponse response = new AuthenticationResponse(
                 token,
                 user.getId(),
@@ -412,7 +468,10 @@ public class UserService {
                 user.getLastName(),
                 user.getIsVerified(),
                 user.getVerificationStatus(),
-                userRole.toLowerCase()
+                userRole.toLowerCase(),
+                user.getAccountStatus() != null ? user.getAccountStatus() : "ACTIVE",
+                user.getNoShowCount() != null ? user.getNoShowCount() : 0,
+                warningMessage
             );
             
             System.out.println("✅ Login successful for: " + request.getEmail() + " with role: " + userRole.toLowerCase());

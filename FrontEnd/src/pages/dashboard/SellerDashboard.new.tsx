@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { 
   User, Menu, 
   Home, Trophy, Calendar, Gem, Megaphone, MessageCircle
 } from 'lucide-react';
 import RoleAwareDashboardLayout from '@/components/layout/RoleAwareDashboardLayout';
 import { useAuth } from '@/contexts/AuthContext';
-import NotificationComponent from '@/components/ui/NotificationComponent';
+import { useNotifications } from '@/contexts/NotificationContext';
+import NotificationBadge from '@/components/ui/NotificationBadge';
 
 // Import modular components
 import {
@@ -24,8 +26,23 @@ import FeedbackForm from '../Feedback/FeedbackPage';
 
 const SellerDashboard = () => {
   const { user } = useAuth();
+  const { getNotificationCount } = useNotifications();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState('overview');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+
+  // Check URL parameters on component mount and when location changes
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const section = urlParams.get('section');
+    
+    console.log('🔧 SellerDashboard URL params:', { section, pathname: location.pathname });
+    
+    if (section && ['overview', 'listings', 'advertisements', 'bids', 'meetings', 'feedback', 'profile'].includes(section)) {
+      console.log('🔧 Setting active tab from URL parameter:', section);
+      setActiveTab(section);
+    }
+  }, [location]);
 
   // Debug user state for notifications
   console.log('🔧 SellerDashboard - User state:', user);
@@ -34,13 +51,48 @@ const SellerDashboard = () => {
 
   // Sidebar navigation items
   const sidebarItems: SidebarItem[] = [
-    { id: 'overview', label: 'Overview', icon: <Home size={24} /> },
-    { id: 'listings', label: 'List Items', icon: <Gem size={24} /> },
-    { id: 'advertisements', label: 'Advertisements', icon: <Megaphone size={24} /> },
-    { id: 'bids', label: 'Bids', icon: <Trophy size={24} /> },
-    { id: 'meetings', label: 'Meetings', icon: <Calendar size={24} /> },
-    { id: 'feedback', label: 'Submit Feedback', icon: <MessageCircle size={24} /> },
-    { id: 'profile', label: 'Profile', icon: <User size={24} /> }
+    { 
+      id: 'overview', 
+      label: 'Overview', 
+      icon: <Home size={24} />,
+      notificationCount: getNotificationCount('seller', 'overview') || 0
+    },
+    { 
+      id: 'listings', 
+      label: 'List Items', 
+      icon: <Gem size={24} />,
+      notificationCount: getNotificationCount('seller', 'listings') || 0
+    },
+    { 
+      id: 'advertisements', 
+      label: 'Advertisements', 
+      icon: <Megaphone size={24} />,
+      notificationCount: getNotificationCount('seller', 'advertisements') || 0
+    },
+    { 
+      id: 'bids', 
+      label: 'Bids', 
+      icon: <Trophy size={24} />,
+      notificationCount: getNotificationCount('seller', 'bids') || 0
+    },
+    { 
+      id: 'meetings', 
+      label: 'Meetings', 
+      icon: <Calendar size={24} />,
+      notificationCount: getNotificationCount('seller', 'meetings') || 0
+    },
+    { 
+      id: 'feedback', 
+      label: 'Submit Feedback', 
+      icon: <MessageCircle size={24} />,
+      notificationCount: getNotificationCount('seller', 'feedback') || 0
+    },
+    { 
+      id: 'profile', 
+      label: 'Profile', 
+      icon: <User size={24} />,
+      notificationCount: getNotificationCount('seller', 'profile') || 0
+    }
   ];
   // Render content based on active tab
   const renderContent = () => {
@@ -133,8 +185,15 @@ const SellerDashboard = () => {
               }`}
               title={sidebarCollapsed ? item.label : undefined}
             >
-              <div className="flex-shrink-0">
+              <div className="flex-shrink-0 relative">
                 {item.icon}
+                {item.notificationCount && item.notificationCount > 0 ? (
+                  <NotificationBadge 
+                    count={item.notificationCount} 
+                    size="sm"
+                    variant="danger"
+                  />
+                ) : null}
               </div>
               {!sidebarCollapsed && (
                 <span className="text-base font-medium truncate">{item.label}</span>
@@ -168,16 +227,9 @@ const SellerDashboard = () => {
               </div>
             </div>
             
-            {/* Right side - Notifications */}
+            {/* Right side - Dashboard controls */}
             <div className="flex items-center space-x-4">
-              {user?.userId && (
-                <NotificationComponent 
-                  userId={user.userId} 
-                  context="seller"
-                  maxNotifications={5}
-                  user={user}
-                />
-              )}
+              {/* Dashboard-specific controls can be added here if needed */}
             </div>
           </div>
         </header>

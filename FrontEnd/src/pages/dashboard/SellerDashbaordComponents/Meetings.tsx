@@ -6,7 +6,7 @@ interface MeetingsProps {
 }
 
 const Meetings: React.FC<MeetingsProps> = ({ user }) => {
-  return <MeetingManager user={user} />;
+  return <MeetingManager user={user} userType="seller" />;
 };
 
 export default Meetings;

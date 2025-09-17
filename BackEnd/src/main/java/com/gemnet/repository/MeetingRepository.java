@@ -62,4 +62,13 @@ public interface MeetingRepository extends MongoRepository<Meeting, String> {
     // Find overdue meetings (past confirmed date but still pending/confirmed status)
     @Query("{'confirmedDateTime': {$lt: ?0}, 'status': {$in: ['CONFIRMED', 'PENDING']}}")
     List<Meeting> findOverdueMeetings(LocalDateTime now);
+    
+    // Find meeting by display ID
+    Optional<Meeting> findByMeetingDisplayId(String displayId);
+    
+    // Find meetings by status and confirmed date time range for reminders
+    List<Meeting> findByStatusAndConfirmedDateTimeBetween(String status, LocalDateTime start, LocalDateTime end);
+    
+    // Count meetings created between date range
+    long countByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
 }

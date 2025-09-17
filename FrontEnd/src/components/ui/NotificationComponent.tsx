@@ -265,8 +265,13 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({
           case 'MEETING_RESCHEDULED':
           case 'MEETING_CANCELLED':
           case 'MEETING_COMPLETED':
-            console.log('🔔 Routing to seller meetings section');
-            window.location.href = '/seller/dashboard?section=meetings';
+            console.log('🔔 Routing to seller meetings section with meetingId:', notification.meetingId);
+            // Route to seller dashboard meetings section with meeting ID if available
+            if (notification.meetingId) {
+              window.location.href = `/seller/dashboard?section=meetings&meetingId=${notification.meetingId}`;
+            } else {
+              window.location.href = '/seller/dashboard?section=meetings';
+            }
             break;
           default:
             // For other seller notifications, check if there's a listingId
@@ -283,12 +288,12 @@ const NotificationComponent: React.FC<NotificationComponentProps> = ({
         switch (notification.type) {
           case 'BID_WON':
           case 'BID_ACCEPTED':
+            console.log('🔔 Routing buyer to reserved items section with listingId:', notification.listingId);
+            // Route to buyer dashboard reserved items section (renamed from purchases)
             if (notification.listingId) {
-              console.log('🔔 Routing buyer to marketplace with listing:', notification.listingId);
-              window.location.href = `/marketplace?viewGemstone=${notification.listingId}`;
+              window.location.href = `/buyer/dashboard?section=reserved&itemId=${notification.listingId}`;
             } else {
-              console.log('🔔 Routing to buyer purchases section');
-              window.location.href = '/buyer/dashboard?section=purchases';
+              window.location.href = '/buyer/dashboard?section=reserved';
             }
             break;
           case 'BID_OUTBID':

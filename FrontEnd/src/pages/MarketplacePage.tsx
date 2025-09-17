@@ -25,7 +25,7 @@ import {
   CloseOutlined
 } from '@ant-design/icons';
 import { DetailedGemstone } from '@/types';
-import Header from '@/components/layout/Header';
+import Header from '@/components/layout/RoleAwareHeader';
 import GemstoneCard from '@/components/ui/GemstoneCard';
 import GemstoneDetailModal from '@/components/home/GemstoneDetailModal';
 import { api } from '@/services/api';
@@ -611,6 +611,13 @@ const MarketplacePage: React.FC = () => {
 
   const handlePlaceBid = (amount: number) => {
     console.log('Placing bid:', amount);
+    
+    // Check if user is admin - admins cannot place bids
+    if (user?.role?.toLowerCase() === 'admin' || user?.userRole?.toLowerCase() === 'admin') {
+      message.error('Admin users cannot place bids on items. This feature is restricted to buyers only.');
+      return;
+    }
+    
     setPendingBidAmount(amount);
     setIsTermsModalOpen(true);
   };
@@ -625,6 +632,14 @@ const MarketplacePage: React.FC = () => {
 
     if (!isAuthenticated || !user) {
       message.error('Please log in to place a bid');
+      return;
+    }
+
+    // Check if user is admin - admins cannot place bids
+    if (user.role?.toLowerCase() === 'admin' || user.userRole?.toLowerCase() === 'admin') {
+      message.error('Admin users cannot place bids on items. This feature is restricted to buyers only.');
+      setIsTermsModalOpen(false);
+      setPendingBidAmount(0);
       return;
     }
 

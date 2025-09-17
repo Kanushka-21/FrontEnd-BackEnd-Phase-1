@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Meeting Attendance Management Test</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/lucide-react@latest/dist/umd/lucide-react.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #f8fafc;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        .test-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .status-confirmed { background-color: #dcfce7; color: #166534; }
+        .status-pending { background-color: #fef3c7; color: #92400e; }
+        .status-completed { background-color: #e0e7ff; color: #3730a3; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState } = React;
+        const { Calendar, Clock, MapPin, CheckCircle, XCircle, AlertTriangle, DollarSign, Package } = lucide;
+
+        // Mock meeting data with comprehensive information
+        const mockMeetings = [
+            {
+                id: "68c4851ee9fd231b78dd3870",
+                meetingDisplayId: "GEM-2025-003",
+                purchaseId: "68c48481e9fd231b78dd3869",
+                gemName: "Natural Emerald",
+                gemType: "Natural Emerald",
+                gemCertificateNumber: "EM-2025-NAT-001",
+                primaryImageUrl: "/uploads/gem-images/emerald-natural.jpg",
+                finalPrice: 1500000,
+                buyerId: "buyer123",
+                buyerName: "pasindu perera",
+                buyerEmail: "iit21001@std.uwu.ac.lk",
+                buyerPhone: "+94701418312",
+                sellerId: "seller456",
+                sellerName: "Dinushi hansani",
+                sellerEmail: "iit21017@std.uwu.ac.lk",
+                sellerPhone: "+94705883113",
+                proposedDateTime: "2025-09-13T02:29:00Z",
+                confirmedDateTime: "2025-09-13T02:29:00Z",
+                meetingLocation: "Rathnapura Office",
+                meetingType: "PHYSICAL",
+                status: "CONFIRMED",
+                buyerAttended: null,
+                sellerAttended: null,
+                adminVerified: false,
+                buyerNotes: "Looking forward to the meeting",
+                sellerNotes: "Will bring certificates",
+                createdAt: "2025-09-13T02:09:57Z",
+                updatedAt: "2025-09-13T02:30:27Z"
+            },
+            {
+                id: "68c4851ee9fd231b78dd3871",
+                meetingDisplayId: "GEM-2025-004",
+                purchaseId: "68c48481e9fd231b78dd3870",
+                gemName: "Blue Sapphire Ring",
+                gemType: "Sapphire",
+                gemCertificateNumber: "SP-2025-BLU-002",
+                primaryImageUrl: "/uploads/gem-images/sapphire-blue.jpg",
+                finalPrice: 2200000,
+                buyerId: "buyer789",
+                buyerName: "John Smith",
+                buyerEmail: "john.smith@email.com",
+                buyerPhone: "+94712345678",
+                sellerId: "seller101",
+                sellerName: "Alice Johnson",
+                sellerEmail: "alice.johnson@gems.lk",
+                sellerPhone: "+94765432109",
+                proposedDateTime: "2025-09-15T10:00:00Z",
+                confirmedDateTime: "2025-09-15T10:00:00Z",
+                meetingLocation: "Colombo Gem Palace",
+                meetingType: "PHYSICAL",
+                status: "CONFIRMED",
+                buyerAttended: true,
+                sellerAttended: false,
+                adminVerified: true,
+                adminNotes: "Seller was a no-show, buyer attended on time",
+                createdAt: "2025-09-12T08:00:00Z",
+                updatedAt: "2025-09-15T11:00:00Z"
+            }
+        ];
+
+        const EnhancedAttendanceManagementTest = () => {
+            const [selectedMeeting, setSelectedMeeting] = useState(null);
+
+            // Get proper image URL function
+            const getImageUrl = (imageUrl, gemName) => {
+                if (imageUrl) {
+                    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+                        return imageUrl;
+                    }
+                    if (imageUrl.startsWith('/uploads/') || imageUrl.startsWith('uploads/')) {
+                        return `http://localhost:9092/${imageUrl.startsWith('/') ? imageUrl.slice(1) : imageUrl}`;
+                    }
+                    return `http://localhost:9092/uploads/gem-images/${imageUrl}`;
+                }
+                
+                const gemType = gemName?.toLowerCase() || '';
+                if (gemType.includes('ruby')) {
+                    return 'https://images.unsplash.com/photo-1506792006437-256b665541e2?w=300&h=200&fit=crop';
+                } else if (gemType.includes('sapphire')) {
+                    return 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=300&h=200&fit=crop';
+                } else if (gemType.includes('emerald')) {
+                    return 'https://images.unsplash.com/photo-1544829099-b9a0c5303bea?w=300&h=200&fit=crop';
+                } else {
+                    return 'https://images.unsplash.com/photo-1506792006437-256b665541e2?w=300&h=200&fit=crop';
+                }
+            };
+
+            // Format currency
+            const formatCurrency = (amount) => {
+                if (!amount) return 'N/A';
+                return new Intl.NumberFormat('en-LK', {
+                    style: 'currency',
+                    currency: 'LKR'
+                }).format(amount);
+            };
+
+            // Get attendance status
+            const getAttendanceStatus = (meeting) => {
+                if (!meeting.adminVerified) {
+                    return {
+                        text: 'Pending Verification',
+                        color: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+                        icon: AlertTriangle
+                    };
+                }
+                
+                if (meeting.buyerAttended && meeting.sellerAttended) {
+                    return {
+                        text: 'Both Attended',
+                        color: 'bg-green-100 text-green-800 border-green-200',
+                        icon: CheckCircle
+                    };
+                } else if (!meeting.buyerAttended && !meeting.sellerAttended) {
+                    return {
+                        text: 'Both No-Show',
+                        color: 'bg-red-100 text-red-800 border-red-200',
+                        icon: XCircle
+                    };
+                } else {
+                    return {
+                        text: 'Partial Attendance',
+                        color: 'bg-orange-100 text-orange-800 border-orange-200',
+                        icon: AlertTriangle
+                    };
+                }
+            };
+
+            return (
+                <div className="test-container">
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+                        <h1 className="text-2xl font-bold text-gray-900 mb-4">
+                            🔧 Enhanced Meeting Attendance Management
+                        </h1>
+                        <p className="text-gray-600 mb-4">
+                            Updated meeting attendance management with comprehensive meeting details including 
+                            gem images, price information, proper date formatting, and enhanced display.
+                        </p>
+                        
+                        {/* Enhancement Summary */}
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                            <div className="flex items-center space-x-2">
+                                <CheckCircle className="w-5 h-5 text-green-600" />
+                                <h3 className="font-medium text-green-800">✅ Enhanced Features</h3>
+                            </div>
+                            <ul className="mt-2 text-sm text-green-700 space-y-1">
+                                <li>• Gem images displayed in Meeting Details column</li>
+                                <li>• Price information with proper formatting</li>
+                                <li>• Meeting ID, Purchase ID, and Certificate numbers</li>
+                                <li>• Fixed "Invalid Date" issue with proper date handling</li>
+                                <li>• Meeting type and status badges</li>
+                                <li>• Enhanced schedule display with multiple date sources</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    {/* Meetings Table */}
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                        <div className="px-6 py-4 border-b border-gray-200">
+                            <h2 className="text-lg font-semibold text-gray-900">Meeting Attendance Management</h2>
+                            <p className="text-sm text-gray-600 mt-1">Comprehensive meeting information display</p>
+                        </div>
+                        
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Meeting Details
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Participants
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Schedule
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Attendance Status
+                                        </th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Actions
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {mockMeetings.map((meeting) => {
+                                        const status = getAttendanceStatus(meeting);
+                                        const StatusIcon = status.icon;
+                                        
+                                        return (
+                                            <tr key={meeting.id} className="hover:bg-gray-50">
+                                                {/* Enhanced Meeting Details */}
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-start space-x-3">
+                                                        {/* Gem Image */}
+                                                        <div className="flex-shrink-0">
+                                                            <img
+                                                                src={getImageUrl(meeting.primaryImageUrl, meeting.gemName)}
+                                                                alt={meeting.gemName || 'Gem'}
+                                                                className="w-16 h-16 rounded-lg object-cover border border-gray-200"
+                                                                onError={(e) => {
+                                                                    const target = e.target;
+                                                                    target.src = getImageUrl(undefined, meeting.gemName);
+                                                                }}
+                                                            />
+                                                        </div>
+                                                        
+                                                        {/* Meeting Information */}
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="space-y-1">
+                                                                {/* Meeting ID */}
+                                                                <div className="flex items-center space-x-2">
+                                                                    <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
+                                                                        {meeting.meetingDisplayId || `GEM-${meeting.id.slice(-8)}`}
+                                                                    </span>
+                                                                    {meeting.status && (
+                                                                        <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${
+                                                                            meeting.status === 'CONFIRMED' ? 'bg-green-100 text-green-800' :
+                                                                            meeting.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                                                                            meeting.status === 'COMPLETED' ? 'bg-blue-100 text-blue-800' :
+                                                                            'bg-gray-100 text-gray-800'
+                                                                        }`}>
+                                                                            {meeting.status}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                
+                                                                {/* Gem Details */}
+                                                                <div>
+                                                                    <div className="text-sm font-medium text-gray-900">{meeting.gemName}</div>
+                                                                    <div className="text-xs text-gray-500">{meeting.gemType}</div>
+                                                                    {meeting.gemCertificateNumber && (
+                                                                        <div className="text-xs text-gray-400">Cert: {meeting.gemCertificateNumber}</div>
+                                                                    )}
+                                                                </div>
+                                                                
+                                                                {/* Price Information */}
+                                                                {meeting.finalPrice && (
+                                                                    <div className="flex items-center space-x-1">
+                                                                        <DollarSign className="w-3 h-3 text-green-600" />
+                                                                        <span className="text-sm font-semibold text-green-600">
+                                                                            {formatCurrency(meeting.finalPrice)}
+                                                                        </span>
+                                                                    </div>
+                                                                )}
+                                                                
+                                                                {/* Additional IDs */}
+                                                                <div className="space-y-1 text-xs text-gray-400">
+                                                                    {meeting.purchaseId && (
+                                                                        <div>Purchase: {meeting.purchaseId.slice(-8)}</div>
+                                                                    )}
+                                                                    <div>Meeting: {meeting.id.slice(-8)}</div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                
+                                                {/* Participants */}
+                                                <td className="px-6 py-4">
+                                                    <div className="space-y-1">
+                                                        <div className="text-sm text-gray-900 font-medium">
+                                                            Meeting Participants
+                                                        </div>
+                                                        <div className="text-sm text-gray-600">
+                                                            <div>👤 {meeting.buyerName} (Buyer)</div>
+                                                            <div>🏪 {meeting.sellerName} (Seller)</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                
+                                                {/* Enhanced Schedule */}
+                                                <td className="px-6 py-4">
+                                                    <div className="space-y-2">
+                                                        {/* Date and Time */}
+                                                        <div>
+                                                            <div className="flex items-center text-sm text-gray-900">
+                                                                <Calendar className="w-4 h-4 text-gray-400 mr-2" />
+                                                                <span className="font-medium">
+                                                                    {meeting.confirmedDateTime ? (
+                                                                        new Date(meeting.confirmedDateTime).toLocaleDateString('en-GB', {
+                                                                            weekday: 'short',
+                                                                            year: 'numeric',
+                                                                            month: 'short',
+                                                                            day: 'numeric'
+                                                                        })
+                                                                    ) : meeting.proposedDateTime ? (
+                                                                        new Date(meeting.proposedDateTime).toLocaleDateString('en-GB', {
+                                                                            weekday: 'short',
+                                                                            year: 'numeric',
+                                                                            month: 'short',
+                                                                            day: 'numeric'
+                                                                        })
+                                                                    ) : 'Date TBD'}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex items-center text-sm text-gray-600 mt-1">
+                                                                <Clock className="w-4 h-4 text-gray-400 mr-2" />
+                                                                <span>
+                                                                    {meeting.confirmedDateTime ? (
+                                                                        new Date(meeting.confirmedDateTime).toLocaleTimeString('en-GB', {
+                                                                            hour: '2-digit',
+                                                                            minute: '2-digit'
+                                                                        })
+                                                                    ) : meeting.proposedDateTime ? (
+                                                                        new Date(meeting.proposedDateTime).toLocaleTimeString('en-GB', {
+                                                                            hour: '2-digit',
+                                                                            minute: '2-digit'
+                                                                        })
+                                                                    ) : 'Time TBD'}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        {/* Location and Type */}
+                                                        <div>
+                                                            <div className="flex items-center text-sm text-gray-500">
+                                                                <MapPin className="w-4 h-4 text-gray-400 mr-2" />
+                                                                <span>{meeting.meetingLocation || 'Location TBD'}</span>
+                                                            </div>
+                                                            {meeting.meetingType && (
+                                                                <div className="mt-1">
+                                                                    <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800">
+                                                                        {meeting.meetingType}
+                                                                    </span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                
+                                                {/* Attendance Status */}
+                                                <td className="px-6 py-4">
+                                                    <div className={`inline-flex items-center space-x-1 px-3 py-1 rounded-full text-xs font-medium border ${status.color}`}>
+                                                        <StatusIcon className="w-4 h-4" />
+                                                        <span>{status.text}</span>
+                                                    </div>
+                                                    {meeting.adminVerified && (
+                                                        <div className="mt-2 space-y-1">
+                                                            <div className="text-xs text-gray-600">
+                                                                Buyer: {meeting.buyerAttended ? '✅ Attended' : '❌ No-show'}
+                                                            </div>
+                                                            <div className="text-xs text-gray-600">
+                                                                Seller: {meeting.sellerAttended ? '✅ Attended' : '❌ No-show'}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                
+                                                {/* Actions */}
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center space-x-2">
+                                                        {!meeting.adminVerified ? (
+                                                            <button
+                                                                onClick={() => setSelectedMeeting(meeting)}
+                                                                className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition-colors flex items-center space-x-1"
+                                                            >
+                                                                <CheckCircle className="w-4 h-4" />
+                                                                <span>Mark Attendance</span>
+                                                            </button>
+                                                        ) : (
+                                                            <span className="text-xs text-gray-500">Verified</span>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* Implementation Summary */}
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mt-6">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                            🛠️ Enhancement Summary
+                        </h3>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                                <h4 className="font-medium text-red-800 mb-2">❌ Before (Issues)</h4>
+                                <ul className="text-sm text-red-700 space-y-1">
+                                    <li>• Minimal meeting details (only ID, name, type)</li>
+                                    <li>• "Invalid Date" errors in schedule column</li>
+                                    <li>• No gem images or price information</li>
+                                    <li>• Limited meeting identification</li>
+                                    <li>• Basic schedule display</li>
+                                </ul>
+                            </div>
+                            
+                            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                                <h4 className="font-medium text-green-800 mb-2">✅ After (Enhanced)</h4>
+                                <ul className="text-sm text-green-700 space-y-1">
+                                    <li>• Comprehensive meeting details with gem images</li>
+                                    <li>• Fixed date formatting with multiple date sources</li>
+                                    <li>• Price information with proper currency formatting</li>
+                                    <li>• Meeting ID, Purchase ID, Certificate numbers</li>
+                                    <li>• Enhanced schedule with location and meeting type</li>
+                                    <li>• Status badges and visual improvements</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<EnhancedAttendanceManagementTest />, document.getElementById('root'));
+    </script>
+</body>
+</html>

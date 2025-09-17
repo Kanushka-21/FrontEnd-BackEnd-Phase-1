@@ -132,6 +132,55 @@ public class NotificationService {
     }
 
     /**
+     * Send notification to a specific user
+     */
+    public void sendNotification(String userId, String type, String title, String message, String details) {
+        try {
+            Optional<User> userOpt = userRepository.findById(userId);
+            if (userOpt.isPresent()) {
+                User user = userOpt.get();
+                
+                // Create notification in database
+                createNotification(userId, type, title, message, details);
+                
+                // Send email notification
+                emailService.sendNotificationEmail(userId, type, title, message, details);
+                
+                System.out.println("📩 Notification sent to user " + user.getEmail() + ": " + type);
+            } else {
+                System.err.println("⚠️ User not found for notification: " + userId);
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Error sending notification to user " + userId + ": " + e.getMessage());
+        }
+    }
+
+    /**
+     * Create notification in database
+     */
+    public void createNotification(String userId, String type, String title, String message, String details) {
+        try {
+            Notification notification = new Notification(
+                userId,        // userId
+                null,          // listingId (can be null for general notifications)
+                null,          // bidId (can be null)
+                type,          // notification type
+                title,         // notification title
+                message,       // notification message
+                "SYSTEM",      // triggerUserId (system generated)
+                details,       // relatedName/details
+                null,          // bidAmount
+                null           // gemName
+            );
+            
+            notificationRepository.save(notification);
+            System.out.println("✅ Notification created for user " + userId + ": " + type);
+        } catch (Exception e) {
+            System.err.println("❌ Error creating notification for user " + userId + ": " + e.getMessage());
+        }
+    }
+
+    /**
      * Trigger notification when new meeting request is created
      */
     public void notifyAdminOfNewMeetingRequest(String meetingId, String buyerName, String sellerName, 
