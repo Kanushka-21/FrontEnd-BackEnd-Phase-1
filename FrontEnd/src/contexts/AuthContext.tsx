@@ -88,6 +88,89 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(response.data);
         setIsAuthenticated(true);
         
+        // Show login success message first
+        toast.success('Login successful!');
+        
+        // Role-based routing
+        const userRole = response.data.role?.toLowerCase() || 'buyer';
+
+        console.log("user role",userRole)
+        console.log('🔄 Redirecting user based on role:', userRole);
+        
+        if (userRole === 'admin') {
+          console.log('👑 Redirecting to admin dashboard');
+          navigate('/admin/dashboard');
+        } else if (userRole === 'seller') {
+          console.log('🏪 Redirecting to seller dashboard');
+          navigate('/seller/dashboard');
+        } else {
+          console.log('🛒 Redirecting to buyer dashboard');
+          navigate('/buyer/dashboard');
+        }
+
+        // Check for verification status - Handle REJECTED users (after navigation)
+        if (response.data.verificationStatus === 'REJECTED') {
+          // Delay the modal to appear after navigation and success message
+          setTimeout(() => {
+            Modal.error({
+              title: '❌ Account Verification Required',
+              content: (
+                <div style={{ padding: '16px 0' }}>
+                  <Alert
+                    message="You are unverified"
+                    description={
+                      <div>
+                        <p style={{ marginBottom: '12px', fontSize: '14px', lineHeight: '1.6' }}>
+                          <strong>Verification Status:</strong> Your account verification has been rejected or is incomplete.
+                        </p>
+                        <p style={{ marginBottom: '12px', fontSize: '14px', color: '#dc2626', lineHeight: '1.6' }}>
+                          🚫 <strong>Marketplace Restrictions:</strong> As an unverified user, you cannot bid on marketplace items or access full platform features.
+                        </p>
+                        <p style={{ marginBottom: '12px', fontSize: '14px', color: '#374151', lineHeight: '1.6' }}>
+                          � <strong>Next Steps:</strong> Please contact our admin team for account approval and verification assistance.
+                        </p>
+                        <div style={{ 
+                          backgroundColor: '#f3f4f6', 
+                          padding: '12px', 
+                          borderRadius: '6px', 
+                          border: '1px solid #d1d5db',
+                          marginTop: '16px'
+                        }}>
+                          <p style={{ margin: '0', fontSize: '14px', fontWeight: '600', color: '#374151' }}>
+                            📧 <strong>Contact Admin:</strong> 
+                            <a 
+                              href="mailto:gemnetsystem@gmail.com" 
+                              style={{ 
+                                color: '#2563eb', 
+                                textDecoration: 'none',
+                                marginLeft: '8px'
+                              }}
+                              onMouseOver={(e) => e.target.style.textDecoration = 'underline'}
+                              onMouseOut={(e) => e.target.style.textDecoration = 'none'}
+                            >
+                              gemnetsystem@gmail.com
+                            </a>
+                          </p>
+                        </div>
+                      </div>
+                    }
+                    type="error"
+                    showIcon
+                    style={{ marginTop: '8px' }}
+                  />
+                </div>
+              ),
+              okText: 'I Understand',
+              width: 550,
+              centered: true,
+              maskClosable: false,
+              onOk: () => {
+                console.log('Unverified user acknowledged verification requirement');
+              }
+            });
+          }, 1000); // Show modal 1 second after login success
+        }
+        
         // Check for account warnings and blocks
         if (response.data.accountStatus === 'WARNED' && response.data.warningMessage) {
           Modal.warning({
@@ -105,7 +188,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                         ⚡ <strong>Action Required:</strong> Please review our community guidelines and improve your attendance.
                       </p>
                       <p style={{ marginBottom: '0', fontSize: '13px', color: '#374151' }}>
-                        💡 <strong>Next Steps:</strong> Attend scheduled meetings to maintain good standing and avoid account restrictions.
+                        � <strong>Next Steps:</strong> Attend scheduled meetings to maintain good standing and avoid account restrictions.
                       </p>
                     </div>
                   }
@@ -161,25 +244,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             }
           });
         }
-        
-        // Role-based routing
-        const userRole = response.data.role?.toLowerCase() || 'buyer';
-
-        console.log("user role",userRole)
-        console.log('🔄 Redirecting user based on role:', userRole);
-        
-        if (userRole === 'admin') {
-          console.log('👑 Redirecting to admin dashboard');
-          navigate('/admin/dashboard');
-        } else if (userRole === 'seller') {
-          console.log('🏪 Redirecting to seller dashboard');
-          navigate('/seller/dashboard');
-        } else {
-          console.log('🛒 Redirecting to buyer dashboard');
-          navigate('/buyer/dashboard');
-        }
-        
-        toast.success('Login successful!');
         return true;
       } else {
         toast.error(response.message || 'Login failed');
