@@ -5,7 +5,7 @@ import NotificationBadge from '@/components/ui/NotificationBadge';
 import { useLocation } from 'react-router-dom';
 import { 
   ShoppingBag, User, 
-  Menu, Home, Calendar, MessageCircle
+  Menu, Home, Calendar, MessageCircle, BookOpen
 } from 'lucide-react';
 import RoleAwareDashboardLayout from '@/components/layout/RoleAwareDashboardLayout';
 
@@ -23,6 +23,9 @@ import { SidebarItem } from './BuyerDashboardComponents/shared';
 // Import feedback page
 import FeedbackForm from '../Feedback/FeedbackPage';
 
+// Import User Manual component
+import UserManual from '../../components/user-manual/UserManual';
+
 const BuyerDashboard = () => {
   const { user, loading } = useAuth();
   const { getNotificationCount } = useNotifications();
@@ -37,7 +40,7 @@ const BuyerDashboard = () => {
     
     console.log('🔧 BuyerDashboard URL params:', { section, pathname: location.pathname });
     
-    if (section && ['overview', 'purchases', 'reserved', 'meetings', 'profile'].includes(section)) {
+    if (section && ['overview', 'purchases', 'reserved', 'meetings', 'feedback', 'user-manual', 'profile'].includes(section)) {
       console.log('🔧 Setting active tab from URL parameter:', section);
       setActiveTab(section);
     }
@@ -79,6 +82,12 @@ const BuyerDashboard = () => {
       notificationCount: getNotificationCount('buyer', 'feedback') || 0
     },
     { 
+      id: 'user-manual', 
+      label: 'User Manual', 
+      icon: <BookOpen size={24} />,
+      notificationCount: 0
+    },
+    { 
       id: 'profile', 
       label: 'Profile', 
       icon: <User size={24} />,
@@ -98,6 +107,8 @@ const BuyerDashboard = () => {
         return <MeetingManager user={user} />;
       case 'feedback':
         return <FeedbackForm />;
+      case 'user-manual':
+        return <UserManual onNavigateToSection={(section) => setActiveTab(section)} />;
       case 'profile':
         return <Profile user={user} />;
       default:

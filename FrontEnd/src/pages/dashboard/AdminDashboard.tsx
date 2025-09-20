@@ -5,7 +5,7 @@ import NotificationBadge from '@/components/ui/NotificationBadge';
 import { Modal, Divider, Alert } from 'antd';
 import dayjs from 'dayjs';
 import RoleAwareDashboardLayout from '@/components/layout/RoleAwareDashboardLayout';
-import { BarChart3, Users, Package, Clock, Settings, Menu as MenuIcon, MessageCircle, Search, Shield, CheckSquare } from 'lucide-react';
+import { BarChart3, Users, Package, Clock, Settings, Menu as MenuIcon, MessageCircle, Search, Shield, CheckSquare, BookOpen } from 'lucide-react';
 
 // Import modular components
 import {
@@ -24,6 +24,9 @@ import {
 import NoShowManagement from '@/components/admin/NoShowManagement';
 import MeetingAttendanceManagement from '@/components/admin/MeetingAttendanceManagement';
 import BlockedUsersManagement from '@/components/admin/BlockedUsersManagement';
+
+// Import User Manual component
+import UserManual from '../../components/user-manual/UserManual';
 
 const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -102,6 +105,12 @@ const AdminDashboard: React.FC = () => {
       notificationCount: 0
     },
     { 
+      id: 'user-manual', 
+      label: 'User Manual', 
+      icon: <BookOpen size={24} />,
+      notificationCount: 0
+    },
+    { 
       id: 'settings', 
       label: 'System Settings', 
       icon: <Settings size={24} />,
@@ -146,6 +155,8 @@ const AdminDashboard: React.FC = () => {
         return <BlockedUsersManagement />;
       case 'feedback':
         return <FeedbackManagement user={user} onTabChange={setActiveTab} />;
+      case 'user-manual':
+        return <UserManual onNavigateToSection={(section) => setActiveTab(section)} />;
       case 'settings':
         return <SystemSettings />;
       default:
