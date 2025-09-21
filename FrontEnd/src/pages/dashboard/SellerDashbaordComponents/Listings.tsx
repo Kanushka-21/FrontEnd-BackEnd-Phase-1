@@ -9,8 +9,9 @@ import {
   DeleteOutlined, ArrowLeftOutlined, ArrowRightOutlined,
   FileImageOutlined, SafetyCertificateOutlined,
   UploadOutlined, CheckCircleOutlined, ReloadOutlined,
-  PictureOutlined, DollarOutlined
+  PictureOutlined, DollarOutlined, AlertCircleOutlined
 } from '@ant-design/icons';
+import { AlertTriangle } from 'lucide-react';
 import dayjs from 'dayjs';
 import { 
   formatLKR, 
@@ -324,8 +325,32 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
     }
   };
   
-  // Handle starting new listing wizard
+  // Handle starting new listing wizard with verification check
   const handleStartNewListing = () => {
+    // Check if user is verified before allowing listing creation
+    if (!user?.isVerified) {
+      Modal.warning({
+        title: 'Verification Required',
+        content: (
+          <div>
+            <p>You cannot create listings because your account is not verified.</p>
+            <p>Please contact the admin to complete your verification process.</p>
+            <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded">
+              <p className="text-sm text-orange-700">
+                <strong>Current Status:</strong> {user?.verificationStatus || 'Unverified'}
+              </p>
+              <p className="text-sm text-orange-700 mt-1">
+                Contact admin at: <strong>admin@gemnet.com</strong>
+              </p>
+            </div>
+          </div>
+        ),
+        okText: 'Understood',
+        width: 500,
+      });
+      return;
+    }
+
     setViewMode('add-listing');
     setCurrentStep(0);
     setWizardData({
@@ -1936,14 +1961,30 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
           <div className="flex justify-between items-center">
             <div>
               <h3 className="text-xl font-semibold text-gray-900">My Listings</h3>
-              <p className="text-gray-600 mt-1">
-                Manage all your gemstone listings 
-                {pagination.total > 0 && (
-                  <span className="ml-2 text-blue-600 font-medium">
-                    ({pagination.total} total)
-                  </span>
-                )}
-              </p>
+              <div className="flex items-center space-x-3 mt-1">
+                <p className="text-gray-600">
+                  Manage all your gemstone listings 
+                  {pagination.total > 0 && (
+                    <span className="ml-2 text-blue-600 font-medium">
+                      ({pagination.total} total)
+                    </span>
+                  )}
+                </p>
+                {/* Verification Status Indicator */}
+                <div className="flex items-center">
+                  {user?.isVerified ? (
+                    <Tag color="green" className="border-0">
+                      <CheckCircleOutlined className="mr-1" />
+                      Verified Seller
+                    </Tag>
+                  ) : (
+                    <Tag color="orange" className="border-0">
+                      <AlertTriangle className="mr-1 w-3 h-3" />
+                      Unverified Account
+                    </Tag>
+                  )}
+                </div>
+              </div>
             </div>
             <div className="flex space-x-3">
               <Button 
@@ -1960,11 +2001,17 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
                 onClick={handleStartNewListing}
                 className="shadow-sm hover:shadow-md"
                 style={{
-                  background: 'linear-gradient(135deg, #7c3aed, #4f46e5)',
-                  borderColor: '#7c3aed'
+                  background: user?.isVerified 
+                    ? 'linear-gradient(135deg, #7c3aed, #4f46e5)' 
+                    : 'linear-gradient(135deg, #9ca3af, #6b7280)',
+                  borderColor: user?.isVerified ? '#7c3aed' : '#9ca3af'
                 }}
+                title={user?.isVerified ? 'Create a new listing' : 'Verification required to create listings'}
               >
                 Add New Listing
+                {!user?.isVerified && (
+                  <span className="ml-1 text-xs">🔒</span>
+                )}
               </Button>
             </div>
           </div>
