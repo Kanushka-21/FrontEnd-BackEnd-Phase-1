@@ -617,4 +617,33 @@ public class MeetingController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
+
+    /**
+     * Admin delete a meeting (allows deletion of completed and no-show meetings)
+     */
+    @DeleteMapping("/admin/delete/{meetingId}")
+    public ResponseEntity<?> adminDeleteMeeting(@PathVariable String meetingId) {
+        try {
+            System.out.println("🗑️ Admin delete meeting request for meeting ID: " + meetingId);
+            
+            Map<String, Object> result = meetingService.adminDeleteMeeting(meetingId);
+            
+            if ((Boolean) result.get("success")) {
+                System.out.println("✅ Meeting deleted successfully by admin");
+                return ResponseEntity.ok(result);
+            } else {
+                System.out.println("❌ Admin meeting deletion failed: " + result.get("message"));
+                return ResponseEntity.badRequest().body(result);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("❌ Error deleting meeting (admin): " + e.getMessage());
+            e.printStackTrace();
+            
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "An unexpected error occurred. Please try again later.");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
 }

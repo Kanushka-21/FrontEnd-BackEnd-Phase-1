@@ -15,7 +15,8 @@ import {
   Save,
   AlertCircle,
   Package,
-  DollarSign
+  DollarSign,
+  Trash2
 } from 'lucide-react';
 
 interface Meeting {
@@ -80,37 +81,27 @@ const MeetingAttendanceManagement: React.FC<MeetingAttendanceManagementProps> = 
     sellerAttended: false,
     adminNotes: ''
   });
+  const [deletingMeeting, setDeletingMeeting] = useState<string | null>(null);
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+  const [meetingToDelete, setMeetingToDelete] = useState<Meeting | null>(null);
 
-  // Get proper image URL - using the exact same logic as AdminMeetingDashboard
+  // Get proper image URL - using the EXACT same logic as AdminMeetingDashboard (working version)
   const getImageUrl = (imageUrl?: string, gemName?: string) => {
-    console.log('🖼️ getImageUrl called with:', { imageUrl, gemName });
-    
     if (imageUrl) {
       // If it's already a full URL, return as is
       if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-        console.log('🖼️ Using full URL:', imageUrl);
         return imageUrl;
       }
       // If it's a relative path, prepend the backend URL
       if (imageUrl.startsWith('/uploads/') || imageUrl.startsWith('uploads/')) {
-        const finalUrl = `http://localhost:9092/${imageUrl.startsWith('/') ? imageUrl.slice(1) : imageUrl}`;
-        console.log('🖼️ Using uploads path:', finalUrl);
-        return finalUrl;
+        return `http://localhost:9092/${imageUrl.startsWith('/') ? imageUrl.slice(1) : imageUrl}`;
       }
-      // Try different possible paths
-      const possiblePaths = [
-        `http://localhost:9092/uploads/gem-images/${imageUrl}`,
-        `http://localhost:9092/uploads/listing-images/${imageUrl}`,
-        `http://localhost:9092/uploads/${imageUrl}`,
-        `http://localhost:9092/api/uploads/gem-images/${imageUrl}`
-      ];
-      console.log('🖼️ Trying first possible path:', possiblePaths[0]);
-      return possiblePaths[0];
+      // If it's just a filename, assume it's in gem-images
+      return `http://localhost:9092/uploads/gem-images/${imageUrl}`;
     }
     
     // Fallback images based on gem type
     const gemType = gemName?.toLowerCase() || '';
-    console.log('🖼️ Using fallback for gem type:', gemType);
     if (gemType.includes('ruby')) {
       return 'https://images.unsplash.com/photo-1506792006437-256b665541e2?w=300&h=200&fit=crop';
     } else if (gemType.includes('sapphire')) {
@@ -166,12 +157,49 @@ const MeetingAttendanceManagement: React.FC<MeetingAttendanceManagementProps> = 
       
       const data = await response.json();
       if (data.success) {
-        setMeetings(data.meetings || []);
+        const meetings = data.meetings || [];
+        
+        // 🔧 ENHANCEMENT: Try to enrich meeting data with gem listing images
+        const enrichedMeetings = await Promise.all(meetings.map(async (meeting: any) => {
+          // If the meeting already has a good image URL, use it
+          if (meeting.primaryImageUrl && 
+              (meeting.primaryImageUrl.startsWith('http') || 
+               meeting.primaryImageUrl.startsWith('/uploads'))) {
+            return meeting;
+          }
+          
+          // Otherwise, try to fetch the gem listing to get the image
+          try {
+            if (meeting.purchaseId) {
+              console.log('🔍 Fetching gem data for purchase:', meeting.purchaseId);
+              const gemResponse = await fetch(`http://localhost:9092/api/marketplace/listings?search=${meeting.gemName}`);
+              if (gemResponse.ok) {
+                const gemData = await gemResponse.json();
+                if (gemData.success && gemData.data && gemData.data.listings && gemData.data.listings.length > 0) {
+                  const matchingGem = gemData.data.listings.find((gem: any) => 
+                    gem.gemName?.toLowerCase() === meeting.gemName?.toLowerCase()
+                  ) || gemData.data.listings[0];
+                  
+                  if (matchingGem && matchingGem.images && matchingGem.images.length > 0) {
+                    meeting.primaryImageUrl = matchingGem.images[0].imageUrl || matchingGem.images[0].url;
+                    console.log('✅ Found gem image:', meeting.primaryImageUrl);
+                  }
+                }
+              }
+            }
+          } catch (error) {
+            console.log('⚠️ Could not fetch gem data for:', meeting.gemName);
+          }
+          
+          return meeting;
+        }));
+        
+        setMeetings(enrichedMeetings);
         setTotalElements(data.totalElements || 0);
         setTotalPages(data.totalPages || 0);
         
-        if (data.meetings?.length > 0) {
-          setMessage({ type: 'success', text: `Loaded ${data.meetings.length} confirmed meetings from backend` });
+        if (enrichedMeetings?.length > 0) {
+          setMessage({ type: 'success', text: `Loaded ${enrichedMeetings.length} confirmed meetings from backend` });
         } else {
           setMessage({ type: 'info', text: 'No confirmed meetings found' });
         }
@@ -259,6 +287,67 @@ const MeetingAttendanceManagement: React.FC<MeetingAttendanceManagementProps> = 
       setMessage({ type: 'error', text: 'Error marking attendance. Please try again.' });
     } finally {
       setSubmittingAttendance(false);
+    }
+  };
+
+  // Delete meeting function
+  const deleteMeeting = async (meetingId: string) => {
+    setDeletingMeeting(meetingId);
+    try {
+      console.log('🗑️ Deleting meeting:', meetingId);
+      
+      const response = await fetch(`http://localhost:9092/api/meetings/admin/delete/${meetingId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        console.log('✅ Meeting deleted successfully');
+        setMessage({ 
+          type: 'success', 
+          text: 'Meeting deleted successfully!' 
+        });
+        setTimeout(() => setMessage(null), 5000);
+        
+        // Refresh meetings list
+        await fetchMeetings();
+        
+        // Close modals
+        setShowDeleteConfirmModal(false);
+        setMeetingToDelete(null);
+        setShowAttendanceModal(false);
+        setSelectedMeeting(null);
+      } else {
+        throw new Error(data.message || 'Failed to delete meeting');
+      }
+    } catch (error) {
+      console.error('❌ Error deleting meeting:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      setMessage({ 
+        type: 'error', 
+        text: `Failed to delete meeting: ${errorMessage}` 
+      });
+      setTimeout(() => setMessage(null), 5000);
+    } finally {
+      setDeletingMeeting(null);
+    }
+  };
+
+  // Show confirmation modal before deleting meeting
+  const handleDeleteButtonClick = (meeting: Meeting) => {
+    setMeetingToDelete(meeting);
+    setShowDeleteConfirmModal(true);
+  };
+
+  // Confirm deletion action
+  const confirmDeletion = async () => {
+    if (meetingToDelete) {
+      await deleteMeeting(meetingToDelete.id);
     }
   };
 
@@ -448,41 +537,20 @@ const MeetingAttendanceManagement: React.FC<MeetingAttendanceManagementProps> = 
                             {/* Gem Image */}
                             <div className="flex-shrink-0">
                               <img
-                                src={getImageUrl(meeting.primaryImageUrl || meeting.gem?.primaryImageUrl || meeting.gem?.images?.[0], meeting.gemName)}
+                                src={getImageUrl(
+                                  meeting.primaryImageUrl || 
+                                  meeting.gem?.primaryImageUrl || 
+                                  meeting.gem?.images?.[0] ||
+                                  meeting.gemImage ||
+                                  meeting.image, 
+                                  meeting.gemName
+                                )}
                                 alt={meeting.gemName || 'Gem'}
                                 className="w-16 h-16 rounded-lg object-cover border border-gray-200"
                                 onError={(e) => {
-                                  console.log('🖼️ Image load error for:', meeting.gemName);
-                                  console.log('🖼️ Attempted URL:', e.currentTarget.src);
-                                  console.log('🖼️ Meeting image data:', {
-                                    primaryImageUrl: meeting.primaryImageUrl,
-                                    gemImages: meeting.gem?.images,
-                                    gemPrimaryImageUrl: meeting.gem?.primaryImageUrl
-                                  });
-                                  
                                   const target = e.target as HTMLImageElement;
-                                  const currentSrc = target.src;
-                                  
-                                  // Try alternative image paths if not already tried
-                                  const imageUrl = meeting.primaryImageUrl || meeting.gem?.primaryImageUrl || meeting.gem?.images?.[0];
-                                  if (imageUrl && !currentSrc.includes('placeholder') && !currentSrc.includes('unsplash')) {
-                                    const alternativePaths = [
-                                      `http://localhost:9092/uploads/listing-images/${imageUrl}`,
-                                      `http://localhost:9092/uploads/${imageUrl}`,
-                                      `http://localhost:9092/api/uploads/gem-images/${imageUrl}`,
-                                      `http://localhost:9092/uploads/images/${imageUrl}`
-                                    ];
-                                    
-                                    // Find a path we haven't tried yet
-                                    const nextPath = alternativePaths.find(path => path !== currentSrc);
-                                    if (nextPath) {
-                                      console.log('🖼️ Trying alternative path:', nextPath);
-                                      target.src = nextPath;
-                                      return;
-                                    }
-                                  }
-                                  
-                                  // Fall back to type-based fallback image
+                                  // Try to fetch the gem listing data if image fails
+                                  console.log('🖼️ Image failed, trying to fetch gem data for:', meeting.gemName);
                                   target.src = getImageUrl(undefined, meeting.gemName);
                                 }}
                               />
@@ -494,7 +562,7 @@ const MeetingAttendanceManagement: React.FC<MeetingAttendanceManagementProps> = 
                                 {/* Meeting ID */}
                                 <div className="flex items-center space-x-2">
                                   <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
-                                    {meeting.meetingDisplayId || `GEM-${meeting.id.slice(-8)}`}
+                                    {meeting.id.slice(-8)}
                                   </span>
                                   {meeting.status && (
                                     <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${
@@ -665,6 +733,22 @@ const MeetingAttendanceManagement: React.FC<MeetingAttendanceManagementProps> = 
                             >
                               <Eye className="w-4 h-4" />
                             </button>
+
+                            {/* Delete button for completed or no-show meetings */}
+                            {(meeting.status === 'COMPLETED' || meeting.status === 'NO_SHOW_RECORDED') && (
+                              <button
+                                onClick={() => handleDeleteButtonClick(meeting)}
+                                disabled={deletingMeeting === meeting.id}
+                                className="text-red-600 hover:text-red-800 disabled:text-red-300 disabled:cursor-not-allowed"
+                                title="Delete meeting"
+                              >
+                                {deletingMeeting === meeting.id ? (
+                                  <div className="w-4 h-4 animate-spin rounded-full border-2 border-red-600 border-t-transparent" />
+                                ) : (
+                                  <Trash2 className="w-4 h-4" />
+                                )}
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -729,7 +813,7 @@ const MeetingAttendanceManagement: React.FC<MeetingAttendanceManagementProps> = 
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
                         <span className="font-medium text-gray-700">Meeting ID:</span>
-                        <span className="ml-2">{selectedMeeting.meetingDisplayId || `GEM-2025-${selectedMeeting.id.slice(-3)}`}</span>
+                        <span className="ml-2">{selectedMeeting.id.slice(-8)}</span>
                       </div>
                       <div>
                         <span className="font-medium text-gray-700">Gem:</span>
@@ -1022,6 +1106,84 @@ const MeetingAttendanceManagement: React.FC<MeetingAttendanceManagementProps> = 
                     )}
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteConfirmModal && meetingToDelete && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-md w-full p-6">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="bg-red-100 p-2 rounded-full">
+                  <Trash2 className="w-6 h-6 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Delete Meeting</h3>
+                  <p className="text-sm text-gray-500">This action cannot be undone</p>
+                </div>
+              </div>
+
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-medium text-gray-900 mb-2">Meeting Details:</h4>
+                <div className="space-y-1 text-sm text-gray-600">
+                  <p><span className="font-medium">ID:</span> {meetingToDelete.id.slice(0, 8)}</p>
+                  <p><span className="font-medium">Buyer:</span> {meetingToDelete.buyerName}</p>
+                  <p><span className="font-medium">Seller:</span> {meetingToDelete.sellerName}</p>
+                  <p><span className="font-medium">Status:</span> 
+                    <span className={`ml-1 px-2 py-1 rounded text-xs font-medium ${
+                      meetingToDelete.status === 'COMPLETED' 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-red-100 text-red-800'
+                    }`}>
+                      {meetingToDelete.status.replace('_', ' ')}
+                    </span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="text-sm text-gray-600 mb-6">
+                <p className="mb-2">
+                  <strong>⚠️ Warning:</strong> This action will permanently remove the meeting record from the system.
+                </p>
+                <p>
+                  This action will:
+                </p>
+                <ul className="list-disc list-inside ml-2 mt-1">
+                  <li>Delete all meeting data and history</li>
+                  <li>Remove attendance records</li>
+                  <li>Cannot be recovered once deleted</li>
+                </ul>
+              </div>
+
+              <div className="flex justify-center space-x-3">
+                <button
+                  onClick={() => {
+                    setShowDeleteConfirmModal(false);
+                    setMeetingToDelete(null);
+                  }}
+                  className="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDeletion}
+                  disabled={!!deletingMeeting}
+                  className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {deletingMeeting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Deleting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4" />
+                      <span>Delete Meeting</span>
+                    </>
+                  )}
+                </button>
               </div>
             </div>
           </div>
