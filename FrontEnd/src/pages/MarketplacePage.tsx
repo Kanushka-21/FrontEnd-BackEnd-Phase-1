@@ -566,13 +566,36 @@ const MarketplacePage: React.FC = () => {
       if (detailResult.success && detailResult.data) {
         // Convert the detailed backend data to DetailedGemstone format
         console.log('🔄 Converting detailed backend data to modal format...');
-        const detailedGemstone = convertToDetailedGemstone(detailResult.data);
         
-        // Merge with any existing bid data from the basic gemstone
+        let rawListingData = detailResult.data;
+        let videoData = null;
+        
+        // 🎬 CRITICAL FIX: Handle enhanced backend response with videos
+        if (detailResult.data && typeof detailResult.data === 'object' && 'gemstone' in detailResult.data) {
+          console.log('🎬 DETECTED: Enhanced backend response with videos!');
+          rawListingData = detailResult.data.gemstone;
+          videoData = {
+            videos: detailResult.data.videos || [],
+            hasVideos: detailResult.data.hasVideos || false,
+            videoCount: detailResult.data.videoCount || 0
+          };
+          console.log('🎬 Extracted video data:', videoData);
+        }
+        
+        const detailedGemstone = convertToDetailedGemstone(rawListingData);
+        
+        // 🎬 CRITICAL FIX: Merge video data into gemstone object
+        let gemstoneData = detailedGemstone;
+        if (videoData && videoData.videos.length > 0) {
+          console.log('🎬 MERGING videos into gemstone data:', videoData.videos);
+          gemstoneData.videos = videoData.videos;
+          gemstoneData.hasVideos = videoData.hasVideos;
+          gemstoneData.videoCount = videoData.videoCount;
+        }
         const enhancedGemstone = {
-          ...detailedGemstone,
+          ...gemstoneData,
           // Preserve current bid information from marketplace data
-          currentBid: basicGemstone.currentBid || detailedGemstone.price,
+          currentBid: basicGemstone.currentBid || gemstoneData.price,
           latestBidPrice: basicGemstone.latestBidPrice,
           totalBids: basicGemstone.totalBids,
           highestBidder: basicGemstone.highestBidder,
@@ -581,10 +604,8 @@ const MarketplacePage: React.FC = () => {
           biddingEndTime: basicGemstone.biddingEndTime,
           remainingTimeSeconds: basicGemstone.remainingTimeSeconds
         };
-        
         console.log('✅ Enhanced gemstone with detailed backend data:', enhancedGemstone);
         console.log('📷 Total images available:', enhancedGemstone.images?.length || 0);
-        
         setSelectedGemstone(enhancedGemstone);
       } else {
         console.warn('⚠️ Backend returned unsuccessful response, using basic data');

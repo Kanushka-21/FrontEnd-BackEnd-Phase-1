@@ -221,6 +221,9 @@ export interface Gemstone {
   totalBids?: number; // Total number of bids
   image: string; // Primary image for backward compatibility
   images?: string[]; // Array of all uploaded images
+  videos?: string[]; // Array of all uploaded videos
+  certificateImages?: string[]; // Array of certificate images
+  media?: GemMedia[]; // Combined media array (images and videos)
   certified: boolean;
   weight: number;
   color: string;
@@ -257,6 +260,19 @@ export interface Gemstone {
   remainingMinutes?: number;
   remainingSeconds?: number;
   isExpired?: boolean;
+}
+
+export interface GemMedia {
+  id: string;
+  url: string;
+  type: 'IMAGE' | 'VIDEO';
+  mediaType: 'GEMSTONE' | 'CERTIFICATE';
+  isPrimary?: boolean;
+  thumbnailUrl?: string;
+  originalName?: string;
+  format?: string;
+  size?: number;
+  duration?: number; // For videos in seconds
 }
 
 export interface Dimension {

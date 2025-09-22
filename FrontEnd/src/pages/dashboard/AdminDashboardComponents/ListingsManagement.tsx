@@ -31,6 +31,13 @@ interface GemImage {
   description?: string;
   imageType: 'GEMSTONE' | 'CERTIFICATE';
   uploadedAt: string;
+  
+  // Video support fields
+  mediaType?: 'IMAGE' | 'VIDEO';
+  videoUrl?: string;
+  videoThumbnailUrl?: string;
+  videoDurationSeconds?: number;
+  videoFormat?: string;
 }
 
 interface DetailedGemListing {
@@ -132,6 +139,32 @@ const ListingsManagement: React.FC<AdminComponentProps> = () => {
     
     // Fallback
     return '/placeholder-gem.jpg';
+  };
+
+  // Helper function to construct video URLs
+  const constructVideoUrl = (videoPath: string): string => {
+    if (!videoPath) return '';
+    
+    // If it's already a full URL, return as is
+    if (videoPath.startsWith('http://') || videoPath.startsWith('https://')) {
+      return videoPath;
+    }
+    
+    // If it starts with /uploads, construct full URL
+    if (videoPath.startsWith('/uploads')) {
+      return `http://localhost:9092${videoPath}`;
+    }
+    
+    // If it's a Windows path, convert to URL
+    if (videoPath.includes('\\')) {
+      const relativePath = videoPath.split('uploads\\')[1];
+      if (relativePath) {
+        const urlPath = relativePath.replace(/\\/g, '/');
+        return `http://localhost:9092/uploads/${urlPath}`;
+      }
+    }
+    
+    return videoPath;
   };
 
   // Helper function to format LKR currency
@@ -492,6 +525,48 @@ const ListingsManagement: React.FC<AdminComponentProps> = () => {
               ) : (
                 <div className="text-center py-8 bg-gray-50 rounded-lg">
                   <Text type="secondary">No images available for this listing</Text>
+                </div>
+              )}
+            </div>
+
+            {/* Videos Section */}
+            <div>
+              <Title level={4} className="text-purple-600 mb-4">
+                Gemstone Videos
+              </Title>
+              
+              {detailedListing.images && detailedListing.images.filter(media => media.mediaType === 'VIDEO').length > 0 ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {detailedListing.images
+                      .filter(media => media.mediaType === 'VIDEO' && media.imageType === 'GEMSTONE')
+                      .map((video, index) => (
+                      <div key={video.imageId} className="relative bg-gray-100 rounded-lg overflow-hidden">
+                        <video
+                          controls
+                          width="100%"
+                          height="200"
+                          style={{ objectFit: 'cover' }}
+                          poster={video.videoThumbnailUrl ? constructVideoUrl(video.videoThumbnailUrl) : undefined}
+                        >
+                          <source src={constructVideoUrl(video.videoUrl || video.imageUrl)} type={`video/${video.videoFormat || 'mp4'}`} />
+                          Your browser does not support the video tag.
+                        </video>
+                        <div className="absolute top-2 left-2">
+                          <Tag color="purple" className="text-xs">🎬 Video {index + 1}</Tag>
+                        </div>
+                        {video.originalName && (
+                          <div className="absolute bottom-2 left-2">
+                            <Tag color="blue" className="text-xs">{video.originalName}</Tag>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 bg-gray-50 rounded-lg">
+                  <Text type="secondary">No videos available for this listing</Text>
                 </div>
               )}
             </div>

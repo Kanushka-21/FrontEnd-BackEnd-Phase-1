@@ -595,9 +595,9 @@ public class GemCertificateService {
     }
     
     /**
-     * Save gem listing data and images to database
+     * Save gem listing data with images and videos to database
      */
-    public ApiResponse<Map<String, Object>> saveGemListingData(GemListingDataDto gemListingData, MultipartFile[] gemImages, MultipartFile[] certificateImages) {
+    public ApiResponse<Map<String, Object>> saveGemListingData(GemListingDataDto gemListingData, MultipartFile[] gemImages, MultipartFile[] gemVideos, MultipartFile[] certificateImages) {
         System.out.println("💎 Starting gem listing data save to database...");
         System.out.println("👤 User: " + gemListingData.getUserName() + " (ID: " + gemListingData.getUserId() + ")");
         System.out.println("🔖 Certification Status: " + (gemListingData.getIsCertified() ? "Certified" : "Non-Certified"));
@@ -667,6 +667,51 @@ public class GemCertificateService {
                 }
                 
                 System.out.println("✅ All " + gemImages.length + " gemstone images processed for database storage");
+            }
+            
+            // Process gemstone videos
+            if (gemVideos != null && gemVideos.length > 0) {
+                System.out.println("🎬 Processing " + gemVideos.length + " gem videos for database storage...");
+                
+                for (int i = 0; i < gemVideos.length; i++) {
+                    MultipartFile video = gemVideos[i];
+                    
+                    try {
+                        // Generate unique video ID
+                        String videoId = "VIDEO_" + System.currentTimeMillis() + "_" + i;
+                        
+                        // Store video using FileStorageService
+                        String videoUrl = fileStorageService.storeGemVideo(video, videoId);
+                        
+                        // Create GemImage entity for video (using the same class for consistency)
+                        GemImage gemVideo = new GemImage();
+                        gemVideo.setImageId(videoId);
+                        gemVideo.setOriginalName(video.getOriginalFilename());
+                        gemVideo.setContentType(video.getContentType());
+                        gemVideo.setSize(video.getSize());
+                        gemVideo.setVideoUrl(videoUrl);
+                        gemVideo.setMediaType("VIDEO");
+                        gemVideo.setVideoFormat(getVideoFormat(video.getOriginalFilename()));
+                        gemVideo.setIsPrimary(false); // Videos are never primary for card display
+                        gemVideo.setDisplayOrder(processedImages.size() + i); // After images
+                        gemVideo.setImageType("GEMSTONE");
+                        gemVideo.setDescription("Gemstone Video " + (i + 1));
+                        
+                        // TODO: Generate video thumbnail in the future
+                        // For now, we'll leave thumbnails null
+                        
+                        processedImages.add(gemVideo);
+                        
+                        System.out.println("✅ Gemstone video " + (i + 1) + " processed and stored: " + video.getOriginalFilename());
+                        System.out.println("   📁 Stored at: " + videoUrl);
+                        
+                    } catch (Exception e) {
+                        System.err.println("❌ Error processing gemstone video " + (i + 1) + ": " + e.getMessage());
+                        return ApiResponse.error("Failed to process gemstone video " + (i + 1) + ": " + e.getMessage());
+                    }
+                }
+                
+                System.out.println("✅ All " + gemVideos.length + " gemstone videos processed for database storage");
             }
             
             // Process certificate images (only for certified stones)
@@ -1290,6 +1335,23 @@ public class GemCertificateService {
             e.printStackTrace();
             return ApiResponse.error("Failed to update gem listing: " + e.getMessage());
         }
+    }
+    
+    /**
+     * Helper method to get video format from filename
+     */
+    private String getVideoFormat(String filename) {
+        if (filename == null || filename.lastIndexOf('.') == -1) {
+            return "mp4"; // default format
+        }
+        return filename.substring(filename.lastIndexOf('.') + 1).toLowerCase();
+    }
+    
+    /**
+     * Backward compatibility method - Save gem listing data with images only
+     */
+    public ApiResponse<Map<String, Object>> saveGemListingData(GemListingDataDto gemListingData, MultipartFile[] gemImages, MultipartFile[] certificateImages) {
+        return saveGemListingData(gemListingData, gemImages, null, certificateImages);
     }
 
     // ...existing code...

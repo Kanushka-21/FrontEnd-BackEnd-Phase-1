@@ -2,6 +2,7 @@ package com.gemnet.controller;
 
 import com.gemnet.dto.ApiResponse;
 import com.gemnet.model.GemListing;
+import com.gemnet.model.GemImage;
 import com.gemnet.repository.GemListingRepository;
 import com.gemnet.service.MarketplaceService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -18,6 +19,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.ArrayList;
 
 /**
  * Controller for marketplace operations
@@ -92,7 +94,7 @@ public class MarketplaceController {
     @Operation(summary = "Get listing details", 
                description = "Get detailed information about a specific gemstone listing")
     @CrossOrigin(origins = "*", allowedHeaders = "*", methods = {RequestMethod.GET})
-    public ResponseEntity<ApiResponse<GemListing>> getListingDetails(
+    public ResponseEntity<ApiResponse<Object>> getListingDetails(
             @PathVariable String listingId) {
         
         System.out.println("🔍 Marketplace - Get listing details request received");
@@ -113,17 +115,79 @@ public class MarketplaceController {
             System.out.println("📋 Is active: " + listing.getIsActive());
             System.out.println("📋 Images count: " + (listing.getImages() != null ? listing.getImages().size() : 0));
             
+            // DEBUG: Detailed video inspection
+            if (listing.getImages() != null && !listing.getImages().isEmpty()) {
+                System.out.println("🎬 Detailed images inspection:");
+                for (int i = 0; i < listing.getImages().size(); i++) {
+                    GemImage img = listing.getImages().get(i);
+                    System.out.println("🎬 Image " + i + ":");
+                    System.out.println("  - Media Type: " + img.getMediaType());
+                    System.out.println("  - Image URL: " + img.getImageUrl());
+                    System.out.println("  - Video URL: " + img.getVideoUrl());
+                    System.out.println("  - Video Format: " + img.getVideoFormat());
+                    System.out.println("  - Is Video: " + img.isVideo());
+                }
+            } else {
+                System.out.println("❌ No images found in listing");
+            }
+            
+            // ENHANCEMENT: Enhance listing with explicit video data for frontend compatibility
+            System.out.println("🔧 ENHANCEMENT: Adding explicit video support to response");
+            
+            // Extract videos from GemImage objects
+            List<String> videoUrls = new ArrayList<>();
+            if (listing.getImages() != null) {
+                for (GemImage img : listing.getImages()) {
+                    if (img.isVideo() && img.getVideoUrl() != null && !img.getVideoUrl().isEmpty()) {
+                        videoUrls.add(img.getVideoUrl());
+                        System.out.println("🎬 Found video: " + img.getVideoUrl());
+                    }
+                }
+            }
+            
+            System.out.println("🎬 Total videos found: " + videoUrls.size());
+            
             // Get listing details from service
             ApiResponse<GemListing> serviceResponse = marketplaceService.getListingDetails(listingId);
             
             if (serviceResponse.isSuccess()) {
-                System.out.println("✅ Successfully retrieved listing details");
-                return ResponseEntity.ok(serviceResponse);
+                GemListing responseListing = serviceResponse.getData();
+                
+                // CRITICAL FIX: Add video URLs directly to the listing object for frontend access
+                // We'll create a custom field that the frontend can easily access
+                if (!videoUrls.isEmpty()) {
+                    System.out.println("🔧 CRITICAL FIX: Adding " + videoUrls.size() + " videos to listing response");
+                    
+                    // Create a map with enhanced data
+                    Map<String, Object> enhancedResponse = new HashMap<>();
+                    enhancedResponse.put("gemstone", responseListing);
+                    enhancedResponse.put("videos", videoUrls);
+                    enhancedResponse.put("hasVideos", true);
+                    enhancedResponse.put("videoCount", videoUrls.size());
+                    
+                    return ResponseEntity.ok(ApiResponse.success("Listing details with videos", enhancedResponse));
+                }
+                
+                System.out.println("✅ Successfully retrieved listing details (no videos)");
+                return ResponseEntity.ok(ApiResponse.success(serviceResponse.getMessage(), (Object) serviceResponse.getData()));
             } else {
                 System.err.println("❌ Service error: " + serviceResponse.getMessage());
                 
                 // For debugging, let's return the raw listing even if service validation fails
                 System.out.println("🔧 DEBUG: Returning raw listing for debugging purposes");
+                
+                // Still add video enhancement to debug response
+                if (!videoUrls.isEmpty()) {
+                    Map<String, Object> debugResponse = new HashMap<>();
+                    debugResponse.put("gemstone", listing);
+                    debugResponse.put("videos", videoUrls);
+                    debugResponse.put("hasVideos", true);
+                    debugResponse.put("videoCount", videoUrls.size());
+                    debugResponse.put("debugMode", true);
+                    
+                    return ResponseEntity.ok(ApiResponse.success("Raw listing data with videos (debug mode)", debugResponse));
+                }
+                
                 return ResponseEntity.ok(ApiResponse.success("Raw listing data (debug mode)", listing));
             }
             
@@ -172,8 +236,61 @@ public class MarketplaceController {
     }
 
     /**
-     * Get marketplace statistics
+     * DEBUG: Get raw listing data for inspection
      */
+    @GetMapping("/listings/{listingId}/debug")
+    @Operation(summary = "Debug listing data", 
+               description = "Get raw listing data for debugging purposes")
+    @CrossOrigin(origins = "*", allowedHeaders = "*", methods = {RequestMethod.GET})
+    public ResponseEntity<ApiResponse<Map<String, Object>>> debugListingData(
+            @PathVariable String listingId) {
+        
+        System.out.println("🔧 DEBUG - Raw listing data request for ID: " + listingId);
+        
+        try {
+            Optional<GemListing> optionalListing = gemListingRepository.findById(listingId);
+            
+            if (!optionalListing.isPresent()) {
+                return ResponseEntity.status(404)
+                    .body(ApiResponse.error("Listing not found"));
+            }
+            
+            GemListing listing = optionalListing.get();
+            
+            Map<String, Object> debugData = new HashMap<>();
+            debugData.put("id", listing.getId());
+            debugData.put("gemName", listing.getGemName());
+            debugData.put("listingStatus", listing.getListingStatus());
+            debugData.put("isActive", listing.getIsActive());
+            debugData.put("totalImages", listing.getImages() != null ? listing.getImages().size() : 0);
+            
+            // Detailed images inspection
+            if (listing.getImages() != null) {
+                List<Map<String, Object>> imagesDebug = new ArrayList<>();
+                for (int i = 0; i < listing.getImages().size(); i++) {
+                    GemImage img = listing.getImages().get(i);
+                    Map<String, Object> imgData = new HashMap<>();
+                    imgData.put("index", i);
+                    imgData.put("mediaType", img.getMediaType());
+                    imgData.put("imageUrl", img.getImageUrl());
+                    imgData.put("videoUrl", img.getVideoUrl());
+                    imgData.put("videoFormat", img.getVideoFormat());
+                    imgData.put("isVideo", img.isVideo());
+                    imgData.put("hasVideoUrl", img.getVideoUrl() != null && !img.getVideoUrl().isEmpty());
+                    imagesDebug.add(imgData);
+                }
+                debugData.put("imagesDetails", imagesDebug);
+            }
+            
+            return ResponseEntity.ok(ApiResponse.success("Debug data retrieved", debugData));
+            
+        } catch (Exception e) {
+            System.err.println("❌ Debug listing error: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500)
+                .body(ApiResponse.error("Debug failed: " + e.getMessage()));
+        }
+    }
     @GetMapping("/stats")
     @Operation(summary = "Get marketplace statistics", 
                description = "Get statistics about marketplace listings")

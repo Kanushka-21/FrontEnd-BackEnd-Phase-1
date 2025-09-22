@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Video Check</title>
+</head>
+<body>
+    <h1>Quick Video Data Check</h1>
+    <button onclick="checkVideoData()">Check Video Data</button>
+    <div id="result"></div>
+
+    <script>
+        async function checkVideoData() {
+            try {
+                const response = await fetch('http://localhost:9092/api/marketplace/listing/approved');
+                const data = await response.json();
+                
+                console.log('Full API Response:', data);
+                
+                if (data.success && data.data && data.data.length > 0) {
+                    const listing = data.data[0]; // Check first listing
+                    
+                    console.log('First listing:', listing);
+                    console.log('Images array:', listing.images);
+                    
+                    // Check for videos in images
+                    const videos = listing.images?.filter(img => 
+                        img.mediaType?.toLowerCase().includes('video') || 
+                        img.videoUrl || 
+                        img.isVideo
+                    );
+                    
+                    console.log('Found videos:', videos);
+                    
+                    document.getElementById('result').innerHTML = `
+                        <h3>Results:</h3>
+                        <p>Total listings: ${data.data.length}</p>
+                        <p>First listing ID: ${listing.id}</p>
+                        <p>Images count: ${listing.images?.length || 0}</p>
+                        <p>Videos found: ${videos?.length || 0}</p>
+                        <pre>${JSON.stringify(videos, null, 2)}</pre>
+                    `;
+                } else {
+                    document.getElementById('result').innerHTML = 'No approved listings found';
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('result').innerHTML = `Error: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

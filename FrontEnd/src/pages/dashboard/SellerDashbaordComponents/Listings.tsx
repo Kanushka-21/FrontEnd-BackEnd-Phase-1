@@ -35,6 +35,7 @@ interface WizardData {
   basicInfo: any;
   certificationDetails: any;
   images: any[];
+  videos: any[];
   certificateImages: any[];
 }
 
@@ -47,6 +48,7 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
     basicInfo: {},
     certificationDetails: {},
     images: [],
+    videos: [],
     certificateImages: []
   });
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -473,9 +475,10 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
       }
     }
     
-    // If images are missing
-    if (!wizardData.images || wizardData.images.length === 0) {
-      message.error('Please upload at least one image of your gemstone.');
+    // If both images and videos are missing
+    if ((!wizardData.images || wizardData.images.length === 0) && 
+        (!wizardData.videos || wizardData.videos.length === 0)) {
+      message.error('Please upload at least one image or video of your gemstone.');
       return false;
     }
     
@@ -607,6 +610,15 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
         });
       }
       
+      // Add gemstone videos
+      if (wizardData.videos && wizardData.videos.length > 0) {
+        wizardData.videos.forEach((video) => {
+          if (video.originFileObj) {
+            formData.append('gemVideos', video.originFileObj);
+          }
+        });
+      }
+      
       // Add certificate images for certified gemstones
       if (wizardData.certificationType === 'certified' && wizardData.certificateImages && wizardData.certificateImages.length > 0) {
         wizardData.certificateImages.forEach((certImage) => {
@@ -618,6 +630,7 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
 
       console.log('📤 Sending data to backend:', gemListingData);
       console.log('🖼️ Number of gemstone images:', wizardData.images?.length || 0);
+      console.log('🎬 Number of gemstone videos:', wizardData.videos?.length || 0);
       console.log('📄 Number of certificate images:', wizardData.certificationType === 'certified' ? wizardData.certificateImages?.length || 0 : 0);
       console.log('🔗 API Endpoint: /api/gemsData/list-gem-data');
       console.log('🌐 Backend should be running on port 9092');
@@ -695,8 +708,8 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
           description: 'Enter gemstone details manually'
         },
         {
-          title: 'Images & Review',
-          description: 'Upload images and review'
+          title: 'Media & Review',
+          description: 'Upload images/videos and review'
         }
       ];
     } else {
@@ -710,8 +723,8 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
           description: 'Gemstone details'
         },
         {
-          title: 'Images & Review',
-          description: 'Upload images and review'
+          title: 'Media & Review',
+          description: 'Upload images/videos and review'
         }
       ];
     }
@@ -1520,13 +1533,22 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
       console.log('📁 Certificate image upload change:', info);
       
       // Update wizard data with uploaded certificate images
-      setWizardData(prev => ({
-        ...prev,
+      setWizardData(prev => ({ 
+        ...prev, 
         certificateImages: info.fileList
       }));
     };
 
-    const uploadProps = {
+    // Handle video upload change
+    const handleVideoChange = (info: any) => {
+      console.log('🎬 Video upload change:', info);
+      
+      // Update wizard data with uploaded videos
+      setWizardData(prev => ({ 
+        ...prev, 
+        videos: info.fileList
+      }));
+    };    const uploadProps = {
       name: 'images',
       multiple: true,
       accept: '.jpg,.jpeg,.png,.webp',
@@ -1544,6 +1566,16 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
       onChange: handleCertificateImageChange,
       beforeUpload: () => false, // Prevent automatic upload
       maxCount: 5,
+    };
+
+    const videoUploadProps = {
+      name: 'videos',
+      multiple: true,
+      accept: '.mp4,.avi,.mov,.wmv,.webm',
+      listType: 'picture-card' as const,
+      onChange: handleVideoChange,
+      beforeUpload: () => false, // Prevent automatic upload
+      maxCount: 3,
     };
 
     // Check if button should be disabled
@@ -1566,9 +1598,9 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
         <Card>
           <div className="text-center mb-6">
             <FileImageOutlined className="text-3xl text-purple-600 mb-4" />
-            <Title level={3}>Upload Images & Review</Title>
+            <Title level={3}>Upload Media & Review</Title>
             <Text type="secondary">
-              Upload high-quality images of your gemstone and review your listing
+              Upload high-quality images and videos of your gemstone and review your listing
             </Text>
           </div>
 
@@ -1583,6 +1615,19 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
               <Text type="secondary" className="text-sm block mt-2">
                 Upload up to 10 high-quality images of your gemstone. First image will be used as the primary image.
                 Supported formats: JPG, PNG, WebP (Max 5MB per image)
+              </Text>
+            </Form.Item>
+
+            <Form.Item label="Gemstone Videos (Optional)">
+              <Upload {...videoUploadProps}>
+                <div>
+                  <PictureOutlined />
+                  <div style={{ marginTop: 8 }}>Upload Gemstone Videos</div>
+                </div>
+              </Upload>
+              <Text type="secondary" className="text-sm block mt-2">
+                Upload up to 3 high-quality videos of your gemstone showing different angles or features.
+                Supported formats: MP4, AVI, MOV, WMV, WebM (Max 50MB per video)
               </Text>
             </Form.Item>
 

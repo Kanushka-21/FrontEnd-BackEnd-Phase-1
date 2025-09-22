@@ -268,19 +268,21 @@ public class GemCertificateController {
     }
     
     /**
-     * Save gem listing data with images submitted by seller
+     * Save gem listing data with images and videos submitted by seller
      */
     @PostMapping(value = "/list-gem-data", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "Save gem listing data with images", 
-               description = "Save gem listing data and images submitted by seller (both certified and non-certified gems)")
+    @Operation(summary = "Save gem listing data with images and videos", 
+               description = "Save gem listing data and media files (images/videos) submitted by seller (both certified and non-certified gems)")
     @CrossOrigin(origins = "*", allowedHeaders = "*", methods = {RequestMethod.POST})
     public ResponseEntity<ApiResponse<Map<String, Object>>> saveGemListingData(
             @RequestParam("gemListingData") String gemListingDataJson,
             @RequestParam(value = "gemImages", required = false) MultipartFile[] gemImages,
+            @RequestParam(value = "gemVideos", required = false) MultipartFile[] gemVideos,
             @RequestParam(value = "certificateImages", required = false) MultipartFile[] certificateImages) {
         
-        System.out.println("💎 Gem listing data with images save request received");
+        System.out.println("💎 Gem listing data with media files save request received");
         System.out.println("📁 Number of gem images: " + (gemImages != null ? gemImages.length : 0));
+        System.out.println("🎬 Number of gem videos: " + (gemVideos != null ? gemVideos.length : 0));
         System.out.println("📋 Number of certificate images: " + (certificateImages != null ? certificateImages.length : 0));
         
         try {
@@ -333,16 +335,16 @@ public class GemCertificateController {
                 }
             }
             
-            // Validate that at least some gemstone images are provided
-            if (gemImages == null || gemImages.length == 0) {
-                System.err.println("❌ Gemstone images are required");
+            // Validate that at least some gemstone media (images or videos) are provided
+            if ((gemImages == null || gemImages.length == 0) && (gemVideos == null || gemVideos.length == 0)) {
+                System.err.println("❌ Gemstone media (images or videos) are required");
                 return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("At least one gemstone image is required"));
+                    .body(ApiResponse.error("At least one gemstone image or video is required"));
             }
             
-            // Call service to save to database with images
+            // Call service to save to database with media files
             ApiResponse<Map<String, Object>> serviceResponse = 
-                gemCertificateService.saveGemListingData(gemListingData, gemImages, certificateImages);
+                gemCertificateService.saveGemListingData(gemListingData, gemImages, gemVideos, certificateImages);
             
             if (serviceResponse.isSuccess()) {
                 System.out.println("✅ Gem listing data and images saved successfully via service");
