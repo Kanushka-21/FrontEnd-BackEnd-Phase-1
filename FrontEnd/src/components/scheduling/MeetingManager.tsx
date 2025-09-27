@@ -1,6 +1,89 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, MapPin, CheckCircle, XCircle, Edit, AlertTriangle, FileText, Ban, Search, Download } from 'lucide-react';
 
+// Enhanced image component with multiple fallback paths for meetings
+interface GemstoneImageProps {
+  src?: string;
+  alt: string;
+  gemName?: string;
+  className?: string;
+}
+
+const GemstoneImage: React.FC<GemstoneImageProps> = ({ src, alt, gemName, className }) => {
+  const [currentSrc, setCurrentSrc] = useState<string>('');
+  const [attemptIndex, setAttemptIndex] = useState(0);
+
+  const getPossibleImageUrls = (imagePath?: string, gemName?: string): string[] => {
+    const urls: string[] = [];
+    
+    if (imagePath && !imagePath.includes('placeholder')) {
+      // If it's already a full URL, use it
+      if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+        urls.push(imagePath);
+      } else {
+        // Try different backend paths
+        const filename = imagePath.replace(/^.*[\\\/]/, ''); // Extract filename
+        urls.push(`http://localhost:9092/uploads/gems/${filename}`);
+        urls.push(`http://localhost:9092/uploads/images/${filename}`);
+        urls.push(`http://localhost:9092/uploads/${filename}`);
+        urls.push(`http://localhost:9092/api/files/gem-images/${filename}`);
+        
+        // If original path has uploads, try it directly
+        if (imagePath.includes('uploads/')) {
+          const path = imagePath.startsWith('/') ? imagePath.slice(1) : imagePath;
+          urls.push(`http://localhost:9092/${path}`);
+        }
+      }
+    }
+    
+    // Add fallback images based on gem type
+    const gemType = (gemName?.toLowerCase() || '');
+    if (gemType.includes('ruby') || gemType.includes('red')) {
+      urls.push('https://images.unsplash.com/photo-1544829099-b9a0c5303bea?w=400&h=300&fit=crop&crop=center');
+    } else if (gemType.includes('sapphire') || gemType.includes('blue')) {
+      urls.push('https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=400&h=300&fit=crop&crop=center');
+    } else if (gemType.includes('emerald') || gemType.includes('green')) {
+      urls.push('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop&crop=center');
+    } else if (gemType.includes('diamond') || gemType.includes('white') || gemType.includes('clear')) {
+      urls.push('https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=400&h=300&fit=crop&crop=center');
+    } else if (gemType.includes('padparadscha') || gemType.includes('pink') || gemType.includes('orange')) {
+      urls.push('https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=300&fit=crop&crop=center');
+    } else {
+      // Default gemstone image
+      urls.push('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop&crop=center');
+    }
+    
+    return urls;
+  };
+
+  useEffect(() => {
+    const possibleUrls = getPossibleImageUrls(src, gemName);
+    if (possibleUrls.length > 0) {
+      setCurrentSrc(possibleUrls[0]);
+      setAttemptIndex(0);
+    }
+  }, [src, gemName]);
+
+  const handleError = () => {
+    const possibleUrls = getPossibleImageUrls(src, gemName);
+    const nextIndex = attemptIndex + 1;
+    
+    if (nextIndex < possibleUrls.length) {
+      setCurrentSrc(possibleUrls[nextIndex]);
+      setAttemptIndex(nextIndex);
+    }
+  };
+
+  return (
+    <img
+      src={currentSrc}
+      alt={alt}
+      className={className}
+      onError={handleError}
+    />
+  );
+};
+
 interface Meeting {
   id: string;
   purchaseId: string;
@@ -160,7 +243,7 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
         return `http://localhost:9092/${imageUrl.startsWith('/') ? imageUrl.slice(1) : imageUrl}`;
       }
       // If it's just a filename, assume it's in gem-images
-      return `http://localhost:9092/uploads/gem-images/${imageUrl}`;
+      return `http://localhost:9092/uploads/gems/${imageUrl}`;
     }
     
     // Fallback images based on gem type
@@ -686,14 +769,11 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
                 <div key={meeting.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-start space-x-4">
-                      <img
-                        src={getImageUrl(meeting.primaryImageUrl, meeting.gemName)}
+                      <GemstoneImage
+                        src={meeting.primaryImageUrl}
                         alt={meeting.gemName}
+                        gemName={meeting.gemName}
                         className="w-20 h-20 object-cover rounded-lg"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = getImageUrl(undefined, meeting.gemName);
-                        }}
                       />
                       <div>
                         <h3 className="font-semibold text-gray-900">{meeting.gemName}</h3>

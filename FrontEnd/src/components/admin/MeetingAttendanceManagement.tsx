@@ -97,7 +97,7 @@ const MeetingAttendanceManagement: React.FC<MeetingAttendanceManagementProps> = 
         return `http://localhost:9092/${imageUrl.startsWith('/') ? imageUrl.slice(1) : imageUrl}`;
       }
       // If it's just a filename, assume it's in gem-images
-      return `http://localhost:9092/uploads/gem-images/${imageUrl}`;
+      return `http://localhost:9092/uploads/gems/${imageUrl}`;
     }
     
     // Fallback images based on gem type

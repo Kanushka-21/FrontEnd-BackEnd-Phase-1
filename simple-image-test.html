@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Image Loading Test - Simple</title>
+    <style>
+        body { font-family: Arial; padding: 20px; background: #f0f0f0; }
+        .test { margin: 20px 0; padding: 20px; background: white; border-radius: 8px; }
+        img { width: 150px; height: 150px; object-fit: cover; border: 2px solid #ddd; margin: 10px; }
+        .success { border-color: green !important; }
+        .error { border-color: red !important; opacity: 0.5; }
+        .status { font-weight: bold; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Image Loading Test - Simple Debug</h1>
+    
+    <div class="test">
+        <h3>Test 1: Direct Backend Image URL</h3>
+        <img id="test1" src="http://localhost:9092/uploads/gems/IMG_1751571383560_0.jpg" alt="Direct backend">
+        <div class="status" id="status1">Loading...</div>
+    </div>
+    
+    <div class="test">
+        <h3>Test 2: Fallback Unsplash Image</h3>
+        <img id="test2" src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=150&h=150&fit=crop&crop=center" alt="Unsplash fallback">
+        <div class="status" id="status2">Loading...</div>
+    </div>
+
+    <div class="test">
+        <h3>Test 3: React Component Simulation</h3>
+        <div id="react-test">
+            <p>Testing the exact logic from our React component...</p>
+            <div id="react-image-container"></div>
+            <div class="status" id="react-status">Testing...</div>
+        </div>
+    </div>
+
+    <script>
+        // Test 1: Direct backend image
+        document.getElementById('test1').onload = function() {
+            this.classList.add('success');
+            document.getElementById('status1').textContent = '✅ Backend image loaded successfully!';
+        };
+        document.getElementById('test1').onerror = function() {
+            this.classList.add('error');
+            document.getElementById('status1').textContent = '❌ Backend image failed to load';
+        };
+
+        // Test 2: Unsplash fallback
+        document.getElementById('test2').onload = function() {
+            this.classList.add('success');
+            document.getElementById('status2').textContent = '✅ Unsplash fallback loaded successfully!';
+        };
+        document.getElementById('test2').onerror = function() {
+            this.classList.add('error');
+            document.getElementById('status2').textContent = '❌ Unsplash fallback failed to load';
+        };
+
+        // Test 3: React component simulation
+        function simulateReactComponent() {
+            const src = 'IMG_1751571383560_0.jpg'; // This is what React gets from API
+            const gemName = 'Ruby';
+            
+            // Simulate getPossibleImageUrls function
+            const urls = [];
+            
+            if (src && !src.includes('placeholder')) {
+                if (src.startsWith('http://') || src.startsWith('https://')) {
+                    urls.push(src);
+                } else {
+                    const filename = src.replace(/^.*[\\\/]/, '');
+                    urls.push(`http://localhost:9092/uploads/gems/${filename}`);
+                    urls.push(`http://localhost:9092/uploads/images/${filename}`);
+                    urls.push(`http://localhost:9092/uploads/${filename}`);
+                    urls.push(`http://localhost:9092/api/files/gem-images/${filename}`);
+                }
+            }
+            
+            // Add gem-type fallbacks
+            if (gemName?.toLowerCase().includes('ruby')) {
+                urls.push('https://images.unsplash.com/photo-1544829099-b9a0c5303bea?w=150&h=150&fit=crop&crop=center');
+            }
+            
+            console.log('Simulated React URLs:', urls);
+            
+            // Try each URL
+            let currentIndex = 0;
+            
+            function tryNextImage() {
+                if (currentIndex >= urls.length) {
+                    document.getElementById('react-status').textContent = '❌ All URLs failed in React simulation';
+                    return;
+                }
+                
+                const img = document.createElement('img');
+                img.src = urls[currentIndex];
+                img.style.width = '150px';
+                img.style.height = '150px';
+                img.style.objectFit = 'cover';
+                img.style.border = '2px solid #ddd';
+                img.style.margin = '10px';
+                
+                img.onload = function() {
+                    img.classList.add('success');
+                    img.style.borderColor = 'green';
+                    document.getElementById('react-image-container').appendChild(img);
+                    document.getElementById('react-status').textContent = `✅ React simulation success with URL ${currentIndex + 1}: ${urls[currentIndex]}`;
+                };
+                
+                img.onerror = function() {
+                    console.log(`Failed URL ${currentIndex + 1}:`, urls[currentIndex]);
+                    currentIndex++;
+                    tryNextImage();
+                };
+            }
+            
+            tryNextImage();
+        }
+        
+        // Run React simulation after a delay
+        setTimeout(simulateReactComponent, 2000);
+    </script>
+</body>
+</html>
