@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, CheckCircle, XCircle, Edit, AlertTriangle, FileText, Ban, Search, Download } from 'lucide-react';
+import { Calendar, Clock, MapPin, CheckCircle, XCircle, Edit, AlertTriangle, FileText, Search, Download } from 'lucide-react';
 
 // Enhanced image component with multiple fallback paths for meetings
 interface GemstoneImageProps {
@@ -124,13 +124,6 @@ interface Meeting {
   buyerNoShowCount?: number;
   sellerNoShowCount?: number;
   meetingDisplayId?: string;
-  meetingId?: string;
-  sellerReasonSubmission?: string;
-  buyerReasonSubmission?: string;
-  hasRescheduleRequest?: boolean;
-  rescheduleRequestTime?: string;
-  rescheduleRequester?: 'buyer' | 'seller';
-  rescheduleStatus?: 'pending' | 'accepted' | 'rejected' | 'countered';
 }
 
 interface MeetingManagerProps {
@@ -173,7 +166,6 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
   
   // Confirmation modal state
   const [showConfirmNoShowModal, setShowConfirmNoShowModal] = useState(false);
-  const [showRescheduleResponseModal, setShowRescheduleResponseModal] = useState(false);
 
   // Fetch meetings
   useEffect(() => {
@@ -447,35 +439,6 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
     link.download = `GemNet-Meeting-${meeting.meetingDisplayId || meeting.id.slice(-8)}.png`;
     link.href = canvas.toDataURL();
     link.click();
-  };
-
-  // Handle accept reschedule
-  const handleAcceptReschedule = async (meetingId: string) => {
-    setMessage({ type: 'info', text: 'Accepting new meeting time...' });
-
-    try {
-      const userId = user.userId || user.id;
-      const response = await fetch(`http://localhost:9092/api/meetings/${meetingId}/accept-reschedule`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId
-        })
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        await fetchMeetings();
-        setMessage({ type: 'success', text: 'Successfully accepted new meeting time!' });
-      } else {
-        setMessage({ type: 'error', text: `Failed to accept reschedule: ${data.message}` });
-      }
-    } catch (error) {
-      console.error('Error accepting reschedule:', error);
-      setMessage({ type: 'error', text: 'Error accepting reschedule. Please try again.' });
-    }
   };
 
   // Handle reschedule meeting
@@ -869,58 +832,7 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
                   )}
 
                   {/* No-Show Notification Alert */}
-                    {/* Rescheduling Alert - For buyers responding to reschedule requests */}
-                    {!isSeller && meeting.hasRescheduleRequest && meeting.rescheduleStatus === 'pending' && (
-                      <div className="bg-blue-50 rounded-lg p-4 mb-4 border border-blue-200">
-                        <div className="flex items-start space-x-2">
-                          <Calendar className="w-5 h-5 text-blue-600 mt-0.5" />
-                          <div className="flex-1">
-                            <h4 className="font-medium text-blue-800">
-                              New Meeting Time Proposed
-                            </h4>
-                            <p className="text-sm text-blue-700 mt-1">
-                              The seller has requested to reschedule this meeting.
-                            </p>
-                            <div className="mt-2 p-3 bg-blue-100 rounded-md">
-                              <div className="flex flex-col space-y-1">
-                                <div className="flex items-center text-blue-800">
-                                  <Calendar className="w-4 h-4 mr-2" />
-                                  <span className="font-medium">New Date:</span>
-                                  <span className="ml-2">
-                                    {meeting.rescheduleRequestTime && formatDateTime(meeting.rescheduleRequestTime).date}
-                                  </span>
-                                </div>
-                                <div className="flex items-center text-blue-800">
-                                  <Clock className="w-4 h-4 mr-2" />
-                                  <span className="font-medium">New Time:</span>
-                                  <span className="ml-2">
-                                    {meeting.rescheduleRequestTime && formatDateTime(meeting.rescheduleRequestTime).time}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="mt-3 flex flex-wrap items-center gap-2">
-                              <button
-                                onClick={() => {
-                                  setSelectedMeeting(meeting);
-                                  setShowRescheduleResponseModal(true);
-                                }}
-                                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm flex items-center space-x-1"
-                              >
-                                <Calendar className="w-4 h-4" />
-                                <span>Respond to Request</span>
-                              </button>
-                              <span className="text-xs text-blue-600">
-                                Please accept, propose a new time, or cancel the meeting
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* No-Show Alert */}
-                    {meeting.status === 'CONFIRMED' && (
+                  {meeting.status === 'CONFIRMED' && (
                     ((!isSeller && meeting.sellerReasonSubmission) || 
                      (isSeller && meeting.buyerReasonSubmission)) && (
                     <div className="bg-orange-50 rounded-lg p-4 mb-4 border border-orange-200">
@@ -959,7 +871,9 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
                         </div>
                       </div>
                     </div>
-                  ))}                  {/* Notes */}
+                  ))}
+
+                  {/* Notes */}
                   {(meeting.buyerNotes || meeting.sellerNotes) && (
                     <div className="bg-blue-50 rounded-lg p-4 mb-4">
                       <h4 className="font-medium text-gray-900 mb-2">Notes</h4>
@@ -1030,29 +944,33 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
                       </>
                     )}
 
-                    {/* Delete option for buyers (only for pending meetings) */}
-                    {meeting.status === 'PENDING' && !isSeller && (
-                      <button
-                        onClick={() => handleDeleteMeeting(meeting.id)}
-                        disabled={deletingMeeting === meeting.id}
-                        className={`px-4 py-2 ${
-                          deletingMeeting === meeting.id
-                            ? 'bg-gray-400 cursor-not-allowed'
-                            : 'bg-red-600 hover:bg-red-700'
-                        } text-white rounded-md transition-colors text-sm flex items-center space-x-1`}
-                      >
-                        {deletingMeeting === meeting.id ? (
-                          <>
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                            <span>Deleting...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Ban className="w-4 h-4" />
-                            <span>Delete</span>
-                          </>
+                    {/* Buyer options for pending and rescheduled meetings */}
+                    {(meeting.status === 'PENDING' || meeting.status === 'RESCHEDULED') && !isSeller && (
+                      <div className="flex items-center space-x-2">
+                        {/* Accept button for rescheduled meetings */}
+                        {meeting.status === 'RESCHEDULED' && (
+                          <button
+                            onClick={() => handleConfirmMeeting()}
+                            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors text-sm flex items-center space-x-1"
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                            <span>Accept</span>
+                          </button>
                         )}
-                      </button>
+                        
+                        {/* Reschedule button */}
+                        <button
+                          onClick={() => {
+                            setSelectedMeeting(meeting);
+                            setShowRescheduleModal(true);
+                          }}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm flex items-center space-x-1"
+                        >
+                          <Edit className="w-4 h-4" />
+                          <span>Reschedule</span>
+                        </button>
+
+                      </div>
                     )}
 
                     {/* Reschedule option for confirmed meetings */}
@@ -1149,7 +1067,8 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
                       </div>
                     )}
 
-                    {['PENDING', 'CONFIRMED'].includes(meeting.status) && (
+                    {/* Only show Cancel button if not already shown in the rescheduled section */}
+                    {['PENDING', 'CONFIRMED'].includes(meeting.status) && meeting.status !== 'RESCHEDULED' && (
                       <button
                         onClick={() => handleCancelMeeting(meeting.id)}
                         className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm flex items-center space-x-1"
@@ -1428,74 +1347,6 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
                   Report No-Show
                 </button>
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* Reschedule Response Modal */}
-        {showRescheduleResponseModal && selectedMeeting && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Respond to Reschedule Request
-              </h3>
-              
-              <div className="p-4 bg-blue-50 rounded-lg mb-4">
-                <p className="text-sm text-blue-800 mb-2">
-                  <span className="font-medium">New proposed date & time:</span>
-                </p>
-                <div className="flex items-center text-blue-700">
-                  <Calendar className="w-4 h-4 mr-2" />
-                  {selectedMeeting.rescheduleRequestTime && 
-                    formatDateTime(selectedMeeting.rescheduleRequestTime).date}
-                  <Clock className="w-4 h-4 mx-2" />
-                  {selectedMeeting.rescheduleRequestTime && 
-                    formatDateTime(selectedMeeting.rescheduleRequestTime).time}
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <button
-                  onClick={() => {
-                    handleAcceptReschedule(selectedMeeting.id);
-                    setShowRescheduleResponseModal(false);
-                  }}
-                  className="w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center justify-center space-x-2"
-                >
-                  <CheckCircle className="w-4 h-4" />
-                  <span>Accept New Time</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    setSelectedMeeting(selectedMeeting);
-                    setShowRescheduleModal(true);
-                    setShowRescheduleResponseModal(false);
-                  }}
-                  className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
-                >
-                  <Edit className="w-4 h-4" />
-                  <span>Propose Different Time</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    handleCancelMeeting(selectedMeeting.id);
-                    setShowRescheduleResponseModal(false);
-                  }}
-                  className="w-full px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center justify-center space-x-2"
-                >
-                  <XCircle className="w-4 h-4" />
-                  <span>Cancel Meeting</span>
-                </button>
-              </div>
-
-              <button
-                onClick={() => setShowRescheduleResponseModal(false)}
-                className="mt-4 w-full px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                Close
-              </button>
             </div>
           </div>
         )}

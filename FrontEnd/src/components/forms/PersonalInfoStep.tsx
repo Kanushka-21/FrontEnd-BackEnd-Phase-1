@@ -120,22 +120,16 @@ const PersonalInfoStep: React.FC = () => {
     e.preventDefault();
     console.log('Form submitted!');
     
-    // Mark all fields as touched to trigger validation messages
-    Object.keys(values).forEach((key) => {
-      setTouched(key as keyof UserRegistrationRequest);
-    });
-    setConfirmPasswordTouched(true);
-    
     // Check validation
     const isValid = validate();
     console.log('Form validation result:', isValid);
     
-    // Validate password confirmation
+    // Also validate password confirmation
+    setConfirmPasswordTouched(true);
     const confirmPasswordValidationError = validatePasswordConfirmation(values.password, confirmPassword);
     
     if (!isValid || confirmPasswordValidationError) {
-      console.log('Form validation failed:', errors);
-      console.log('Password confirmation error:', confirmPasswordValidationError);
+      console.log('Form validation failed');
       return;
     }
 
