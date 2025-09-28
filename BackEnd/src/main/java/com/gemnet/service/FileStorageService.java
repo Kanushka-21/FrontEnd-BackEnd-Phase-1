@@ -30,6 +30,7 @@ public class FileStorageService {
     private Path advertisementImagesPath;
     private Path advertisementVideosPath;
     private Path gemImagesPath;
+    private Path gemVideosPath;
     private Path gemCertificatesPath;
     
     @PostConstruct
@@ -43,6 +44,7 @@ public class FileStorageService {
             advertisementImagesPath = basePath.resolve("advertisement-images");
             advertisementVideosPath = basePath.resolve("advertisement-videos");
             gemImagesPath = basePath.resolve("gems");
+            gemVideosPath = basePath.resolve("gem-videos");
             gemCertificatesPath = basePath.resolve("gemstone-certificates");
             
             // Create directories if they don't exist
@@ -52,6 +54,7 @@ public class FileStorageService {
             Files.createDirectories(advertisementImagesPath);
             Files.createDirectories(advertisementVideosPath);
             Files.createDirectories(gemImagesPath);
+            Files.createDirectories(gemVideosPath);
             Files.createDirectories(gemCertificatesPath);
             
         } catch (IOException e) {
@@ -179,6 +182,21 @@ public class FileStorageService {
     }
     
     /**
+     * Store gemstone video
+     */
+    public String storeGemVideo(MultipartFile file, String videoId) throws IOException {
+        validateVideoFile(file);
+        
+        String filename = videoId + "." + getFileExtension(file.getOriginalFilename());
+        Path targetPath = gemVideosPath.resolve(filename);
+        
+        Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
+        
+        // Return relative URL path for database storage
+        return "/uploads/gem-videos/" + filename;
+    }
+    
+    /**
      * Generate unique filename
      */
     private String generateFileName(String userId, String type, String extension) {
@@ -292,6 +310,8 @@ public class FileStorageService {
                     path = extractedPhotosPath.resolve(filename);
                 } else if (filePath.contains("/gems/")) {
                     path = gemImagesPath.resolve(filename);
+                } else if (filePath.contains("/gem-videos/")) {
+                    path = gemVideosPath.resolve(filename);
                 } else if (filePath.contains("/gemstone-certificates/")) {
                     path = gemCertificatesPath.resolve(filename);
                 } else {

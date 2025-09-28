@@ -12,6 +12,8 @@ const PersonalInfoStep: React.FC = () => {
   const navigate = useNavigate();
   const { registerUser, loading, progress } = useRegistration();
   const [isNavigating, setIsNavigating] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState(''); // Add confirm password state
+  const [confirmPasswordTouched, setConfirmPasswordTouched] = useState(false); // Track if confirm password field was touched
 
   const initialValues: UserRegistrationRequest = {
     firstName: '',
@@ -66,6 +68,21 @@ const PersonalInfoStep: React.FC = () => {
     validate,
   } = useFormValidation(initialValues, validationRules);
 
+  // Function to validate password confirmation
+  const validatePasswordConfirmation = (password: string, confirmPassword: string) => {
+    if (!confirmPassword) return 'Please confirm your password';
+    if (password !== confirmPassword) return 'Passwords do not match';
+    return '';
+  };
+
+  // Get current password confirmation error
+  const confirmPasswordError = confirmPasswordTouched 
+    ? validatePasswordConfirmation(values.password, confirmPassword)
+    : '';
+
+  // Check if passwords match (for visual feedback)
+  const passwordsMatch = values.password && confirmPassword && values.password === confirmPassword;
+
   // Watch for progress changes after successful registration
   useEffect(() => {
     if (isNavigating && progress.personalInfoCompleted && progress.userId) {
@@ -82,6 +99,10 @@ const PersonalInfoStep: React.FC = () => {
     setValue(field, e.target.value);
   };
 
+  const handleConfirmPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setConfirmPassword(e.target.value);
+  };
+
   const handleRoleChange = (role: 'buyer' | 'seller') => {
     setValue('userRole', role);
     setTouched('userRole');
@@ -89,6 +110,10 @@ const PersonalInfoStep: React.FC = () => {
 
   const handleInputBlur = (field: keyof UserRegistrationRequest) => () => {
     setTouched(field);
+  };
+
+  const handleConfirmPasswordBlur = () => {
+    setConfirmPasswordTouched(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -99,7 +124,11 @@ const PersonalInfoStep: React.FC = () => {
     const isValid = validate();
     console.log('Form validation result:', isValid);
     
-    if (!isValid) {
+    // Also validate password confirmation
+    setConfirmPasswordTouched(true);
+    const confirmPasswordValidationError = validatePasswordConfirmation(values.password, confirmPassword);
+    
+    if (!isValid || confirmPasswordValidationError) {
       console.log('Form validation failed');
       return;
     }
@@ -249,6 +278,38 @@ const PersonalInfoStep: React.FC = () => {
               required
               placeholder="Create a strong password"
             />
+
+            <div className="relative">
+              <Input
+                label="Confirm Password"
+                name="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={handleConfirmPasswordChange}
+                onBlur={handleConfirmPasswordBlur}
+                error={confirmPasswordError}
+                required
+                placeholder="Re-enter your password"
+              />
+              {/* Visual feedback for password matching */}
+              {confirmPassword && values.password && (
+                <div className="absolute right-3 top-[38px] flex items-center">
+                  {passwordsMatch ? (
+                    <div className="flex items-center text-green-600">
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  ) : (
+                    <div className="flex items-center text-red-600">
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
             <Input
               label="Date of Birth"

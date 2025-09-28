@@ -89,7 +89,7 @@ const RoleAwareHeader: React.FC<RoleAwareHeaderProps> = ({ transparent = false }
         { 
           label: 'Dashboard', 
           icon: <BarChart3 className="w-5 h-5" />, 
-          onClick: () => navigate('/admin/dashboard') 
+          onClick: () => navigate('/admin/dashboard?section=overview') 
         }
       ];
     } else if (user?.role === 'seller') {
@@ -103,7 +103,7 @@ const RoleAwareHeader: React.FC<RoleAwareHeaderProps> = ({ transparent = false }
         { 
           label: 'Dashboard', 
           icon: <BarChart3 className="w-5 h-5" />, 
-          onClick: () => navigate('/seller/dashboard') 
+          onClick: () => navigate('/seller/dashboard?section=overview') 
         }
       ];
     } else if (user?.role === 'buyer') {
@@ -117,7 +117,7 @@ const RoleAwareHeader: React.FC<RoleAwareHeaderProps> = ({ transparent = false }
         { 
           label: 'Dashboard', 
           icon: <ShoppingBag className="w-5 h-5" />, 
-          onClick: () => navigate('/buyer/dashboard') 
+          onClick: () => navigate('/buyer/dashboard?section=overview') 
         }
       ];
     }
@@ -137,7 +137,79 @@ const RoleAwareHeader: React.FC<RoleAwareHeaderProps> = ({ transparent = false }
 
   // Role-specific user menu items
   const getUserMenuItems = () => {
-    const baseItems = [
+    if (user?.role === 'admin') {
+      return [
+        {
+          label: 'Admin Dashboard',
+          icon: <Shield className="w-4 h-4" />,
+          onClick: () => navigate('/admin/dashboard?section=overview')
+        },
+        {
+          label: 'User Management',
+          icon: <User className="w-4 h-4" />,
+          onClick: () => navigate('/admin/dashboard?section=users')
+        },
+        {
+          label: 'Listing Management',
+          icon: <FileText className="w-4 h-4" />,
+          onClick: () => navigate('/admin/dashboard?section=listings')
+        },
+        {
+          label: 'Settings',
+          icon: <Settings className="w-4 h-4" />,
+          onClick: () => navigate('/admin/dashboard?section=settings')
+        }
+      ];
+    } else if (user?.role === 'seller') {
+      return [
+        {
+          label: 'Seller Dashboard',
+          icon: <Gem className="w-4 h-4" />,
+          onClick: () => navigate('/seller/dashboard?section=overview')
+        },
+        {
+          label: 'My Listings',
+          icon: <FileText className="w-4 h-4" />,
+          onClick: () => navigate('/seller/dashboard?section=listings')
+        },
+        {
+          label: 'Profile',
+          icon: <User className="w-4 h-4" />,
+          onClick: () => navigate('/seller/dashboard?section=profile')
+        },
+        {
+          label: 'Settings',
+          icon: <Settings className="w-4 h-4" />,
+          onClick: () => navigate('/settings')
+        }
+      ];
+    } else if (user?.role === 'buyer') {
+      return [
+        {
+          label: 'Buyer Dashboard',
+          icon: <ShoppingBag className="w-4 h-4" />,
+          onClick: () => navigate('/buyer/dashboard?section=overview')
+        },
+        {
+          label: 'Reserved Items',
+          icon: <ShoppingBag className="w-4 h-4" />,
+          onClick: () => navigate('/buyer/dashboard?section=reserved')
+        },
+        {
+          label: 'Profile',
+          icon: <User className="w-4 h-4" />,
+          onClick: () => navigate('/buyer/dashboard?section=profile')
+        },
+        {
+          label: 'Settings',
+          icon: <Settings className="w-4 h-4" />,
+          onClick: () => navigate('/settings')
+        }
+      ];
+    }
+
+    // Default items for non-authenticated users
+    return [
       {
         label: 'Profile',
         icon: <User className="w-4 h-4" />,
@@ -149,47 +221,6 @@ const RoleAwareHeader: React.FC<RoleAwareHeaderProps> = ({ transparent = false }
         onClick: () => navigate('/settings')
       }
     ];
-
-    if (user?.role === 'admin') {
-      return [
-        {
-          label: 'Admin Dashboard',
-          icon: <Shield className="w-4 h-4" />,
-          onClick: () => navigate('/admin/dashboard')
-        },
-        ...baseItems
-      ];
-    } else if (user?.role === 'seller') {
-      return [
-        {
-          label: 'Seller Dashboard',
-          icon: <Gem className="w-4 h-4" />,
-          onClick: () => navigate('/seller/dashboard')
-        },
-        {
-          label: 'My Listings',
-          icon: <FileText className="w-4 h-4" />,
-          onClick: () => navigate('/seller/listings')
-        },
-        ...baseItems
-      ];
-    } else if (user?.role === 'buyer') {
-      return [
-        {
-          label: 'Buyer Dashboard',
-          icon: <ShoppingBag className="w-4 h-4" />,
-          onClick: () => navigate('/buyer/dashboard')
-        },
-        {
-          label: 'My Purchases',
-          icon: <ShoppingBag className="w-4 h-4" />,
-          onClick: () => navigate('/buyer/purchases')
-        },
-        ...baseItems
-      ];
-    }
-
-    return baseItems;
   };
 
   const userMenuItems = getUserMenuItems();

@@ -1,8 +1,26 @@
+export interface GemImage {
+  imageId?: string;
+  originalName?: string;
+  contentType?: string;
+  size?: number;
+  imageUrl?: string;
+  videoUrl?: string; // For video files
+  thumbnailUrl?: string;
+  isPrimary?: boolean;
+  displayOrder?: number;
+  description?: string;
+  imageType?: string; // "GEMSTONE" or "CERTIFICATE"
+  mediaType: 'IMAGE' | 'VIDEO';
+  videoThumbnailUrl?: string;
+  videoDurationSeconds?: number;
+  videoFormat?: string;
+}
+
 export interface GemListing {
   id: string;
   name: string;
   image: string;
-  images?: string[]; // Multiple images support
+  images?: GemImage[]; // Support for both images and videos
   price: number;
   status: 'active' | 'pending' | 'sold' | 'rejected';
   bids: number;

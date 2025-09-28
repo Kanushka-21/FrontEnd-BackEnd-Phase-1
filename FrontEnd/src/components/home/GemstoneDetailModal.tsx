@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Shield, TrendingUp, Clock, Users } from 'lucide-react';
+import { X, Shield, TrendingUp, Clock, Users, Play } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { DetailedGemstone, BidInfo } from '@/types';
 import CountdownTimer from '../CountdownTimer';
@@ -32,7 +32,7 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
   onPlaceBid,
   onCountdownUpdated
 }) => {
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
   const [bidAmount, setBidAmount] = useState<string>('');
   const [bidError, setBidError] = useState<string>('');
   const [bids, setBids] = useState<BidInfo[]>([]);
@@ -66,8 +66,8 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
     gemstone?.listingStatus === 'sold' || 
     gemstone?.listingStatus === 'expired_no_bids' ||
     String(gemstone?.listingStatus).toLowerCase() === 'sold' ||
-    (countdownData.isExpired && (bidStats.totalBids > 0 || gemstone?.totalBids > 0)) ||
-    (countdownData.remainingTimeSeconds <= 0 && countdownData.biddingActive && (bidStats.totalBids > 0 || gemstone?.totalBids > 0));
+    (countdownData.isExpired && (bidStats.totalBids > 0 || (gemstone?.totalBids || 0) > 0)) ||
+    (countdownData.remainingTimeSeconds <= 0 && countdownData.biddingActive && (bidStats.totalBids > 0 || (gemstone?.totalBids || 0) > 0));
   
   // Check if waiting for first bid (no bids yet and not expired)
   const isWaitingForFirstBid = !isBiddingClosed && 
@@ -93,35 +93,139 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
   });
   
   // Use actual uploaded images from the gemstone data, including certificate images
-  const gemstoneImages = gemstone?.images && gemstone.images.length > 0 
+  const rawGemstoneImages = gemstone?.images && gemstone.images.length > 0 
     ? gemstone.images 
     : gemstone?.image 
       ? [gemstone.image] 
-      : ['https://via.placeholder.com/400x300?text=No+Image+Available'];
+      : [];
+  
+  // DEBUG: Check if images array contains video data
+  console.log('🔍 DETAILED IMAGE INSPECTION:');
+  if (gemstone?.images) {
+    gemstone.images.forEach((img, index) => {
+      console.log(`🔍 Image ${index}:`, img);
+      if (typeof img === 'object') {
+        console.log(`🔍 Image ${index} type:`, typeof img);
+        console.log(`🔍 Image ${index} keys:`, Object.keys(img));
+        console.log(`🔍 Image ${index} has videoUrl:`, 'videoUrl' in img);
+        console.log(`🔍 Image ${index} has mediaType:`, 'mediaType' in img);
+      }
+    });
+  }
+  
+  // Extract actual image URLs (handle both string URLs and GemImage objects)
+  const gemstoneImages = rawGemstoneImages.map((img: any) => {
+    if (typeof img === 'string') return img;
+    if (img && typeof img === 'object') {
+      // For GemImage objects that are images (not videos)
+      if (img.mediaType === 'IMAGE' || !img.mediaType) {
+        return img.imageUrl || img.url || img;
+      }
+    }
+    return null;
+  }).filter(url => url && typeof url === 'string');
+  
+  console.log('🖼️ Processed gemstone images:', gemstoneImages);
+  
+  // Add videos from gemstone data
+  const gemstoneVideos = gemstone?.videos || [];
+  
+  // CRITICAL FIX: Handle enhanced backend response with explicit video data
+  console.log('🔧 CRITICAL FIX: Checking for enhanced video response from backend');
+  
+  // Check if the response has the new enhanced format
+  let enhancedVideos: string[] = [];
+  if (gemstone && typeof gemstone === 'object' && 'videos' in gemstone && Array.isArray(gemstone.videos)) {
+    enhancedVideos = gemstone.videos;
+    console.log('🎬 Found enhanced videos from backend:', enhancedVideos);
+  }
+  
+  // Check if gemstone data has hasVideos flag
+  if (gemstone && typeof gemstone === 'object' && 'hasVideos' in gemstone && gemstone.hasVideos) {
+    console.log('🎬 Backend confirms videos are available: hasVideos = true');
+  }
+  
+  // IMPORTANT: Extract videos from GemImage objects in images array
+  const videosFromImages = rawGemstoneImages?.filter((img: any) => 
+    img && typeof img === 'object' && (
+      img.mediaType === 'VIDEO' || 
+      img.videoUrl || 
+      (img.isVideo && img.isVideo()) ||
+      (typeof img.isVideo === 'function' && img.isVideo())
+    )
+  ).map((img: any) => img.videoUrl || img.url) || [];
+  
+  console.log('🎬 Videos from images array:', videosFromImages);
+  
+  // Handle media array if available
+  const mediaItems = gemstone?.media || [];
+  const mediaImages = mediaItems.filter(m => m.type === 'IMAGE').map(m => m.url);
+  const mediaVideos = mediaItems.filter(m => m.type === 'VIDEO').map(m => m.url);
+  
+  // Combine all images and videos with deduplication
+  const allImages = [...gemstoneImages, ...mediaImages];
+  
+  // 🔧 DEDUPLICATION FIX: Remove duplicate videos by creating a Set
+  const combinedVideos = [...gemstoneVideos, ...videosFromImages, ...mediaVideos, ...enhancedVideos];
+  const allVideos = [...new Set(combinedVideos.filter(video => video && video.trim() !== ''))];
+  
+  console.log('🔧 CRITICAL FIX: Enhanced video combination with deduplication:');
+  console.log('  - Original gemstone videos:', gemstoneVideos.length);
+  console.log('  - Videos from images:', videosFromImages.length);
+  console.log('  - Media videos:', mediaVideos.length);
+  console.log('  - Enhanced backend videos:', enhancedVideos.length);
+  console.log('  - Combined videos (before dedup):', combinedVideos.length);
+  console.log('  - Final videos (after dedup):', allVideos.length);
+  console.log('  - Deduplicated videos:', allVideos);
   
   // Add certificate images if available
   const certificateImages = gemstone?.certificateImages || [];
   
-  // Combine gemstone and certificate images
-  const images = [...gemstoneImages, ...certificateImages];
+  // Create unified media array with type information
+  const mediaArray = [
+    ...allImages.map(url => ({ url, type: 'image' as const, category: 'gemstone' as const })),
+    ...allVideos.map(url => ({ url, type: 'video' as const, category: 'gemstone' as const })),
+    ...certificateImages.map(url => ({ url, type: 'image' as const, category: 'certificate' as const }))
+  ];
+  
+  // Fallback to placeholder if no media
+  const finalMediaArray = mediaArray.length > 0 
+    ? mediaArray 
+    : [{ url: 'https://via.placeholder.com/400x300?text=No+Media+Available', type: 'image' as const, category: 'gemstone' as const }];
+  
+  // Legacy images array for backward compatibility
+  const images = [...allImages, ...certificateImages];
+  if (images.length === 0) {
+    images.push('https://via.placeholder.com/400x300?text=No+Image+Available');
+  }
 
-  // Function to determine image type
-  const getImageType = (index: number) => {
-    if (index < gemstoneImages.length) {
-      return 'gemstone';
-    } else {
-      return 'certificate';
-    }
+  // Media availability flags
+  const hasVideos = allVideos.length > 0;
+  const hasMedia = mediaItems.length > 0;
+
+  // Function to determine media type and category
+  const getMediaInfo = (index: number) => {
+    return finalMediaArray[index] || { url: '', type: 'image', category: 'gemstone' };
   };
 
-  // Function to get image label
-  const getImageLabel = (index: number) => {
-    const type = getImageType(index);
-    if (type === 'gemstone') {
-      return `Gemstone Image ${index + 1}`;
+  // Function to get media label
+  const getMediaLabel = (index: number) => {
+    const mediaInfo = getMediaInfo(index);
+    const mediaType = mediaInfo.type === 'video' ? 'Video' : 'Image';
+    const category = mediaInfo.category === 'certificate' ? 'Certificate' : 'Gemstone';
+    
+    if (mediaInfo.category === 'gemstone') {
+      const sameTypeIndex = finalMediaArray
+        .slice(0, index)
+        .filter(m => m.type === mediaInfo.type && m.category === mediaInfo.category)
+        .length + 1;
+      return `${category} ${mediaType} ${sameTypeIndex}`;
     } else {
-      const certIndex = index - gemstoneImages.length + 1;
-      return `Certificate Image ${certIndex}`;
+      const certIndex = finalMediaArray
+        .slice(0, index)
+        .filter(m => m.category === 'certificate')
+        .length + 1;
+      return `${category} ${mediaType} ${certIndex}`;
     }
   };
 
@@ -133,6 +237,31 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
   console.log('🖼️ Final combined images array:', images);
   console.log('🖼️ Total images count:', images.length);
 
+  console.log('🎬 Modal Video Debug Info:');
+  console.log('🎬 Gemstone.videos:', gemstone?.videos);
+  console.log('🎬 Gemstone.media:', gemstone?.media);
+  console.log('🎬 All videos combined:', allVideos);
+  console.log('🎬 Media videos:', mediaVideos);
+  console.log('🎬 Has videos flag:', hasVideos);
+  console.log('🎬 Has media flag:', hasMedia);
+  console.log('🎬 Final media array:', finalMediaArray);
+  console.log('🎬 Final media array length:', finalMediaArray.length);
+  console.log('🎬 Current media index:', currentMediaIndex);
+  if (finalMediaArray.length > 0) {
+    console.log('🎬 Current media item:', getMediaInfo(currentMediaIndex));
+  }
+
+  // EMERGENCY TEST: Force show a test video to verify the UI works
+  console.log('🚨 EMERGENCY TEST: Adding a test video to see if UI works');
+  if (finalMediaArray.length === 1 && finalMediaArray[0].url.includes('placeholder')) {
+    finalMediaArray.push({
+      url: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4',
+      type: 'video' as const,
+      category: 'gemstone' as const
+    });
+    console.log('🚨 Added test video. New media array:', finalMediaArray);
+  }
+
   // Load bid data when modal opens
   useEffect(() => {
     if (isOpen && gemstone?.id) {
@@ -141,11 +270,11 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
     }
   }, [isOpen, gemstone?.id]);
 
-  // Reset image index when gemstone changes
+  // Reset media index when gemstone changes
   useEffect(() => {
     if (gemstone) {
-      setCurrentImageIndex(0);
-      console.log('🖼️ Gemstone changed, reset image index to 0');
+      setCurrentMediaIndex(0);
+      console.log('🖼️ Gemstone changed, reset media index to 0');
     }
   }, [gemstone?.id]);
 
@@ -237,124 +366,183 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
         <div className="flex-1 overflow-y-auto">
           <div className="p-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Left Column - Images */}
+              {/* Left Column - Media (Images & Videos) */}
               <div className="space-y-4">
                 <div className="max-w-md mx-auto h-[300px] rounded-2xl overflow-hidden border bg-gray-50 relative">
-                  {/* Image Type Badge */}
-                  {images.length > 1 && (
+                  {/* Media Type Badge */}
+                  {finalMediaArray.length > 1 && (
                     <div className="absolute top-2 left-2 z-10">
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                        getImageType(currentImageIndex) === 'gemstone' 
+                        getMediaInfo(currentMediaIndex).category === 'gemstone' 
                           ? 'bg-blue-100 text-blue-800' 
                           : 'bg-green-100 text-green-800'
                       }`}>
-                        {getImageType(currentImageIndex) === 'gemstone' ? 'Gemstone' : 'Certificate'}
+                        {getMediaLabel(currentMediaIndex)}
                       </span>
                     </div>
                   )}
-                  <img
-                    src={images[currentImageIndex]}
-                    alt={getImageLabel(currentImageIndex)}
-                    className="w-full h-full object-contain"
-                    onError={(e) => {
-                      console.error('🚫 Failed to load image:', images[currentImageIndex]);
-                      console.error('🚫 Error event:', e);
-                      
-                      // Try to construct a different URL format as fallback
-                      const currentSrc = e.currentTarget.src;
-                      if (!currentSrc.includes('placeholder') && !currentSrc.includes('Not+Found')) {
-                        // Try alternative image URL formats
-                        const originalPath = images[currentImageIndex];
-                        let fallbackUrl = originalPath;
-                        
-                        // If it's a relative path, try different base URLs
-                        if (!originalPath.startsWith('http')) {
-                          if (originalPath.startsWith('/uploads/')) {
-                            fallbackUrl = `http://localhost:9092${originalPath}`;
-                          } else if (originalPath.startsWith('uploads/')) {
-                            fallbackUrl = `http://localhost:9092/${originalPath}`;
-                          } else {
-                            fallbackUrl = `http://localhost:9092/uploads/${originalPath}`;
-                          }
+
+                  {/* Video Display */}
+                  {getMediaInfo(currentMediaIndex).type === 'video' ? (
+                    <div className="relative w-full h-full">
+                      <video
+                        src={getMediaInfo(currentMediaIndex).url}
+                        className="w-full h-full object-contain"
+                        controls
+                        poster={
+                          gemstone?.media?.find(m => m.url === getMediaInfo(currentMediaIndex).url)?.thumbnailUrl
                         }
+                        onError={(e) => {
+                          console.error('🚫 Failed to load video:', getMediaInfo(currentMediaIndex).url);
+                          console.error('🚫 Error event:', e);
+                          
+                          // Try fallback video URL
+                          const currentSrc = e.currentTarget.src;
+                          if (!currentSrc.includes('placeholder')) {
+                            const originalPath = getMediaInfo(currentMediaIndex).url;
+                            let fallbackUrl = originalPath;
+                            
+                            if (!originalPath.startsWith('http')) {
+                              if (originalPath.startsWith('/uploads/')) {
+                                fallbackUrl = `http://localhost:9092${originalPath}`;
+                              } else if (originalPath.startsWith('uploads/')) {
+                                fallbackUrl = `http://localhost:9092/${originalPath}`;
+                              } else {
+                                fallbackUrl = `http://localhost:9092/uploads/gem-videos/${originalPath}`;
+                              }
+                            }
+                            
+                            console.log('🔄 Trying fallback video URL:', fallbackUrl);
+                            e.currentTarget.src = fallbackUrl;
+                          }
+                        }}
+                        onLoadedData={() => {
+                          console.log('✅ Successfully loaded video:', getMediaInfo(currentMediaIndex).url);
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    /* Image Display */
+                    <img
+                      src={getMediaInfo(currentMediaIndex).url}
+                      alt={getMediaLabel(currentMediaIndex)}
+                      className="w-full h-full object-contain"
+                      onError={(e) => {
+                        console.error('🚫 Failed to load image:', getMediaInfo(currentMediaIndex).url);
+                        console.error('🚫 Error event:', e);
                         
-                        console.log('🔄 Trying fallback URL:', fallbackUrl);
-                        e.currentTarget.src = fallbackUrl;
-                      } else {
-                        // Final fallback to placeholder
-                        console.log('🔄 Using final placeholder fallback');
-                        e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Image+Not+Available';
-                      }
-                    }}
-                    onLoad={() => {
-                      console.log('✅ Successfully loaded image:', images[currentImageIndex]);
-                    }}
-                  />
+                        // Try to construct a different URL format as fallback
+                        const currentSrc = e.currentTarget.src;
+                        if (!currentSrc.includes('placeholder') && !currentSrc.includes('Not+Found')) {
+                          const originalPath = getMediaInfo(currentMediaIndex).url;
+                          let fallbackUrl = originalPath;
+                          
+                          if (!originalPath.startsWith('http')) {
+                            if (originalPath.startsWith('/uploads/')) {
+                              fallbackUrl = `http://localhost:9092${originalPath}`;
+                            } else if (originalPath.startsWith('uploads/')) {
+                              fallbackUrl = `http://localhost:9092/${originalPath}`;
+                            } else {
+                              fallbackUrl = `http://localhost:9092/uploads/${originalPath}`;
+                            }
+                          }
+                          
+                          console.log('🔄 Trying fallback URL:', fallbackUrl);
+                          e.currentTarget.src = fallbackUrl;
+                        } else {
+                          console.log('🔄 Using final placeholder fallback');
+                          e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Image+Not+Available';
+                        }
+                      }}
+                      onLoad={() => {
+                        console.log('✅ Successfully loaded image:', getMediaInfo(currentMediaIndex).url);
+                      }}
+                    />
+                  )}
                 </div>
                 
-                {/* Only show thumbnails if there are multiple images */}
-                {images.length > 1 && (
+                {/* Only show thumbnails if there are multiple media items */}
+                {finalMediaArray.length > 1 && (
                   <div className={`grid gap-3 max-w-md mx-auto ${
-                    images.length <= 3 ? 'grid-cols-3' : 
-                    images.length <= 4 ? 'grid-cols-4' : 
+                    finalMediaArray.length <= 3 ? 'grid-cols-3' : 
+                    finalMediaArray.length <= 4 ? 'grid-cols-4' : 
                     'grid-cols-5'
                   }`}>
-                    {images.map((img, index) => (
+                    {finalMediaArray.map((mediaItem, index) => (
                       <button
                         key={index}
-                        onClick={() => setCurrentImageIndex(index)}
+                        onClick={() => setCurrentMediaIndex(index)}
                         className={`aspect-square rounded-xl overflow-hidden border-2 transition-all relative ${
-                          index === currentImageIndex 
+                          index === currentMediaIndex 
                             ? 'border-primary-500 ring-2 ring-primary-200' 
                             : 'border-gray-200 hover:border-primary-300'
                         }`}
                       >
-                        {/* Thumbnail type indicator */}
+                        {/* Media type indicator */}
                         <div className="absolute top-1 right-1 z-10">
                           <span className="text-xs bg-white bg-opacity-75 px-1 rounded">
-                            {getImageType(index) === 'gemstone' ? 'G' : 'C'}
+                            {mediaItem.type === 'video' ? '▶' : 
+                             mediaItem.category === 'gemstone' ? 'G' : 'C'}
                           </span>
                         </div>
-                        <img 
-                          src={img} 
-                          alt={getImageLabel(index)} 
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            console.error('🚫 Failed to load thumbnail:', img);
-                            
-                            // Try alternative URL formats for thumbnails too
-                            const currentSrc = e.currentTarget.src;
-                            if (!currentSrc.includes('placeholder') && !currentSrc.includes('Error')) {
-                              let fallbackUrl = img;
-                              
-                              if (!img.startsWith('http')) {
-                                if (img.startsWith('/uploads/')) {
-                                  fallbackUrl = `http://localhost:9092${img}`;
-                                } else if (img.startsWith('uploads/')) {
-                                  fallbackUrl = `http://localhost:9092/${img}`;
-                                } else {
-                                  fallbackUrl = `http://localhost:9092/uploads/${img}`;
-                                }
+                        
+                        {mediaItem.type === 'video' ? (
+                          <div className="relative w-full h-full bg-gray-900 flex items-center justify-center">
+                            {/* Video thumbnail or preview */}
+                            <video 
+                              src={mediaItem.url} 
+                              className="w-full h-full object-cover"
+                              muted
+                              poster={
+                                gemstone?.media?.find(m => m.url === mediaItem.url)?.thumbnailUrl
                               }
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <Play className="w-4 h-4 text-white opacity-80" />
+                            </div>
+                          </div>
+                        ) : (
+                          <img 
+                            src={mediaItem.url} 
+                            alt={getMediaLabel(index)} 
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              console.error('🚫 Failed to load thumbnail:', mediaItem.url);
                               
-                              console.log('🔄 Trying thumbnail fallback URL:', fallbackUrl);
-                              e.currentTarget.src = fallbackUrl;
-                            } else {
-                              e.currentTarget.src = 'https://via.placeholder.com/100x100?text=No+Image';
-                            }
-                          }}
-                          onLoad={() => {
-                            console.log('✅ Successfully loaded thumbnail:', img);
-                          }}
-                        />
+                              // Try alternative URL formats for thumbnails too
+                              const currentSrc = e.currentTarget.src;
+                              if (!currentSrc.includes('placeholder') && !currentSrc.includes('Error')) {
+                                let fallbackUrl = mediaItem.url;
+                                
+                                if (!mediaItem.url.startsWith('http')) {
+                                  if (mediaItem.url.startsWith('/uploads/')) {
+                                    fallbackUrl = `http://localhost:9092${mediaItem.url}`;
+                                  } else if (mediaItem.url.startsWith('uploads/')) {
+                                    fallbackUrl = `http://localhost:9092/${mediaItem.url}`;
+                                  } else {
+                                    fallbackUrl = `http://localhost:9092/uploads/${mediaItem.url}`;
+                                  }
+                                }
+                                
+                                console.log('🔄 Trying thumbnail fallback URL:', fallbackUrl);
+                                e.currentTarget.src = fallbackUrl;
+                              } else {
+                                e.currentTarget.src = 'https://via.placeholder.com/100x100?text=No+Image';
+                              }
+                            }}
+                            onLoad={() => {
+                              console.log('✅ Successfully loaded thumbnail:', mediaItem.url);
+                            }}
+                          />
+                        )}
                       </button>
                     ))}
                   </div>
                 )}
                 
-                {/* Image counter with detailed info */}
+                {/* Media counter with detailed info */}
                 <div className="text-center text-sm text-gray-500 space-y-1">
-                  <div>{getImageLabel(currentImageIndex)}</div>
+                  <div>{getMediaLabel(currentMediaIndex)}</div>
                   {images.length > 1 && (
                     <div className="flex items-center justify-center space-x-2 text-xs">
                       <span>{gemstoneImages.length} gemstone</span>
@@ -365,7 +553,7 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
                         </>
                       )}
                       <span>•</span>
-                      <span>{currentImageIndex + 1} of {images.length} total</span>
+                      <span>{currentMediaIndex + 1} of {finalMediaArray.length} total</span>
                     </div>
                   )}
                 </div>

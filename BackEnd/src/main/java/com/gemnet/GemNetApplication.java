@@ -10,6 +10,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.core.env.Environment;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.index.Index;
+import org.springframework.data.domain.Sort;
 
 import jakarta.annotation.PostConstruct;
 import java.net.InetAddress;
@@ -191,7 +193,7 @@ public class GemNetApplication {
                 System.out.println("🔧 Creating users collection...");
                 mongoTemplate.createCollection("users");
                 mongoTemplate.indexOps("users").ensureIndex(
-                    new org.springframework.data.mongodb.core.index.Index("email", org.springframework.data.domain.Sort.Direction.ASC).unique()
+                    new Index("email", Sort.Direction.ASC).unique()
                 );
                 
                 // Insert a sample admin user
@@ -222,7 +224,7 @@ public class GemNetApplication {
                 System.out.println("💎 Creating gem_listings collection...");
                 mongoTemplate.createCollection("gem_listings");
                 mongoTemplate.indexOps("gem_listings").ensureIndex(
-                    new org.springframework.data.mongodb.core.index.Index("status", org.springframework.data.domain.Sort.Direction.ASC)
+                    new Index("status", Sort.Direction.ASC)
                 );
                 
                 // Insert sample gemstone listings with countdown timer fields
@@ -364,19 +366,19 @@ public class GemNetApplication {
                 
                 // Create indexes for the meetings collection
                 mongoTemplate.indexOps("meetings").ensureIndex(
-                    new org.springframework.data.mongodb.core.index.Index("buyerId", org.springframework.data.domain.Sort.Direction.ASC)
+                    new Index("buyerId", Sort.Direction.ASC)
                 );
                 mongoTemplate.indexOps("meetings").ensureIndex(
-                    new org.springframework.data.mongodb.core.index.Index("sellerId", org.springframework.data.domain.Sort.Direction.ASC)
+                    new Index("sellerId", Sort.Direction.ASC)
                 );
                 mongoTemplate.indexOps("meetings").ensureIndex(
-                    new org.springframework.data.mongodb.core.index.Index("status", org.springframework.data.domain.Sort.Direction.ASC)
+                    new Index("status", Sort.Direction.ASC)
                 );
                 mongoTemplate.indexOps("meetings").ensureIndex(
-                    new org.springframework.data.mongodb.core.index.Index("proposedDateTime", org.springframework.data.domain.Sort.Direction.ASC)
+                    new Index("proposedDateTime", Sort.Direction.ASC)
                 );
                 mongoTemplate.indexOps("meetings").ensureIndex(
-                    new org.springframework.data.mongodb.core.index.Index("purchaseId", org.springframework.data.domain.Sort.Direction.ASC).unique()
+                    new Index("purchaseId", Sort.Direction.ASC).unique()
                 );
                 
                 System.out.println("🤝 Meetings collection created with indexes!");

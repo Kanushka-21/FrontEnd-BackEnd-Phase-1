@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { 
   User, Menu, 
-  Home, Trophy, Calendar, Gem, Megaphone, MessageCircle
+  Home, Trophy, Calendar, Gem, Megaphone, MessageCircle, BookOpen
 } from 'lucide-react';
 import RoleAwareDashboardLayout from '@/components/layout/RoleAwareDashboardLayout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -23,6 +23,9 @@ import { SidebarItem } from './SellerDashbaordComponents/shared';
 
 // Import feedback page
 import FeedbackForm from '../Feedback/FeedbackPage';
+
+// Import User Manual component
+import UserManual from '../../components/user-manual/UserManual';
 
 const SellerDashboard = () => {
   const { user } = useAuth();
@@ -88,6 +91,12 @@ const SellerDashboard = () => {
       notificationCount: getNotificationCount('seller', 'feedback') || 0
     },
     { 
+      id: 'user-manual', 
+      label: 'User Manual', 
+      icon: <BookOpen size={24} />,
+      notificationCount: 0
+    },
+    { 
       id: 'profile', 
       label: 'Profile', 
       icon: <User size={24} />,
@@ -109,6 +118,8 @@ const SellerDashboard = () => {
         return <Meetings user={user} />;
       case 'feedback':
         return <FeedbackForm />;
+      case 'user-manual':
+        return <UserManual onNavigateToSection={(section) => setActiveTab(section)} />;
       case 'profile':
         return <Profile user={user} />;
       default:

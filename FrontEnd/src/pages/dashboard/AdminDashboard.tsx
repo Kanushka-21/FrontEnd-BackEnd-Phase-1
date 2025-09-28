@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/contexts/NotificationContext';
 import NotificationBadge from '@/components/ui/NotificationBadge';
 import { Modal, Divider, Alert } from 'antd';
 import dayjs from 'dayjs';
 import RoleAwareDashboardLayout from '@/components/layout/RoleAwareDashboardLayout';
-import { BarChart3, Users, Package, Clock, Settings, Menu as MenuIcon, MessageCircle, Search, Shield, CheckSquare } from 'lucide-react';
+import { BarChart3, Users, Package, Clock, Settings, Menu as MenuIcon, MessageCircle, Search, Shield, CheckSquare, BookOpen } from 'lucide-react';
 
 // Import modular components
 import {
@@ -25,9 +26,13 @@ import NoShowManagement from '@/components/admin/NoShowManagement';
 import MeetingAttendanceManagement from '@/components/admin/MeetingAttendanceManagement';
 import BlockedUsersManagement from '@/components/admin/BlockedUsersManagement';
 
+// Import User Manual component
+import UserManual from '../../components/user-manual/UserManual';
+
 const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
   const { notifications } = useNotifications();
+  const location = useLocation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [modalState, setModalState] = useState<ModalState>({
@@ -40,6 +45,19 @@ const AdminDashboard: React.FC = () => {
     selectedAdvertisement: null,
     selectedListing: null,
   });
+
+  // Check URL parameters on component mount and when location changes
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const section = urlParams.get('section');
+    
+    console.log('🔧 AdminDashboard URL params:', { section, pathname: location.pathname });
+    
+    if (section && ['overview', 'users', 'listings', 'advertisements', 'meetings', 'attendance', 'no-show', 'blocked-users', 'feedback', 'user-manual', 'settings'].includes(section)) {
+      console.log('🔧 Setting active tab from URL parameter:', section);
+      setActiveTab(section);
+    }
+  }, [location]);
 
   // Get notifications from context
   const { notifications: allNotifications, getNotificationCount } = useNotifications();
@@ -102,6 +120,12 @@ const AdminDashboard: React.FC = () => {
       notificationCount: 0
     },
     { 
+      id: 'user-manual', 
+      label: 'User Manual', 
+      icon: <BookOpen size={24} />,
+      notificationCount: 0
+    },
+    { 
       id: 'settings', 
       label: 'System Settings', 
       icon: <Settings size={24} />,
@@ -146,6 +170,8 @@ const AdminDashboard: React.FC = () => {
         return <BlockedUsersManagement />;
       case 'feedback':
         return <FeedbackManagement user={user} onTabChange={setActiveTab} />;
+      case 'user-manual':
+        return <UserManual onNavigateToSection={(section) => setActiveTab(section)} />;
       case 'settings':
         return <SystemSettings />;
       default:

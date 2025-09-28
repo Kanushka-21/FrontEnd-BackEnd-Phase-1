@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Gem, Shield, User } from 'lucide-react';
+import { Gem, Shield, User, Play } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import CountdownTimer from '@/components/CountdownTimer';
 import AIPricePrediction from '@/components/common/AIPricePrediction';
@@ -18,6 +18,36 @@ const formatLKR = (price: number) => {
 
 const GemstoneCard: React.FC<GemstoneCardProps> = ({ gemstone, onViewDetails }) => {
   const [imageError, setImageError] = React.useState(false);
+  const [showVideo, setShowVideo] = React.useState(false);
+  
+  // Check for available media
+  const hasImages = gemstone.images && gemstone.images.length > 0;
+  const hasVideos = gemstone.videos && gemstone.videos.length > 0;
+  const hasMedia = gemstone.media && Array.isArray(gemstone.media) && gemstone.media.length > 0;
+  
+  // Get current display items
+  const currentImage = hasImages ? gemstone.images![0] : null;
+  const currentVideo = React.useMemo(() => {
+    if (hasVideos && gemstone.videos) return gemstone.videos[0];
+    if (hasMedia && gemstone.media) {
+      const videoMedia = gemstone.media.find(m => m.type === 'VIDEO');
+      return videoMedia?.url;
+    }
+    return null;
+  }, [hasVideos, hasMedia, gemstone.videos, gemstone.media]);
+  
+  // Check if we have multiple media types to toggle
+  const hasMultipleMediaTypes = (hasImages || (hasMedia && gemstone.media?.some(m => m.type === 'IMAGE'))) && 
+                               (hasVideos || (hasMedia && gemstone.media?.some(m => m.type === 'VIDEO')));
+  
+  // Determine what to display
+  const canShowVideo = currentVideo && showVideo;
+  
+  const toggleMediaType = () => {
+    if (hasMultipleMediaTypes) {
+      setShowVideo(!showVideo);
+    }
+  };
   
   // Log the gemstone data when the component renders to verify bid price
   React.useEffect(() => {
@@ -40,7 +70,7 @@ const GemstoneCard: React.FC<GemstoneCardProps> = ({ gemstone, onViewDetails }) 
   };
 
   const handleImageError = () => {
-    console.error('❌ Failed to load image:', gemstone.image);
+    console.error('❌ Failed to load image:', currentImage);
     console.error('🔍 Gemstone data:', gemstone);
     console.error('🔍 Gemstone ID:', gemstone.id);
     console.error('🔍 All images available:', gemstone.images);
@@ -48,7 +78,7 @@ const GemstoneCard: React.FC<GemstoneCardProps> = ({ gemstone, onViewDetails }) 
   };
 
   const handleImageLoad = () => {
-    console.log('✅ Image loaded successfully:', gemstone.image);
+    console.log('✅ Image loaded successfully:', currentImage);
     console.log('🔍 Gemstone:', gemstone.name);
     setImageError(false);
   };
@@ -65,14 +95,41 @@ const GemstoneCard: React.FC<GemstoneCardProps> = ({ gemstone, onViewDetails }) 
       }}
       className="bg-white rounded-lg overflow-hidden border border-secondary-200 transition-all duration-300"
     >      <div className="relative overflow-hidden h-40 sm:h-48 bg-gray-100">
-        {imageError ? (
+        {/* Media Toggle Button */}
+        {hasMultipleMediaTypes && (
+          <button
+            onClick={toggleMediaType}
+            className="absolute top-2 left-2 z-10 bg-black/50 text-white px-2 py-1 rounded text-xs font-medium hover:bg-black/70 transition-colors"
+          >
+            {showVideo ? 'Show Image' : 'Show Video'}
+          </button>
+        )}
+
+        {/* Video Display */}
+        {canShowVideo ? (
+          <div className="relative w-full h-full">
+            <video
+              src={currentVideo}
+              className="w-full h-full object-cover"
+              controls
+              poster={hasMedia ? gemstone.media?.find(m => m.url === currentVideo)?.thumbnailUrl : undefined}
+              onError={() => {
+                console.error('❌ Failed to load video:', currentVideo);
+                setShowVideo(false); // Fall back to image if video fails
+              }}
+            />
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <Play className="w-12 h-12 text-white opacity-70" />
+            </div>
+          </div>
+        ) : imageError || !currentImage ? (
           <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
             <Gem className="w-8 h-8 mb-2" />
-            <span className="text-xs text-center">{gemstone.name || 'Image Not Available'}</span>
+            <span className="text-xs text-center">{gemstone.name || 'Media Not Available'}</span>
           </div>
         ) : (
           <motion.img
-            src={gemstone.image}
+            src={currentImage}
             alt={gemstone.name}
             className="w-full h-full object-cover"
             whileHover={{ scale: 1.05 }}
@@ -81,6 +138,7 @@ const GemstoneCard: React.FC<GemstoneCardProps> = ({ gemstone, onViewDetails }) 
             onLoad={handleImageLoad}
           />
         )}
+
         {/* Status badges */}
         <div className="absolute top-2 right-2 flex flex-col space-y-1">
           {gemstone.certified && (
@@ -169,7 +227,7 @@ const GemstoneCard: React.FC<GemstoneCardProps> = ({ gemstone, onViewDetails }) 
                 color: gemstone.color || 'Blue',
                 cut: gemstone.cut || 'Good',
                 clarity: gemstone.clarity || 'SI1',
-                species: gemstone.species || gemstone.type || gemstone.name?.split(' ')[0] || 'Sapphire',
+                species: gemstone.species || gemstone.name?.split(' ')[0] || 'Sapphire',
                 isCertified: gemstone.certified || false,
                 shape: gemstone.shape || 'Round',
                 treatment: gemstone.treatment || 'Heat Treatment'

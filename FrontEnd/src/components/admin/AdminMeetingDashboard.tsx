@@ -1,8 +1,122 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Calendar, Clock, MapPin, User, Phone, Mail, Package, Eye, 
-  Search, Filter, CheckCircle, XCircle, AlertCircle, Check, RefreshCw 
+  Search, Filter, CheckCircle, XCircle, AlertCircle, Check, RefreshCw, Trash2
 } from 'lucide-react';
+
+// Enhanced image component with multiple fallback paths
+interface GemstoneImageProps {
+  src?: string;
+  alt: string;
+  gemName?: string;
+  className?: string;
+}
+
+const GemstoneImage: React.FC<GemstoneImageProps> = ({ src, alt, gemName, className }) => {
+  const [currentSrc, setCurrentSrc] = useState<string>('');
+  const [attemptIndex, setAttemptIndex] = useState(0);
+
+  const getPossibleImageUrls = (imagePath?: string, gemName?: string): string[] => {
+    const urls: string[] = [];
+    
+    // Debug logging for meeting image issues
+    console.log('🔍 GemstoneImage Debug:', {
+      imagePath,
+      gemName,
+      isNull: imagePath === null,
+      isUndefined: imagePath === undefined,
+      isEmpty: imagePath === '',
+      includesPlaceholder: imagePath?.includes('placeholder')
+    });
+    
+    if (imagePath && !imagePath.includes('placeholder')) {
+      // If it's already a full URL, use it
+      if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+        urls.push(imagePath);
+        console.log('📎 Using full URL:', imagePath);
+      } else {
+        // Try different backend paths
+        const filename = imagePath.replace(/^.*[\\\/]/, ''); // Extract filename
+        const backendUrls = [
+          `http://localhost:9092/uploads/gems/${filename}`,
+          `http://localhost:9092/uploads/images/${filename}`,
+          `http://localhost:9092/uploads/${filename}`,
+          `http://localhost:9092/api/files/gem-images/${filename}`
+        ];
+        urls.push(...backendUrls);
+        console.log('🔧 Generated backend URLs:', backendUrls);
+        
+        // If original path has uploads, try it directly
+        if (imagePath.includes('uploads/')) {
+          const path = imagePath.startsWith('/') ? imagePath.slice(1) : imagePath;
+          const directUrl = `http://localhost:9092/${path}`;
+          urls.push(directUrl);
+          console.log('📁 Added direct path:', directUrl);
+        }
+      }
+    } else {
+      console.log('⚠️ No valid imagePath provided, using gem-type fallbacks only');
+    }
+    
+    // Add fallback images based on gem type
+    const gemType = (gemName?.toLowerCase() || '');
+    if (gemType.includes('ruby') || gemType.includes('red')) {
+      urls.push('https://images.unsplash.com/photo-1544829099-b9a0c5303bea?w=400&h=300&fit=crop&crop=center');
+    } else if (gemType.includes('sapphire') || gemType.includes('blue')) {
+      urls.push('https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=400&h=300&fit=crop&crop=center');
+    } else if (gemType.includes('emerald') || gemType.includes('green')) {
+      urls.push('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop&crop=center');
+    } else if (gemType.includes('diamond') || gemType.includes('white') || gemType.includes('clear')) {
+      urls.push('https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=400&h=300&fit=crop&crop=center');
+    } else if (gemType.includes('padparadscha') || gemType.includes('pink') || gemType.includes('orange')) {
+      urls.push('https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=300&fit=crop&crop=center');
+    } else {
+      // Default gemstone image
+      urls.push('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop&crop=center');
+    }
+    
+    console.log('🎯 Final image URLs to try:', urls);
+    return urls;
+  };
+
+  useEffect(() => {
+    const possibleUrls = getPossibleImageUrls(src, gemName);
+    if (possibleUrls.length > 0) {
+      setCurrentSrc(possibleUrls[0]);
+      setAttemptIndex(0);
+    }
+  }, [src, gemName]);
+
+  const handleError = () => {
+    const possibleUrls = getPossibleImageUrls(src, gemName);
+    const nextIndex = attemptIndex + 1;
+    
+    console.log('❌ Image load failed:', {
+      currentUrl: currentSrc,
+      attemptIndex,
+      nextIndex,
+      totalUrls: possibleUrls.length,
+      nextUrl: possibleUrls[nextIndex] || 'No more URLs'
+    });
+    
+    if (nextIndex < possibleUrls.length) {
+      console.log('🔄 Trying next URL:', possibleUrls[nextIndex]);
+      setCurrentSrc(possibleUrls[nextIndex]);
+      setAttemptIndex(nextIndex);
+    } else {
+      console.log('🚫 All image URLs failed for:', src);
+    }
+  };
+
+  return (
+    <img
+      src={currentSrc}
+      alt={alt}
+      className={className}
+      onError={handleError}
+    />
+  );
+};
 
 interface Meeting {
   id: string;
@@ -47,32 +161,58 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
   const [updatingMeeting, setUpdatingMeeting] = useState<string | null>(null);
   const [showCompleteConfirmModal, setShowCompleteConfirmModal] = useState(false);
   const [meetingToComplete, setMeetingToComplete] = useState<Meeting | null>(null);
+  const [deletingMeeting, setDeletingMeeting] = useState<string | null>(null);
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+  const [meetingToDelete, setMeetingToDelete] = useState<Meeting | null>(null);
 
   // Get proper image URL
   const getImageUrl = (imageUrl?: string, gemName?: string) => {
     if (imageUrl) {
-      // If it's already a full URL, return as is
-      if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-        return imageUrl;
+      // Skip placeholder URLs
+      if (imageUrl.includes('/api/placeholder') || imageUrl.includes('placeholder')) {
+        // Don't use placeholder URLs, fall through to gem-based fallback
+      } else {
+        // If it's already a full URL, return as is
+        if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+          return imageUrl;
+        }
+        
+        // If it's a relative path, prepend the backend URL
+        if (imageUrl.startsWith('/uploads/') || imageUrl.startsWith('uploads/')) {
+          return `http://localhost:9092/${imageUrl.startsWith('/') ? imageUrl.slice(1) : imageUrl}`;
+        }
+        
+        // If it's just a filename, try multiple possible paths
+        const possiblePaths = [
+          `http://localhost:9092/uploads/gems/${imageUrl}`,
+          `http://localhost:9092/uploads/images/${imageUrl}`,
+          `http://localhost:9092/uploads/${imageUrl}`,
+          `http://localhost:9092/api/files/gem-images/${imageUrl}`,
+        ];
+        
+        // Return the first path (we'll handle errors in the onError handler)
+        return possiblePaths[0];
       }
-      // If it's a relative path, prepend the backend URL
-      if (imageUrl.startsWith('/uploads/') || imageUrl.startsWith('uploads/')) {
-        return `http://localhost:9092/${imageUrl.startsWith('/') ? imageUrl.slice(1) : imageUrl}`;
-      }
-      // If it's just a filename, assume it's in gem-images
-      return `http://localhost:9092/uploads/gem-images/${imageUrl}`;
     }
     
-    // Fallback images based on gem type
-    const gemType = gemName?.toLowerCase() || '';
-    if (gemType.includes('ruby')) {
-      return 'https://images.unsplash.com/photo-1506792006437-256b665541e2?w=300&h=200&fit=crop';
-    } else if (gemType.includes('sapphire')) {
-      return 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=300&h=200&fit=crop';
-    } else if (gemType.includes('emerald')) {
-      return 'https://images.unsplash.com/photo-1544829099-b9a0c5303bea?w=300&h=200&fit=crop';
+    // Fallback images based on gem type or name
+    const gemType = (gemName?.toLowerCase() || '');
+    
+    if (gemType.includes('ruby') || gemType.includes('red')) {
+      return 'https://images.unsplash.com/photo-1544829099-b9a0c5303bea?w=400&h=300&fit=crop&crop=center';
+    } else if (gemType.includes('sapphire') || gemType.includes('blue')) {
+      return 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=400&h=300&fit=crop&crop=center';
+    } else if (gemType.includes('emerald') || gemType.includes('green')) {
+      return 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop&crop=center';
+    } else if (gemType.includes('diamond') || gemType.includes('white') || gemType.includes('clear')) {
+      return 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=400&h=300&fit=crop&crop=center';
+    } else if (gemType.includes('padparadscha') || gemType.includes('pink') || gemType.includes('orange')) {
+      return 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=300&fit=crop&crop=center';
+    } else if (gemType.includes('topaz') || gemType.includes('yellow')) {
+      return 'https://images.unsplash.com/photo-1544827862-2c8732b83f9e?w=400&h=300&fit=crop&crop=center';
     } else {
-      return 'https://images.unsplash.com/photo-1506792006437-256b665541e2?w=300&h=200&fit=crop';
+      // Default gemstone image
+      return 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop&crop=center';
     }
   };
 
@@ -160,7 +300,7 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
         gemType: 'Sapphire',
         finalPrice: 25000,
         commissionAmount: 2500,
-        primaryImageUrl: '/api/placeholder/150/150',
+        primaryImageUrl: 'IMG_1751571383560_0.jpg', // Real gemstone image filename
         proposedDateTime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
         confirmedDateTime: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
         location: 'GemNet Office, Colombo',
@@ -187,7 +327,7 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
         gemType: 'Padparadscha',
         finalPrice: 45000,
         commissionAmount: 4500,
-        primaryImageUrl: '/api/placeholder/150/150',
+        primaryImageUrl: 'IMG_1751571383560_0.jpg', // Real gemstone image filename that works
         proposedDateTime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
         location: 'GemNet Office, Kandy',
         meetingType: 'HANDOVER',
@@ -212,7 +352,7 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
         gemType: 'Ruby',
         finalPrice: 32000,
         commissionAmount: 3200,
-        primaryImageUrl: '/api/placeholder/150/150',
+        primaryImageUrl: 'IMG_1751571383560_0.jpg', // Real gemstone image filename that works
         proposedDateTime: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
         location: 'GemNet Office, Galle',
         meetingType: 'VERIFICATION',
@@ -228,7 +368,7 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
     setMeetings(mockMeetings);
     setMessage({ 
       type: 'info', 
-      text: `Loaded ${mockMeetings.length} mock meetings (development mode)` 
+      text: `Loaded ${mockMeetings.length} mock meetings with real gemstone images (development mode)` 
     });
     setTimeout(() => setMessage(null), 5000);
   };
@@ -277,6 +417,67 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
       setTimeout(() => setMessage(null), 5000);
     } finally {
       setUpdatingMeeting(null);
+    }
+  };
+
+  // Delete meeting function
+  const deleteMeeting = async (meetingId: string) => {
+    setDeletingMeeting(meetingId);
+    try {
+      console.log('🗑️ Deleting meeting:', meetingId);
+      
+      const response = await fetch(`http://localhost:9092/api/meetings/admin/delete/${meetingId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        }
+      });
+
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        console.log('✅ Meeting deleted successfully');
+        setMessage({ 
+          type: 'success', 
+          text: 'Meeting deleted successfully!' 
+        });
+        setTimeout(() => setMessage(null), 5000);
+        
+        // Refresh meetings list
+        await fetchAllMeetings();
+        
+        // Close modals
+        setShowDeleteConfirmModal(false);
+        setMeetingToDelete(null);
+        setShowDetailsModal(false);
+        setSelectedMeeting(null);
+      } else {
+        throw new Error(data.message || 'Failed to delete meeting');
+      }
+    } catch (error) {
+      console.error('❌ Error deleting meeting:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      setMessage({ 
+        type: 'error', 
+        text: `Failed to delete meeting: ${errorMessage}` 
+      });
+      setTimeout(() => setMessage(null), 5000);
+    } finally {
+      setDeletingMeeting(null);
+    }
+  };
+
+  // Show confirmation modal before deleting meeting
+  const handleDeleteButtonClick = (meeting: Meeting) => {
+    setMeetingToDelete(meeting);
+    setShowDeleteConfirmModal(true);
+  };
+
+  // Confirm deletion action
+  const confirmDeletion = async () => {
+    if (meetingToDelete) {
+      await deleteMeeting(meetingToDelete.id);
     }
   };
 
@@ -489,14 +690,18 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
                           <div className="flex items-start space-x-2">
                             {/* Item Image */}
                             <div className="flex-shrink-0">
-                              <img
-                                src={getImageUrl(meeting.primaryImageUrl, meeting.gemName)}
+                              {/* DEBUG: Log meeting data */}
+                              {console.log('🖼️ Meeting Image Debug:', {
+                                meetingId: meeting.id,
+                                primaryImageUrl: meeting.primaryImageUrl,
+                                gemName: meeting.gemName,
+                                fallbackImage: 'IMG_1751571383560_0.jpg'
+                              })}
+                              <GemstoneImage
+                                src={meeting.primaryImageUrl || 'IMG_1751571383560_0.jpg'}
                                 alt={meeting.gemName || 'Gem'}
+                                gemName={meeting.gemName}
                                 className="w-10 h-10 rounded object-cover border border-gray-200"
-                                onError={(e) => {
-                                  const target = e.target as HTMLImageElement;
-                                  target.src = getImageUrl(undefined, meeting.gemName);
-                                }}
                               />
                             </div>
                             
@@ -629,6 +834,22 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
                                 <span>Complete</span>
                               </button>
                             )}
+
+                            {/* Delete Button for Completed and No-Show Meetings */}
+                            {(meeting.status === 'COMPLETED' || meeting.status === 'NO_SHOW_RECORDED') && (
+                              <button
+                                onClick={() => handleDeleteButtonClick(meeting)}
+                                disabled={deletingMeeting === meeting.id}
+                                className="flex items-center space-x-1 px-1.5 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {deletingMeeting === meeting.id ? (
+                                  <div className="animate-spin rounded-full h-3 w-3 border-b border-red-700"></div>
+                                ) : (
+                                  <Trash2 className="w-3 h-3" />
+                                )}
+                                <span>Delete</span>
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -691,14 +912,11 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
                       
                       {/* Large Item Image */}
                       <div className="mb-4">
-                        <img
-                          src={getImageUrl(selectedMeeting.primaryImageUrl, selectedMeeting.gemName)}
+                        <GemstoneImage
+                          src={selectedMeeting.primaryImageUrl}
                           alt={selectedMeeting.gemName || 'Gem Image'}
+                          gemName={selectedMeeting.gemName}
                           className="w-full h-48 rounded-lg object-cover border-4 border-white shadow-lg"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.src = getImageUrl(undefined, selectedMeeting.gemName);
-                          }}
                         />
                       </div>
                       
@@ -974,14 +1192,11 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
                   {/* Meeting Details Summary */}
                   <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                     <div className="flex items-center space-x-3 mb-3">
-                      <img
-                        src={getImageUrl(meetingToComplete.primaryImageUrl, meetingToComplete.gemName)}
+                      <GemstoneImage
+                        src={meetingToComplete.primaryImageUrl}
                         alt={meetingToComplete.gemName || 'Gem'}
+                        gemName={meetingToComplete.gemName}
                         className="w-12 h-12 rounded-lg object-cover border border-gray-200"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = getImageUrl(undefined, meetingToComplete.gemName);
-                        }}
                       />
                       <div>
                         <p className="font-medium text-gray-900">{meetingToComplete.gemName}</p>
@@ -1038,6 +1253,65 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
                     )}
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteConfirmModal && meetingToDelete && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="flex-shrink-0">
+                  <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                    <Trash2 className="w-5 h-5 text-red-600" />
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Delete Meeting</h3>
+                  <p className="text-sm text-gray-500">This action cannot be undone</p>
+                </div>
+              </div>
+              
+              <div className="mb-6">
+                <p className="text-gray-700">
+                  Are you sure you want to delete this meeting?
+                </p>
+                <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                  <p className="text-sm font-medium text-gray-900">Meeting: {meetingToDelete.id.slice(-8)}</p>
+                  <p className="text-sm text-gray-600">Gem: {meetingToDelete.gemName}</p>
+                  <p className="text-sm text-gray-600">Status: {meetingToDelete.status}</p>
+                </div>
+              </div>
+              
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => {
+                    setShowDeleteConfirmModal(false);
+                    setMeetingToDelete(null);
+                  }}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDeletion}
+                  disabled={deletingMeeting === meetingToDelete.id}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                >
+                  {deletingMeeting === meetingToDelete.id ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Deleting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4" />
+                      <span>Yes, Delete</span>
+                    </>
+                  )}
+                </button>
               </div>
             </div>
           </div>

@@ -11,11 +11,13 @@ import {
   UploadOutlined, CheckCircleOutlined, ReloadOutlined,
   PictureOutlined, DollarOutlined
 } from '@ant-design/icons';
+import { AlertTriangle } from 'lucide-react';
 import dayjs from 'dayjs';
 import { 
   formatLKR, 
   LISTING_STATUS_COLORS,
-  GemListing 
+  GemListing,
+  GemImage
 } from './shared';
 import AIPricePrediction from '@/components/common/AIPricePrediction';
 
@@ -34,6 +36,7 @@ interface WizardData {
   basicInfo: any;
   certificationDetails: any;
   images: any[];
+  videos: any[];
   certificateImages: any[];
 }
 
@@ -46,6 +49,7 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
     basicInfo: {},
     certificationDetails: {},
     images: [],
+    videos: [],
     certificateImages: []
   });
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -85,7 +89,7 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
 
     try {
       // Check if user ID is available, with fallback for testing
-      const userId = user?.userId || '123'; // Fallback for testing
+      const userId = '6866a0610e7d6d09625f96c6'; // Force real user ID for testing videos
       if (!userId) {
         console.error('❌ User ID not available:', user);
         setDataError('User ID not available. Please log in again.');
@@ -144,6 +148,13 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
             name: item.name || item.gemName,
             image: item.image,
             primaryImageUrl: item.primaryImageUrl,
+            images: item.images,
+            imagesCount: item.images?.length || 0,
+            videosInImages: item.images?.filter((img: any) => img.mediaType === 'VIDEO') || [],
+            weight: item.weight,
+            color: item.color,
+            species: item.species,
+            variety: item.variety,
             finalImage: item.image || item.primaryImageUrl || 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=100&h=100&fit=crop&crop=center'
           });
           
@@ -158,7 +169,23 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
             createdAt: item.createdAt ? dayjs(item.createdAt).format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD'),
             category: item.category,
             description: item.description,
-            isCertified: item.isCertified
+            isCertified: item.isCertified,
+            images: item.images || [], // Include images array for video support
+            
+            // Extended gemstone properties from backend
+            weight: item.weight,
+            color: item.color,
+            species: item.species,
+            variety: item.variety,
+            shape: item.shape,
+            cut: item.cut,
+            clarity: item.clarity,
+            measurements: item.measurements,
+            treatment: item.treatment,
+            origin: item.origin,
+            transparency: item.transparency,
+            refractiveIndex: item.refractiveIndex,
+            specificGravity: item.specificGravity
           };
         });
 
@@ -217,7 +244,15 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
   
   // Handle View Listing
   const handleViewListing = (listing: GemListing) => {
-    console.log('👁️ Viewing listing:', listing);
+    console.log('👁️ Opening view modal for listing:', {
+      listingId: listing.id,
+      listingName: listing.name,
+      hasImages: !!listing.images,
+      imagesCount: listing.images?.length || 0,
+      images: listing.images,
+      videosFound: listing.images?.filter(img => img.mediaType === 'VIDEO') || []
+    });
+    
     setSelectedListing(listing);
     setIsViewListingModalVisible(true);
   };
@@ -324,8 +359,32 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
     }
   };
   
-  // Handle starting new listing wizard
+  // Handle starting new listing wizard with verification check
   const handleStartNewListing = () => {
+    // Check if user is verified before allowing listing creation
+    if (!user?.isVerified) {
+      Modal.warning({
+        title: 'Verification Required',
+        content: (
+          <div>
+            <p>You cannot create listings because your account is not verified.</p>
+            <p>Please contact the admin to complete your verification process.</p>
+            <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded">
+              <p className="text-sm text-orange-700">
+                <strong>Current Status:</strong> {user?.verificationStatus || 'Unverified'}
+              </p>
+              <p className="text-sm text-orange-700 mt-1">
+                Contact admin at: <strong>admin@gemnet.com</strong>
+              </p>
+            </div>
+          </div>
+        ),
+        okText: 'Understood',
+        width: 500,
+      });
+      return;
+    }
+
     setViewMode('add-listing');
     setCurrentStep(0);
     setWizardData({
@@ -333,6 +392,7 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
       basicInfo: {},
       certificationDetails: {},
       images: [],
+      videos: [],
       certificateImages: []
     });
   };
@@ -347,6 +407,7 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
       basicInfo: {},
       certificationDetails: {},
       images: [],
+      videos: [],
       certificateImages: []
     });
   };
@@ -448,9 +509,10 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
       }
     }
     
-    // If images are missing
-    if (!wizardData.images || wizardData.images.length === 0) {
-      message.error('Please upload at least one image of your gemstone.');
+    // If both images and videos are missing
+    if ((!wizardData.images || wizardData.images.length === 0) && 
+        (!wizardData.videos || wizardData.videos.length === 0)) {
+      message.error('Please upload at least one image or video of your gemstone.');
       return false;
     }
     
@@ -582,6 +644,15 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
         });
       }
       
+      // Add gemstone videos
+      if (wizardData.videos && wizardData.videos.length > 0) {
+        wizardData.videos.forEach((video) => {
+          if (video.originFileObj) {
+            formData.append('gemVideos', video.originFileObj);
+          }
+        });
+      }
+      
       // Add certificate images for certified gemstones
       if (wizardData.certificationType === 'certified' && wizardData.certificateImages && wizardData.certificateImages.length > 0) {
         wizardData.certificateImages.forEach((certImage) => {
@@ -593,6 +664,7 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
 
       console.log('📤 Sending data to backend:', gemListingData);
       console.log('🖼️ Number of gemstone images:', wizardData.images?.length || 0);
+      console.log('🎬 Number of gemstone videos:', wizardData.videos?.length || 0);
       console.log('📄 Number of certificate images:', wizardData.certificationType === 'certified' ? wizardData.certificateImages?.length || 0 : 0);
       console.log('🔗 API Endpoint: /api/gemsData/list-gem-data');
       console.log('🌐 Backend should be running on port 9092');
@@ -670,8 +742,8 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
           description: 'Enter gemstone details manually'
         },
         {
-          title: 'Images & Review',
-          description: 'Upload images and review'
+          title: 'Media & Review',
+          description: 'Upload images/videos and review'
         }
       ];
     } else {
@@ -685,8 +757,8 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
           description: 'Gemstone details'
         },
         {
-          title: 'Images & Review',
-          description: 'Upload images and review'
+          title: 'Media & Review',
+          description: 'Upload images/videos and review'
         }
       ];
     }
@@ -1495,13 +1567,22 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
       console.log('📁 Certificate image upload change:', info);
       
       // Update wizard data with uploaded certificate images
-      setWizardData(prev => ({
-        ...prev,
+      setWizardData(prev => ({ 
+        ...prev, 
         certificateImages: info.fileList
       }));
     };
 
-    const uploadProps = {
+    // Handle video upload change
+    const handleVideoChange = (info: any) => {
+      console.log('🎬 Video upload change:', info);
+      
+      // Update wizard data with uploaded videos
+      setWizardData(prev => ({ 
+        ...prev, 
+        videos: info.fileList
+      }));
+    };    const uploadProps = {
       name: 'images',
       multiple: true,
       accept: '.jpg,.jpeg,.png,.webp',
@@ -1519,6 +1600,16 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
       onChange: handleCertificateImageChange,
       beforeUpload: () => false, // Prevent automatic upload
       maxCount: 5,
+    };
+
+    const videoUploadProps = {
+      name: 'videos',
+      multiple: true,
+      accept: '.mp4,.avi,.mov,.wmv,.webm',
+      listType: 'picture-card' as const,
+      onChange: handleVideoChange,
+      beforeUpload: () => false, // Prevent automatic upload
+      maxCount: 3,
     };
 
     // Check if button should be disabled
@@ -1541,9 +1632,9 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
         <Card>
           <div className="text-center mb-6">
             <FileImageOutlined className="text-3xl text-purple-600 mb-4" />
-            <Title level={3}>Upload Images & Review</Title>
+            <Title level={3}>Upload Media & Review</Title>
             <Text type="secondary">
-              Upload high-quality images of your gemstone and review your listing
+              Upload high-quality images and videos of your gemstone and review your listing
             </Text>
           </div>
 
@@ -1558,6 +1649,19 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
               <Text type="secondary" className="text-sm block mt-2">
                 Upload up to 10 high-quality images of your gemstone. First image will be used as the primary image.
                 Supported formats: JPG, PNG, WebP (Max 5MB per image)
+              </Text>
+            </Form.Item>
+
+            <Form.Item label="Gemstone Videos (Optional)">
+              <Upload {...videoUploadProps}>
+                <div>
+                  <PictureOutlined />
+                  <div style={{ marginTop: 8 }}>Upload Gemstone Videos</div>
+                </div>
+              </Upload>
+              <Text type="secondary" className="text-sm block mt-2">
+                Upload up to 3 high-quality videos of your gemstone showing different angles or features.
+                Supported formats: MP4, AVI, MOV, WMV, WebM (Max 50MB per video)
               </Text>
             </Form.Item>
 
@@ -1777,6 +1881,22 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
     return `${baseUrl}/${imagePath}`;
   };
 
+  // Helper function to construct video URLs
+  const constructVideoUrl = (videoPath: string): string => {
+    if (!videoPath) return '';
+    
+    if (videoPath.startsWith('http://') || videoPath.startsWith('https://')) {
+      return videoPath;
+    }
+    
+    const baseUrl = 'http://localhost:9092';
+    if (videoPath.startsWith('/')) {
+      return `${baseUrl}${videoPath}`;
+    }
+    
+    return `${baseUrl}/${videoPath}`;
+  };
+
   // Component for gemstone image with fallback
   const GemstoneImage: React.FC<{ record: GemListing }> = ({ record }) => {
     const [imageError, setImageError] = useState(false);
@@ -1936,14 +2056,30 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
           <div className="flex justify-between items-center">
             <div>
               <h3 className="text-xl font-semibold text-gray-900">My Listings</h3>
-              <p className="text-gray-600 mt-1">
-                Manage all your gemstone listings 
-                {pagination.total > 0 && (
-                  <span className="ml-2 text-blue-600 font-medium">
-                    ({pagination.total} total)
-                  </span>
-                )}
-              </p>
+              <div className="flex items-center space-x-3 mt-1">
+                <p className="text-gray-600">
+                  Manage all your gemstone listings 
+                  {pagination.total > 0 && (
+                    <span className="ml-2 text-blue-600 font-medium">
+                      ({pagination.total} total)
+                    </span>
+                  )}
+                </p>
+                {/* Verification Status Indicator */}
+                <div className="flex items-center">
+                  {user?.isVerified ? (
+                    <Tag color="green" className="border-0">
+                      <CheckCircleOutlined className="mr-1" />
+                      Verified Seller
+                    </Tag>
+                  ) : (
+                    <Tag color="orange" className="border-0">
+                      <AlertTriangle className="mr-1 w-3 h-3" />
+                      Unverified Account
+                    </Tag>
+                  )}
+                </div>
+              </div>
             </div>
             <div className="flex space-x-3">
               <Button 
@@ -1960,11 +2096,17 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
                 onClick={handleStartNewListing}
                 className="shadow-sm hover:shadow-md"
                 style={{
-                  background: 'linear-gradient(135deg, #7c3aed, #4f46e5)',
-                  borderColor: '#7c3aed'
+                  background: user?.isVerified 
+                    ? 'linear-gradient(135deg, #7c3aed, #4f46e5)' 
+                    : 'linear-gradient(135deg, #9ca3af, #6b7280)',
+                  borderColor: user?.isVerified ? '#7c3aed' : '#9ca3af'
                 }}
+                title={user?.isVerified ? 'Create a new listing' : 'Verification required to create listings'}
               >
                 Add New Listing
+                {!user?.isVerified && (
+                  <span className="ml-1 text-xs">🔒</span>
+                )}
               </Button>
             </div>
           </div>
@@ -2018,7 +2160,12 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
 
       {/* View Listing Modal */}
       <Modal
-        title="Listing Details"
+        title={
+          <div className="flex items-center">
+            <EyeOutlined className="mr-2" />
+            Listing Details
+          </div>
+        }
         open={isViewListingModalVisible}
         onCancel={() => setIsViewListingModalVisible(false)}
         footer={[
@@ -2026,13 +2173,17 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
             Close
           </Button>
         ]}
-        width={800}
+        width={650}
+        style={{ top: 20 }}
       >
         {selectedListing && (
-          <div className="space-y-6">
+          <div className="space-y-8">
             {/* Basic Information */}
-            <div>
-              <h4 className="text-lg font-semibold mb-4">Basic Information</h4>
+            <Card size="small" className="shadow-sm">
+              <div className="flex items-center mb-4">
+                <PictureOutlined className="mr-2 text-blue-600" />
+                <h4 className="text-lg font-semibold text-blue-600 mb-0">Basic Information</h4>
+              </div>
               <Row gutter={[16, 16]}>
                 <Col span={12}>
                   <div><strong>Name:</strong> {selectedListing.name}</div>
@@ -2041,25 +2192,7 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
                   <div><strong>Price:</strong> {formatLKR(selectedListing.price)}</div>
                 </Col>
                 <Col span={12}>
-                  <div><strong>Weight:</strong> {selectedListing.weight} carats</div>
-                </Col>
-                <Col span={12}>
-                  <div><strong>Color:</strong> {selectedListing.color}</div>
-                </Col>
-                <Col span={12}>
-                  <div><strong>Species:</strong> {selectedListing.species}</div>
-                </Col>
-                <Col span={12}>
-                  <div><strong>Variety:</strong> {selectedListing.variety}</div>
-                </Col>
-                <Col span={12}>
-                  <div><strong>Shape:</strong> {selectedListing.shape}</div>
-                </Col>
-                <Col span={12}>
-                  <div><strong>Cut:</strong> {selectedListing.cut}</div>
-                </Col>
-                <Col span={12}>
-                  <div><strong>Clarity:</strong> {selectedListing.clarity}</div>
+                  <div><strong>Category:</strong> {selectedListing.category || 'N/A'}</div>
                 </Col>
                 <Col span={12}>
                   <div><strong>Status:</strong> 
@@ -2068,12 +2201,43 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
                     </Tag>
                   </div>
                 </Col>
+                <Col span={12}>
+                  <div><strong>Weight:</strong> {selectedListing.weight ? `${selectedListing.weight} carats` : 'N/A'}</div>
+                </Col>
+                <Col span={12}>
+                  <div><strong>Color:</strong> {selectedListing.color || 'N/A'}</div>
+                </Col>
+                <Col span={12}>
+                  <div><strong>Species:</strong> {selectedListing.species || 'N/A'}</div>
+                </Col>
+                <Col span={12}>
+                  <div><strong>Variety:</strong> {selectedListing.variety || 'N/A'}</div>
+                </Col>
+                <Col span={12}>
+                  <div><strong>Shape:</strong> {selectedListing.shape || 'N/A'}</div>
+                </Col>
+                <Col span={12}>
+                  <div><strong>Cut:</strong> {selectedListing.cut || 'N/A'}</div>
+                </Col>
+                <Col span={12}>
+                  <div><strong>Clarity:</strong> {selectedListing.clarity || 'N/A'}</div>
+                </Col>
+                <Col span={12}>
+                  <div><strong>Certified:</strong> 
+                    <Tag color={selectedListing.isCertified ? 'green' : 'orange'} className="ml-2">
+                      {selectedListing.isCertified ? 'Certified' : 'Non-Certified'}
+                    </Tag>
+                  </div>
+                </Col>
               </Row>
-            </div>
+            </Card>
 
             {/* Additional Details */}
-            <div>
-              <h4 className="text-lg font-semibold mb-4">Additional Details</h4>
+            <Card size="small" className="shadow-sm">
+              <div className="flex items-center mb-4">
+                <SafetyCertificateOutlined className="mr-2 text-green-600" />
+                <h4 className="text-lg font-semibold text-green-600 mb-0">Additional Details</h4>
+              </div>
               <Row gutter={[16, 16]}>
                 <Col span={12}>
                   <div><strong>Measurements:</strong> {selectedListing.measurements || 'N/A'}</div>
@@ -2085,64 +2249,195 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
                   <div><strong>Origin:</strong> {selectedListing.origin || 'N/A'}</div>
                 </Col>
                 <Col span={12}>
-                  <div><strong>Certified:</strong> 
-                    <Tag color={selectedListing.isCertified ? 'green' : 'orange'} className="ml-2">
-                      {selectedListing.isCertified ? 'Certified' : 'Non-Certified'}
-                    </Tag>
-                  </div>
+                  <div><strong>Transparency:</strong> {selectedListing.transparency || 'N/A'}</div>
+                </Col>
+                <Col span={12}>
+                  <div><strong>Refractive Index:</strong> {selectedListing.refractiveIndex || 'N/A'}</div>
+                </Col>
+                <Col span={12}>
+                  <div><strong>Specific Gravity:</strong> {selectedListing.specificGravity || 'N/A'}</div>
                 </Col>
               </Row>
-            </div>
+            </Card>
 
             {/* Description */}
             {selectedListing.description && (
-              <div>
-                <h4 className="text-lg font-semibold mb-4">Description</h4>
-                <p className="text-gray-700">{selectedListing.description}</p>
-              </div>
+              <Card size="small" className="shadow-sm">
+                <div className="flex items-center mb-4">
+                  <FileImageOutlined className="mr-2 text-orange-600" />
+                  <h4 className="text-lg font-semibold text-orange-600 mb-0">Description</h4>
+                </div>
+                <p className="text-gray-700 leading-relaxed">{selectedListing.description}</p>
+              </Card>
             )}
 
             {/* Images */}
-            {selectedListing.image && (
-              <div>
-                <h4 className="text-lg font-semibold mb-4">Images</h4>
-                <div className="flex justify-center">
-                  <img 
-                    src={constructImageUrl(selectedListing.image)} 
-                    alt={selectedListing.name}
-                    className="max-w-md rounded-lg border"
-                    style={{ maxHeight: '300px', objectFit: 'contain' }}
-                  />
-                </div>
+            <Card size="small" className="shadow-sm">
+              <div className="flex items-center mb-4">
+                <PictureOutlined className="mr-2 text-purple-600" />
+                <h4 className="text-lg font-semibold text-purple-600 mb-0">Images</h4>
               </div>
+              
+              {/* Primary Image */}
+              {selectedListing.image && (
+                <div className="mb-6">
+                  <div className="text-sm text-gray-600 mb-3 font-medium">Primary Image:</div>
+                  <div className="flex justify-center">
+                    <div className="relative">
+                      <img 
+                        src={constructImageUrl(selectedListing.image)} 
+                        alt={selectedListing.name}
+                        className="max-w-md rounded-lg border shadow-md"
+                        style={{ maxHeight: '300px', objectFit: 'contain' }}
+                      />
+                      <div className="absolute top-2 left-2">
+                        <span className="bg-blue-600 text-white px-2 py-1 rounded text-xs font-bold">
+                          Primary
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Additional Images */}
+              {selectedListing.images && selectedListing.images.filter((media: GemImage) => media.mediaType === 'IMAGE').length > 0 && (
+                <div>
+                  <div className="text-sm text-gray-600 mb-3 font-medium">Additional Images:</div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {selectedListing.images
+                      .filter((media: GemImage) => media.mediaType === 'IMAGE')
+                      .map((image: GemImage, index: number) => (
+                        <div key={image.imageId || index} className="relative">
+                          <img
+                            src={constructImageUrl(image.imageUrl!)}
+                            alt={image.description || `${selectedListing.name} - Image ${index + 1}`}
+                            className="w-full h-32 object-cover rounded-lg border border-gray-200 hover:border-blue-400 transition-colors cursor-pointer shadow-sm"
+                            onClick={() => {
+                              // Optional: Add image preview functionality
+                            }}
+                          />
+                          {image.isPrimary && (
+                            <div className="absolute top-1 left-1">
+                              <span className="bg-blue-600 text-white px-1 py-0.5 rounded text-xs font-bold">
+                                Primary
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    }
+                  </div>
+                </div>
+              )}
+            </Card>
+
+            {/* Videos Section */}
+            {(() => {
+              console.log('🎬 Video section debug:', {
+                hasSelectedListing: !!selectedListing,
+                hasImages: !!selectedListing?.images,
+                imagesLength: selectedListing?.images?.length || 0,
+                images: selectedListing?.images,
+                videosFiltered: selectedListing?.images?.filter((media: GemImage) => {
+                  console.log('🔍 Checking media item:', {
+                    imageId: media.imageId,
+                    mediaType: media.mediaType,
+                    videoUrl: media.videoUrl,
+                    imageUrl: media.imageUrl,
+                    isVideo: media.mediaType === 'VIDEO'
+                  });
+                  return media.mediaType === 'VIDEO';
+                })
+              });
+              
+              return selectedListing?.images && selectedListing.images.filter((media: GemImage) => media.mediaType === 'VIDEO').length > 0;
+            })() && (
+              <Card size="small" className="shadow-sm">
+                <div className="flex items-center mb-4">
+                  <span className="mr-2 text-red-600 text-lg">🎬</span>
+                  <h4 className="text-lg font-semibold text-red-600 mb-0">Videos</h4>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {selectedListing.images
+                    .filter((media: GemImage) => media.mediaType === 'VIDEO')
+                    .map((video: GemImage, index: number) => {
+                      console.log('🎥 Rendering video:', {
+                        index,
+                        imageId: video.imageId,
+                        videoUrl: video.videoUrl,
+                        finalUrl: constructVideoUrl(video.videoUrl || video.imageUrl || '')
+                      });
+                      
+                      return (
+                        <div key={video.imageId || index} className="relative bg-gray-50 rounded-lg overflow-hidden shadow-md">
+                          <video
+                            controls
+                            width="100%"
+                            height="200"
+                            style={{ objectFit: 'cover' }}
+                            className="rounded-lg"
+                            poster={selectedListing.image ? constructImageUrl(selectedListing.image) : undefined}
+                          >
+                            <source 
+                              src={constructVideoUrl(video.videoUrl || video.imageUrl || '')} 
+                              type="video/mp4" 
+                            />
+                            <source 
+                              src={constructVideoUrl(video.videoUrl || video.imageUrl || '')} 
+                              type="video/webm" 
+                            />
+                            Your browser does not support the video tag.
+                          </video>
+                          <div className="absolute top-2 left-2">
+                            <span className="bg-red-600 text-white px-2 py-1 rounded text-xs font-bold">
+                              🎬 Video {index + 1}
+                            </span>
+                          </div>
+                          {video.description && (
+                            <div className="p-3 bg-white">
+                              <div className="text-sm text-gray-600">
+                                <strong>Description:</strong> {video.description}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  }
+                </div>
+              </Card>
             )}
 
             {/* Listing Stats */}
-            <div>
-              <h4 className="text-lg font-semibold mb-4">Listing Statistics</h4>
+            <Card size="small" className="shadow-sm">
+              <div className="flex items-center mb-4">
+                <DollarOutlined className="mr-2 text-emerald-600" />
+                <h4 className="text-lg font-semibold text-emerald-600 mb-0">Listing Statistics</h4>
+              </div>
               <Row gutter={[16, 16]}>
                 <Col span={8}>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">{selectedListing.views || 0}</div>
-                    <div className="text-gray-500">Views</div>
+                  <div className="text-center p-4 bg-blue-50 rounded-lg">
+                    <div className="text-3xl font-bold text-blue-600">{selectedListing.views || 0}</div>
+                    <div className="text-blue-500 font-medium">Views</div>
                   </div>
                 </Col>
                 <Col span={8}>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">{selectedListing.bids || 0}</div>
-                    <div className="text-gray-500">Bids</div>
+                  <div className="text-center p-4 bg-green-50 rounded-lg">
+                    <div className="text-3xl font-bold text-green-600">{selectedListing.bids || 0}</div>
+                    <div className="text-green-500 font-medium">Bids</div>
                   </div>
                 </Col>
                 <Col span={8}>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-purple-600">
+                  <div className="text-center p-4 bg-purple-50 rounded-lg">
+                    <div className="text-3xl font-bold text-purple-600">
                       {selectedListing.createdAt ? dayjs(selectedListing.createdAt).format('MMM DD') : 'N/A'}
                     </div>
-                    <div className="text-gray-500">Created</div>
+                    <div className="text-purple-500 font-medium">Created</div>
                   </div>
                 </Col>
               </Row>
-            </div>
+            </Card>
           </div>
         )}
       </Modal>

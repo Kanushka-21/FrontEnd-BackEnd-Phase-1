@@ -1210,4 +1210,73 @@ public class MeetingService {
             return response;
         }
     }
+
+    /**
+     * Admin delete a meeting (allows deletion of completed and no-show meetings)
+     */
+    public Map<String, Object> adminDeleteMeeting(String meetingId) {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            logger.info("🗑️ [MeetingService] Admin delete meeting request: meetingId={}", meetingId);
+            
+            // Get the meeting
+            Optional<Meeting> meetingOpt = meetingRepository.findById(meetingId);
+            if (!meetingOpt.isPresent()) {
+                response.put("success", false);
+                response.put("message", "Meeting not found");
+                return response;
+            }
+            
+            Meeting meeting = meetingOpt.get();
+            
+            // Admin can delete completed and no-show meetings
+            if (!"COMPLETED".equals(meeting.getStatus()) && !"NO_SHOW_RECORDED".equals(meeting.getStatus())) {
+                response.put("success", false);
+                response.put("message", "Only completed or no-show meetings can be deleted by admin. This meeting is " + meeting.getStatus());
+                return response;
+            }
+            
+            logger.info("🗑️ [MeetingService] Admin deleting {} meeting: {}", meeting.getStatus(), meetingId);
+            
+            // Get user information for logging
+            String buyerName = "Unknown Buyer";
+            String sellerName = "Unknown Seller";
+            try {
+                Optional<User> buyerOpt = userRepository.findById(meeting.getBuyerId());
+                if (buyerOpt.isPresent()) {
+                    User buyer = buyerOpt.get();
+                    buyerName = buyer.getFirstName() + " " + buyer.getLastName();
+                }
+                
+                Optional<User> sellerOpt = userRepository.findById(meeting.getSellerId());
+                if (sellerOpt.isPresent()) {
+                    User seller = sellerOpt.get();
+                    sellerName = seller.getFirstName() + " " + seller.getLastName();
+                }
+            } catch (Exception e) {
+                logger.warn("⚠️ [MeetingService] Could not get user details for logging: {}", e.getMessage());
+            }
+            
+            // Delete the meeting
+            meetingRepository.delete(meeting);
+            
+            logger.info("✅ [MeetingService] Admin successfully deleted {} meeting: {} (Buyer: {}, Seller: {})", 
+                       meeting.getStatus(), meetingId, buyerName, sellerName);
+            
+            response.put("success", true);
+            response.put("message", "Meeting deleted successfully by admin");
+            response.put("meetingId", meetingId);
+            response.put("status", meeting.getStatus());
+            
+            return response;
+            
+        } catch (Exception e) {
+            logger.error("❌ [MeetingService] Error in adminDeleteMeeting(): {}", e.getMessage(), e);
+            response.put("success", false);
+            response.put("message", "Failed to delete meeting: " + e.getMessage());
+            response.put("error", e.getClass().getSimpleName());
+            return response;
+        }
+    }
 }
