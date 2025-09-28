@@ -8,6 +8,7 @@ import {
 import { AlertTriangle } from 'lucide-react';
 import dayjs from 'dayjs';
 import { api } from '@/services/api';
+import AdvertisementViewModal from './AdvertisementViewModal';
 
 const { TabPane } = Tabs;
 import { 
@@ -25,7 +26,7 @@ interface AdvertisementsManagementProps extends AdminComponentProps {
 }
 
 const AdvertisementsManagement: React.FC<AdvertisementsManagementProps> = ({ actionHandlers }) => {
-  const { handleViewAdvertisement, handleToggleAdvertisementStatus } = actionHandlers;
+  const { handleToggleAdvertisementStatus } = actionHandlers;
   
   // State management
   const [advertisements, setAdvertisements] = useState<Advertisement[]>([]);
@@ -38,6 +39,10 @@ const AdvertisementsManagement: React.FC<AdvertisementsManagementProps> = ({ act
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [selectedAdvertisements, setSelectedAdvertisements] = useState<Advertisement[]>([]);
   const [processingBulkAction, setProcessingBulkAction] = useState(false);
+  
+  // Advertisement view modal state
+  const [viewingAdvertisement, setViewingAdvertisement] = useState<Advertisement | null>(null);
+  const [viewModalVisible, setViewModalVisible] = useState(false);
   
   // Confirmation dialog state
   const [confirmationVisible, setConfirmationVisible] = useState(false);
@@ -253,6 +258,28 @@ const AdvertisementsManagement: React.FC<AdvertisementsManagementProps> = ({ act
     }),
   };
 
+  // Handle view advertisement modal
+  const handleViewAdvertisementModal = (advertisement: Advertisement) => {
+    setViewingAdvertisement(advertisement);
+    setViewModalVisible(true);
+  };
+
+  // Handle modal close
+  const handleViewModalClose = () => {
+    setViewModalVisible(false);
+    setViewingAdvertisement(null);
+  };
+
+  // Handle approve from modal
+  const handleApproveFromModal = (advertisement: Advertisement) => {
+    showConfirmationDialog(advertisement, 'approved');
+  };
+
+  // Handle reject from modal
+  const handleRejectFromModal = (advertisement: Advertisement) => {
+    showConfirmationDialog(advertisement, 'rejected');
+  };
+
   // Show confirmation dialog for individual advertisement actions
   const showConfirmationDialog = (advertisement: Advertisement, action: 'approved' | 'rejected') => {
     const actionText = action === 'approved' ? 'approve' : 'reject';
@@ -458,7 +485,7 @@ const AdvertisementsManagement: React.FC<AdvertisementsManagementProps> = ({ act
           <Button 
             size="small" 
             icon={<EyeOutlined />} 
-            onClick={() => handleViewAdvertisement(record)}
+            onClick={() => handleViewAdvertisementModal(record)}
           >
             View
           </Button>
@@ -783,6 +810,15 @@ const AdvertisementsManagement: React.FC<AdvertisementsManagementProps> = ({ act
           </div>
         )}
       </Modal>
+
+      {/* Advertisement View Modal with Seller Information */}
+      <AdvertisementViewModal
+        advertisement={viewingAdvertisement}
+        visible={viewModalVisible}
+        onClose={handleViewModalClose}
+        onApprove={handleApproveFromModal}
+        onReject={handleRejectFromModal}
+      />
     </div>
   );
 };
