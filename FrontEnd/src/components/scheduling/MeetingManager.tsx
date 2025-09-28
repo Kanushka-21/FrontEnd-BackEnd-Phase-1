@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, CheckCircle, XCircle, Edit, AlertTriangle, FileText, Ban, Search, Download } from 'lucide-react';
+import { Calendar, Clock, MapPin, CheckCircle, XCircle, Edit, AlertTriangle, FileText, Search, Download } from 'lucide-react';
 
 // Enhanced image component with multiple fallback paths for meetings
 interface GemstoneImageProps {
@@ -944,29 +944,33 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
                       </>
                     )}
 
-                    {/* Delete option for buyers (only for pending meetings) */}
-                    {meeting.status === 'PENDING' && !isSeller && (
-                      <button
-                        onClick={() => handleDeleteMeeting(meeting.id)}
-                        disabled={deletingMeeting === meeting.id}
-                        className={`px-4 py-2 ${
-                          deletingMeeting === meeting.id
-                            ? 'bg-gray-400 cursor-not-allowed'
-                            : 'bg-red-600 hover:bg-red-700'
-                        } text-white rounded-md transition-colors text-sm flex items-center space-x-1`}
-                      >
-                        {deletingMeeting === meeting.id ? (
-                          <>
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                            <span>Deleting...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Ban className="w-4 h-4" />
-                            <span>Delete</span>
-                          </>
+                    {/* Buyer options for pending and rescheduled meetings */}
+                    {(meeting.status === 'PENDING' || meeting.status === 'RESCHEDULED') && !isSeller && (
+                      <div className="flex items-center space-x-2">
+                        {/* Accept button for rescheduled meetings */}
+                        {meeting.status === 'RESCHEDULED' && (
+                          <button
+                            onClick={() => handleConfirmMeeting()}
+                            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors text-sm flex items-center space-x-1"
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                            <span>Accept</span>
+                          </button>
                         )}
-                      </button>
+                        
+                        {/* Reschedule button */}
+                        <button
+                          onClick={() => {
+                            setSelectedMeeting(meeting);
+                            setShowRescheduleModal(true);
+                          }}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm flex items-center space-x-1"
+                        >
+                          <Edit className="w-4 h-4" />
+                          <span>Reschedule</span>
+                        </button>
+
+                      </div>
                     )}
 
                     {/* Reschedule option for confirmed meetings */}
@@ -1063,7 +1067,8 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
                       </div>
                     )}
 
-                    {['PENDING', 'CONFIRMED'].includes(meeting.status) && (
+                    {/* Only show Cancel button if not already shown in the rescheduled section */}
+                    {['PENDING', 'CONFIRMED'].includes(meeting.status) && meeting.status !== 'RESCHEDULED' && (
                       <button
                         onClick={() => handleCancelMeeting(meeting.id)}
                         className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm flex items-center space-x-1"
@@ -1374,7 +1379,9 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
                 <button
                   onClick={() => {
                     setShowConfirmNoShowModal(false);
-                    handleReportNoShow(selectedMeeting.id, noShowData.reason);
+                    if (selectedMeeting) {
+                      handleReportNoShow(selectedMeeting.id, noShowData.reason);
+                    }
                   }}
                   className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
                 >
