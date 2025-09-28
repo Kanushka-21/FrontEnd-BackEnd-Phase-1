@@ -1008,17 +1008,65 @@ const MarketplacePage: React.FC = () => {
         ]}
       >
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Before placing your bid, please agree to the following terms:</h3>
-          <ul className="list-disc pl-5 space-y-2">
-            <li>Your bid is legally binding and cannot be retracted</li>
-            <li>If you win, you agree to complete the purchase within 48 hours</li>
-            <li>You must verify your identity and payment method before the bid is accepted</li>
-            <li>All transactions are subject to GemNet's marketplace policies</li>
-            <li>Bidding amount: {formatLKR(pendingBidAmount)}</li>
-          </ul>
-          <p className="text-secondary-600 mt-4">
-            By clicking "I Agree & Place Bid", you acknowledge that you have read and agree to these terms.
-          </p>
+          <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-md">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-lg font-semibold text-red-800">⚠️ IMPORTANT BIDDING TERMS & CONDITIONS</h3>
+                <p className="text-sm text-red-700 mt-1 font-medium">
+                  Please read carefully before placing your bid. These terms are legally binding.
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <ul className="list-none space-y-3">
+              <li className="flex items-start">
+                <span className="text-red-500 font-bold mr-2">•</span>
+                <span className="text-gray-800"><strong>Your bid is legally binding</strong> and cannot be retracted</span>
+              </li>
+              <li className="flex items-start">
+                <span className="text-red-500 font-bold mr-2">•</span>
+                <span className="text-gray-800">If you win, you <strong>must confirm the purchase</strong> of the item you won</span>
+              </li>
+              <li className="flex items-start">
+                <span className="text-red-500 font-bold mr-2">•</span>
+                <span className="text-gray-800">After winning, you <strong>must schedule a meeting</strong> with the seller</span>
+              </li>
+              <li className="flex items-start">
+                <span className="text-red-500 font-bold mr-2">•</span>
+                <span className="text-gray-800">Once confirmed, you <strong>must attend the physical meeting</strong></span>
+              </li>
+              <li className="flex items-start">
+                <span className="text-orange-500 font-bold mr-2">•</span>
+                <span className="text-gray-800">If unable to attend, <strong>immediately use "Report No-Show"</strong> option</span>
+              </li>
+              <li className="flex items-start">
+                <span className="text-red-600 font-bold mr-2">⚠</span>
+                <span className="text-red-700 font-semibold">No-show without reporting = Admin penalty (Warning → Account Suspension)</span>
+              </li>
+              <li className="flex items-start">
+                <span className="text-blue-500 font-bold mr-2">•</span>
+                <span className="text-gray-800">All transactions subject to GemNet's marketplace policies</span>
+              </li>
+              <li className="flex items-start bg-blue-50 p-3 rounded border-l-4 border-blue-400 mt-3">
+                <span className="text-blue-600 font-bold mr-2">💰</span>
+                <span className="text-blue-800 font-bold">Bidding Amount: {formatLKR(pendingBidAmount)}</span>
+              </li>
+            </ul>
+          </div>
+          
+          <div className="bg-gray-100 border border-gray-300 rounded-lg p-3">
+            <p className="text-gray-700 text-sm font-medium text-center">
+              <span className="text-red-600">⚠️</span> By clicking "I Agree & Place Bid", you acknowledge that you have read and agree to these terms. 
+              <span className="text-red-600">⚠️</span>
+            </p>
+          </div>
         </div>
       </Modal>
         <style>
