@@ -19,21 +19,10 @@ const GemstoneImage: React.FC<GemstoneImageProps> = ({ src, alt, gemName, classN
   const getPossibleImageUrls = (imagePath?: string, gemName?: string): string[] => {
     const urls: string[] = [];
     
-    // Debug logging for meeting image issues
-    console.log('🔍 GemstoneImage Debug:', {
-      imagePath,
-      gemName,
-      isNull: imagePath === null,
-      isUndefined: imagePath === undefined,
-      isEmpty: imagePath === '',
-      includesPlaceholder: imagePath?.includes('placeholder')
-    });
-    
     if (imagePath && !imagePath.includes('placeholder')) {
       // If it's already a full URL, use it
       if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
         urls.push(imagePath);
-        console.log('📎 Using full URL:', imagePath);
       } else {
         // Try different backend paths
         const filename = imagePath.replace(/^.*[\\\/]/, ''); // Extract filename
@@ -44,18 +33,14 @@ const GemstoneImage: React.FC<GemstoneImageProps> = ({ src, alt, gemName, classN
           `http://localhost:9092/api/files/gem-images/${filename}`
         ];
         urls.push(...backendUrls);
-        console.log('🔧 Generated backend URLs:', backendUrls);
         
         // If original path has uploads, try it directly
         if (imagePath.includes('uploads/')) {
           const path = imagePath.startsWith('/') ? imagePath.slice(1) : imagePath;
           const directUrl = `http://localhost:9092/${path}`;
           urls.push(directUrl);
-          console.log('📁 Added direct path:', directUrl);
         }
       }
-    } else {
-      console.log('⚠️ No valid imagePath provided, using gem-type fallbacks only');
     }
     
     // Add fallback images based on gem type
@@ -75,7 +60,6 @@ const GemstoneImage: React.FC<GemstoneImageProps> = ({ src, alt, gemName, classN
       urls.push('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop&crop=center');
     }
     
-    console.log('🎯 Final image URLs to try:', urls);
     return urls;
   };
 
@@ -91,20 +75,9 @@ const GemstoneImage: React.FC<GemstoneImageProps> = ({ src, alt, gemName, classN
     const possibleUrls = getPossibleImageUrls(src, gemName);
     const nextIndex = attemptIndex + 1;
     
-    console.log('❌ Image load failed:', {
-      currentUrl: currentSrc,
-      attemptIndex,
-      nextIndex,
-      totalUrls: possibleUrls.length,
-      nextUrl: possibleUrls[nextIndex] || 'No more URLs'
-    });
-    
     if (nextIndex < possibleUrls.length) {
-      console.log('🔄 Trying next URL:', possibleUrls[nextIndex]);
       setCurrentSrc(possibleUrls[nextIndex]);
       setAttemptIndex(nextIndex);
-    } else {
-      console.log('🚫 All image URLs failed for:', src);
     }
   };
 
@@ -133,6 +106,7 @@ interface Meeting {
   gemType: string;
   finalPrice: number;
   commissionAmount?: number;
+  commissionRate?: number;
   primaryImageUrl: string;
   proposedDateTime: string;
   confirmedDateTime?: string;
@@ -164,6 +138,9 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
   const [deletingMeeting, setDeletingMeeting] = useState<string | null>(null);
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
   const [meetingToDelete, setMeetingToDelete] = useState<Meeting | null>(null);
+  const [showCommissionEditModal, setShowCommissionEditModal] = useState(false);
+  const [editingCommissionRate, setEditingCommissionRate] = useState<string>('');
+  const [updatingCommission, setUpdatingCommission] = useState(false);
 
   // Get proper image URL
   const getImageUrl = (imageUrl?: string, gemName?: string) => {
@@ -481,6 +458,65 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
     }
   };
 
+  // Update commission rate for a meeting
+  const updateCommissionRate = async (meetingId: string, newRate: number) => {
+    setUpdatingCommission(true);
+    try {
+      console.log('🔄 Updating commission rate for meeting:', meetingId, 'to', newRate + '%');
+      
+      const response = await fetch(`http://localhost:9092/api/meetings/admin/${meetingId}/update-commission`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          commissionRate: newRate / 100 // Convert percentage to decimal
+        })
+      });
+
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        console.log('✅ Commission updated successfully');
+        setMessage({ 
+          type: 'success', 
+          text: `Commission rate updated to ${newRate}% successfully! Both parties have been notified.`
+        });
+        setTimeout(() => setMessage(null), 5000);
+        
+        // Refresh meetings list to get updated data
+        await fetchAllMeetings();
+        
+        // Close modal and update selected meeting
+        setShowCommissionEditModal(false);
+        setEditingCommissionRate('');
+        
+        // Update the selected meeting to reflect changes
+        if (selectedMeeting && selectedMeeting.id === meetingId) {
+          setSelectedMeeting({
+            ...selectedMeeting,
+            commissionRate: newRate / 100,
+            commissionAmount: selectedMeeting.finalPrice * (newRate / 100)
+          });
+        }
+        
+      } else {
+        throw new Error(data.message || 'Failed to update commission');
+      }
+    } catch (error) {
+      console.error('❌ Error updating commission:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      setMessage({ 
+        type: 'error', 
+        text: `Failed to update commission: ${errorMessage}` 
+      });
+      setTimeout(() => setMessage(null), 5000);
+    } finally {
+      setUpdatingCommission(false);
+    }
+  };
+
   // Show confirmation modal before completing meeting
   const handleCompleteButtonClick = (meeting: Meeting) => {
     setMeetingToComplete(meeting);
@@ -690,13 +726,6 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
                           <div className="flex items-start space-x-2">
                             {/* Item Image */}
                             <div className="flex-shrink-0">
-                              {/* DEBUG: Log meeting data */}
-                              {console.log('🖼️ Meeting Image Debug:', {
-                                meetingId: meeting.id,
-                                primaryImageUrl: meeting.primaryImageUrl,
-                                gemName: meeting.gemName,
-                                fallbackImage: 'IMG_1751571383560_0.jpg'
-                              })}
                               <GemstoneImage
                                 src={meeting.primaryImageUrl || 'IMG_1751571383560_0.jpg'}
                                 alt={meeting.gemName || 'Gem'}
@@ -785,11 +814,12 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
                           <div className="text-sm font-semibold text-green-600">
                             LKR {meeting.finalPrice ? meeting.finalPrice.toLocaleString() : '0'}
                           </div>
-                          {meeting.commissionAmount && (
-                            <div className="text-xs text-gray-500">
-                              Com: LKR {meeting.commissionAmount.toLocaleString()}
-                            </div>
-                          )}
+                          <div className="text-xs text-blue-600 font-medium">
+                            Commission ({((meeting.commissionRate || 0.06) * 100).toFixed(1)}%):
+                          </div>
+                          <div className="text-xs text-gray-600">
+                            LKR {(meeting.commissionAmount || (meeting.finalPrice * (meeting.commissionRate || 0.06))).toLocaleString()}
+                          </div>
                         </td>
 
                         {/* Status Column */}
@@ -817,6 +847,19 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
                             >
                               <Eye className="w-3 h-3" />
                               <span>Details</span>
+                            </button>
+                            
+                            {/* Edit Commission Button - Available for all meetings */}
+                            <button
+                              onClick={() => {
+                                setSelectedMeeting(meeting);
+                                setEditingCommissionRate(((meeting.commissionRate || 0.06) * 100).toString());
+                                setShowCommissionEditModal(true);
+                              }}
+                              className="flex items-center space-x-1 px-1.5 py-1 bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition-colors text-xs"
+                            >
+                              <Package className="w-3 h-3" />
+                              <span>Commission</span>
                             </button>
                             
                             {/* Mark as Completed Button for Confirmed Meetings */}
@@ -932,11 +975,25 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
                           <p className="text-2xl font-bold text-green-600">
                             LKR {selectedMeeting.finalPrice ? selectedMeeting.finalPrice.toLocaleString() : '0'}
                           </p>
-                          {selectedMeeting.commissionAmount && (
-                            <p className="text-sm text-gray-500 mt-1">
-                              Commission: LKR {selectedMeeting.commissionAmount.toLocaleString()}
+                          <div className="mt-2 space-y-1">
+                            <div className="flex items-center justify-between">
+                              <p className="text-sm text-blue-600 font-medium">
+                                Commission ({((selectedMeeting.commissionRate || 0.06) * 100).toFixed(1)}%): LKR {(selectedMeeting.commissionAmount || (selectedMeeting.finalPrice * (selectedMeeting.commissionRate || 0.06))).toLocaleString()}
+                              </p>
+                              <button
+                                onClick={() => {
+                                  setEditingCommissionRate(((selectedMeeting.commissionRate || 0.06) * 100).toString());
+                                  setShowCommissionEditModal(true);
+                                }}
+                                className="text-xs px-2 py-1 bg-blue-100 text-blue-600 rounded hover:bg-blue-200 transition-colors"
+                              >
+                                Edit Rate
+                              </button>
+                            </div>
+                            <p className="text-xs text-gray-400">
+                              Negotiable rate - admin can adjust based on agreement
                             </p>
-                          )}
+                          </div>
                         </div>
 
                         <div className="bg-white rounded-lg p-3 border border-purple-200">
@@ -1312,6 +1369,148 @@ const AdminMeetingDashboard: React.FC<AdminMeetingDashboardProps> = ({ className
                     </>
                   )}
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Commission Edit Modal */}
+        {showCommissionEditModal && selectedMeeting && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl max-w-md w-full shadow-2xl">
+              <div className="p-6">
+                {/* Modal Header */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center">
+                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                      <Package className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900">Edit Commission Rate</h3>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowCommissionEditModal(false);
+                      setEditingCommissionRate('');
+                    }}
+                    className="text-gray-400 hover:text-gray-600 p-1"
+                  >
+                    <XCircle className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Modal Content */}
+                <div className="mb-6">
+                  <p className="text-gray-700 mb-4">
+                    Adjust the commission rate for this meeting based on negotiation or special circumstances.
+                  </p>
+                  
+                  {/* Meeting Details Summary */}
+                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 mb-4">
+                    <div className="flex items-center space-x-3 mb-3">
+                      <GemstoneImage
+                        src={selectedMeeting.primaryImageUrl}
+                        alt={selectedMeeting.gemName || 'Gem'}
+                        gemName={selectedMeeting.gemName}
+                        className="w-12 h-12 rounded-lg object-cover border border-gray-200"
+                      />
+                      <div>
+                        <p className="font-medium text-gray-900">{selectedMeeting.gemName}</p>
+                        <p className="text-sm text-gray-600">
+                          {selectedMeeting.buyerName} ↔ {selectedMeeting.sellerName}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="text-sm text-gray-600">
+                      <p><span className="font-medium">Final Price:</span> LKR {selectedMeeting.finalPrice?.toLocaleString()}</p>
+                      <p><span className="font-medium">Current Rate:</span> {((selectedMeeting.commissionRate || 0.06) * 100).toFixed(1)}%</p>
+                      <p><span className="font-medium">Current Commission:</span> LKR {selectedMeeting.commissionAmount?.toLocaleString()}</p>
+                    </div>
+                  </div>
+
+                  {/* Commission Rate Input */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      New Commission Rate (%)
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="0"
+                        max="50"
+                        step="0.1"
+                        value={editingCommissionRate}
+                        onChange={(e) => setEditingCommissionRate(e.target.value)}
+                        className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="6.0"
+                      />
+                      <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">%</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Enter rate between 0% and 50%. Default is 6%.
+                    </p>
+                  </div>
+
+                  {/* Calculated Commission Preview */}
+                  {editingCommissionRate && selectedMeeting.finalPrice && (
+                    <div className="bg-blue-50 rounded-lg p-3 border border-blue-200 mb-4">
+                      <p className="text-sm font-medium text-blue-800 mb-1">New Commission Calculation:</p>
+                      <p className="text-lg font-bold text-blue-600">
+                        LKR {(selectedMeeting.finalPrice * (parseFloat(editingCommissionRate) / 100)).toLocaleString()}
+                      </p>
+                      <p className="text-xs text-blue-600">
+                        {editingCommissionRate}% of LKR {selectedMeeting.finalPrice.toLocaleString()}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                    <div className="flex items-start">
+                      <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5 mr-2 flex-shrink-0" />
+                      <div className="text-sm text-yellow-800">
+                        <p className="font-medium mb-1">Important:</p>
+                        <p>Both the buyer and seller will be notified via email about this commission rate change. The updated rate will be immediately reflected in their meeting dashboards.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Modal Actions */}
+                <div className="flex justify-end space-x-3">
+                  <button
+                    onClick={() => {
+                      setShowCommissionEditModal(false);
+                      setEditingCommissionRate('');
+                    }}
+                    className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      const newRate = parseFloat(editingCommissionRate);
+                      if (newRate >= 0 && newRate <= 50) {
+                        updateCommissionRate(selectedMeeting.id, newRate);
+                      } else {
+                        setMessage({ type: 'error', text: 'Commission rate must be between 0% and 50%' });
+                      }
+                    }}
+                    disabled={!editingCommissionRate || updatingCommission || parseFloat(editingCommissionRate) < 0 || parseFloat(editingCommissionRate) > 50}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                  >
+                    {updatingCommission ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <span>Updating...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-4 h-4" />
+                        <span>Update Commission</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

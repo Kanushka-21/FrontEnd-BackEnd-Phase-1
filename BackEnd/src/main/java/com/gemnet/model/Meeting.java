@@ -79,6 +79,9 @@ public class Meeting {
     @Field("commissionAmount")
     private Double commissionAmount;
     
+    @Field("commissionRate")
+    private Double commissionRate = 0.06; // Default 6% commission rate
+    
     @Field("paymentStatus")
     private String paymentStatus; // "PENDING", "PAID", "COMMISSION_DEDUCTED"
     
@@ -322,6 +325,18 @@ public class Meeting {
     
     public void setCommissionAmount(Double commissionAmount) {
         this.commissionAmount = commissionAmount;
+    }
+    
+    public Double getCommissionRate() {
+        return commissionRate;
+    }
+    
+    public void setCommissionRate(Double commissionRate) {
+        this.commissionRate = commissionRate;
+        // Recalculate commission amount when rate changes
+        if (this.finalPrice != null && commissionRate != null) {
+            this.commissionAmount = this.finalPrice * commissionRate;
+        }
     }
     
     public String getPaymentStatus() {
