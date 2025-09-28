@@ -7,6 +7,13 @@ import axios from 'axios';
 // API Configuration
 const API_BASE_URL = 'http://localhost:9092';
 
+// Configure axios with timeout and size limits
+const axiosConfig = {
+  timeout: 60000, // 60 seconds timeout for larger files
+  maxContentLength: 60 * 1024 * 1024, // 60MB (to handle 50MB video + other form data)
+  maxBodyLength: 60 * 1024 * 1024, // 60MB
+};
+
 // Define Advertisement type
 interface Advertisement {
   id: string;  // Changed from _id to id to match Spring Boot MongoDB
@@ -204,6 +211,21 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
       return;
     }
 
+    // Validate file sizes
+    const maxImageSize = 5 * 1024 * 1024; // 5MB per image
+    const maxVideoSize = 50 * 1024 * 1024; // 50MB for video
+    
+    for (const image of selectedImages) {
+      if (image.size > maxImageSize) {
+        toast.error(`Image "${image.name}" is too large. Maximum size is 5MB.`);
+        return;
+      }
+    }
+    if (selectedVideo && selectedVideo.size > maxVideoSize) {
+      toast.error(`Video "${selectedVideo.name}" is too large. Maximum size is 50MB.`);
+      return;
+    }
+
     try {
       setLoading(true);
       const token = authUtils.getAuthToken();
@@ -233,12 +255,122 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
         submitFormData.append('video', selectedVideo);
       }
 
-      const response = await axios.post(`${API_BASE_URL}/api/advertisements`, submitFormData, {
+      // Debug logging
+      console.log('About to send request to:', `${API_BASE_URL}/api/advertisements`);
+      console.log('FormData contents:');
+      let totalSize = 0;
+      for (let [key, value] of submitFormData.entries()) {
+        if (value instanceof File) {
+          console.log(`${key}: File - name: ${value.name}, size: ${value.size}, type: ${value.type}`);
+          totalSize += value.size;
+        } else {
+          console.log(`${key}: ${value}`);
+        }
+      }
+      console.log('Total upload size:', totalSize, 'bytes');
+
+      // Test server connectivity first
+      try {
+        console.log('Testing server connectivity...');
+        await axios.get(`${API_BASE_URL}/health`, { timeout: 5000 });
+        console.log('✅ Server connectivity confirmed');
+      } catch (connectivityError) {
+        console.error('❌ Server connectivity test failed:', connectivityError);
+        toast.error('Cannot connect to server. Please check if the backend is running.');
+        return;
+      }
+
+      // Test authentication
+      try {
+        console.log('Testing authentication...');
+        const authTest = await axios.get(`${API_BASE_URL}/api/advertisements`, {
+          headers: { 'Authorization': `Bearer ${token}` },
+          timeout: 5000
+        });
+        console.log('✅ Authentication test passed');
+      } catch (authError: any) {
+        console.error('❌ Authentication test failed:', authError);
+        if (authError.response?.status === 401 || authError.response?.status === 403) {
+          toast.error('Authentication failed. Please login again.');
+          return;
+        }
+      }
+
+      // Test simple POST without files first
+      try {
+        console.log('Testing simple POST request...');
+        const testData = new FormData();
+        testData.append('title', 'Test Advertisement');
+        testData.append('category', 'Test');
+        testData.append('description', 'Test Description');
+        testData.append('price', '100');
+        testData.append('userId', userId);
+        testData.append('mobileNo', '1234567890');
+        testData.append('email', user?.email || 'test@test.com');
+        
+        // Add a small dummy image to satisfy backend validation
+        const canvas = document.createElement('canvas');
+        canvas.width = 1;
+        canvas.height = 1;
+        const ctx = canvas.getContext('2d');
+        ctx!.fillStyle = 'red';
+        ctx!.fillRect(0, 0, 1, 1);
+        
+        canvas.toBlob((blob) => {
+          if (blob) {
+            testData.append('images', blob, 'test.jpg');
+          }
+        }, 'image/jpeg', 0.1);
+        
+        // Wait a bit for blob creation
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        const testResponse = await axios.post(`${API_BASE_URL}/api/advertisements`, testData, {
+          headers: { 'Authorization': `Bearer ${token}` },
+          timeout: 10000
+        });
+        
+        console.log('✅ Simple POST test successful:', testResponse.data);
+        
+        // If test successful, delete the test advertisement
+        if (testResponse.data?.data?.id) {
+          await axios.delete(`${API_BASE_URL}/api/advertisements/${testResponse.data.data.id}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          console.log('✅ Test advertisement cleaned up');
+        }
+        
+      } catch (testError: any) {
+        console.error('❌ Simple POST test failed:', testError);
+        console.error('Test error details:', {
+          message: testError.message,
+          response: testError.response?.data,
+          status: testError.response?.status
+        });
+        
+        // If simple test fails, don't proceed with actual upload
+        toast.error('Server is not accepting requests. Please try again later.');
+        return;
+      }
+
+      // Create request configuration
+      const requestConfig = {
+        ...axiosConfig,
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data'
+          // Remove Content-Type header - let axios set it automatically with boundary
+        },
+        onUploadProgress: (progressEvent: any) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          console.log('Upload progress:', percentCompleted + '%');
+          // Show progress to user
+          toast.loading(`Uploading... ${percentCompleted}%`, { id: 'upload-progress' });
         }
-      });
+      };
+
+      console.log('Starting upload with config:', requestConfig);
+      const response = await axios.post(`${API_BASE_URL}/api/advertisements`, submitFormData, requestConfig);
+      toast.dismiss('upload-progress');
 
       if (response.data) {
         toast.success('Advertisement created successfully! It will be reviewed by admins.');
@@ -247,8 +379,28 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
         fetchAdvertisements();
       }
     } catch (error: any) {
+      toast.dismiss('upload-progress'); // Dismiss progress indicator
       console.error('Error creating advertisement:', error);
-      toast.error(error.response?.data?.message || 'Failed to create advertisement');
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response,
+        request: error.request,
+        config: error.config
+      });
+      
+      if (error.response) {
+        // Server responded with error status
+        console.error('Server error response:', error.response.data);
+        toast.error(error.response.data?.message || `Server error: ${error.response.status}`);
+      } else if (error.request) {
+        // Request was made but no response received
+        console.error('Network error - no response received:', error.request);
+        toast.error('Network error: Unable to connect to server. Please check your connection.');
+      } else {
+        // Something else went wrong
+        console.error('Request setup error:', error.message);
+        toast.error(error.message || 'Failed to create advertisement');
+      }
     } finally {
       setLoading(false);
     }
@@ -301,6 +453,21 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
         toast.error('Please login to update advertisements');
         return;
       }
+
+      // Validate file sizes if new files are selected
+      const maxImageSize = 5 * 1024 * 1024; // 5MB per image
+      const maxVideoSize = 50 * 1024 * 1024; // 50MB for video
+      
+      for (const image of selectedImages) {
+        if (image.size > maxImageSize) {
+          toast.error(`Image "${image.name}" is too large. Maximum size is 5MB.`);
+          return;
+        }
+      }
+      if (selectedVideo && selectedVideo.size > maxVideoSize) {
+        toast.error(`Video "${selectedVideo.name}" is too large. Maximum size is 50MB.`);
+        return;
+      }
       
       const submitFormData = new FormData();
       submitFormData.append('title', formData.title);
@@ -326,7 +493,7 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
       const response = await axios.put(`${API_BASE_URL}/api/advertisements/${editingAd.id}`, submitFormData, {
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data'
+          // Remove Content-Type header - let axios set it automatically with boundary
         }
       });
 
@@ -1019,7 +1186,7 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
                           <video
                             src={viewingAd.video.startsWith('http') 
                               ? viewingAd.video 
-                              : `http://localhost:8080/advertisements/videos/${viewingAd.video}`}
+                              : `http://localhost:9092/uploads/advertisement-videos/${viewingAd.video}`}
                             className="w-full h-64 object-cover rounded-lg"
                             controls
                             autoPlay
