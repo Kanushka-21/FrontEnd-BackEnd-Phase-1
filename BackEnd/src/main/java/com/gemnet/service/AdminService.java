@@ -54,6 +54,12 @@ public class AdminService {
     @Autowired
     private FeedbackRepository feedbackRepository;
 
+    @Autowired
+    private EmailService emailService;
+
+    @Autowired
+    private NotificationService notificationService;
+
     /**
      * Get pending gemstone listings for admin approval
      */
@@ -134,6 +140,20 @@ public class AdminService {
             
             System.out.println("✅ Listing status updated successfully from " + oldStatus + " to " + newStatus);
             
+            // Send notification to seller if listing is approved
+            if ("APPROVED".equals(newStatus)) {
+                notificationService.sendNotification(
+                    listing.getUserId(),
+                    "LISTING_APPROVED",
+                    "Listing Published in Marketplace",
+                    "Your gemstone listing '" + listing.getGemName() + "' has been approved and is now published in the marketplace.",
+                    "Your gemstone listing has been reviewed and approved by our admin team. " +
+                    "It is now visible to potential buyers in the GemNet marketplace. " +
+                    "You will be notified when buyers show interest in your gemstone."
+                );
+                System.out.println("📧 Seller notification sent for approved listing: " + listing.getGemName());
+            }
+
             String successMessage = "APPROVED".equals(newStatus) ? 
                 "Listing approved successfully" : "Listing rejected successfully";
             
