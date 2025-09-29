@@ -3,8 +3,9 @@ import { Calendar, MapPin, Clock, User, MessageSquare, Phone, Mail, ArrowLeft, C
 import MeetingService from '../../services/MeetingService';
 import { toast } from 'react-hot-toast';
 
-interface MeetingSchedulerProps {
-  purchase: any;
+interface MeetingSchedulerProps {        proposedDateTime: proposedDateTime,
+        location: 'GemNet Office',
+        meetingType: \"IN_PERSON\"purchase: any;
   user: any;
   onBack: () => void;
   onScheduled: () => void;
@@ -24,8 +25,8 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
   const [formData, setFormData] = useState({
     proposedDate: '',
     proposedTime: '',
-    location: '',
-    meetingType: 'PHYSICAL',
+    location: 'GemNet Office',
+    meetingType: 'Physical Meeting',
     buyerNotes: ''
   });
   const [errors, setErrors] = useState<any>({});
@@ -83,7 +84,7 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
                 fullName: sellerData.fullName || `${sellerData.firstName || ''} ${sellerData.lastName || ''}`.trim(),
                 email: sellerData.email || '',
                 phoneNumber: sellerData.phoneNumber || sellerData.phone || '',
-                location: sellerData.location || sellerData.address || '',
+                location: 'GemNet Office',
                 sellerId: sellerData.sellerId || sellerData.id || sellerData.userId || sellerId
               };
               
@@ -148,7 +149,7 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
         fullName: purchase?.sellerName || purchase?.sellerFullName || "Unknown Seller",
         email: purchase?.sellerEmail || sellerId + "@gemnet.lk",
         phoneNumber: purchase?.sellerPhone || "+94 XX XXX XXXX",
-        location: purchase?.sellerLocation || "Sri Lanka",
+        location: 'GemNet Office',
         sellerId: sellerId
       };
       
@@ -163,6 +164,14 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
   const getMinDate = () => {
     const today = new Date();
     return today.toISOString().split('T')[0];
+  };
+
+  // Get maximum date (5 days from today)
+  const getMaxDate = () => {
+    const today = new Date();
+    const maxDate = new Date(today);
+    maxDate.setDate(today.getDate() + 5);
+    return maxDate.toISOString().split('T')[0];
   };
 
   // Get minimum time for today
@@ -202,17 +211,18 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
       newErrors.proposedTime = 'Please select a time';
     }
 
-    if (!formData.location.trim()) {
-      newErrors.location = 'Please specify a location';
-    }
-
-    // Check if proposed date/time is in the future
+    // Check if proposed date/time is in the future and within 5 days
     if (formData.proposedDate && formData.proposedTime) {
       const proposedDateTime = new Date(`${formData.proposedDate}T${formData.proposedTime}`);
       const now = new Date();
+      const maxDate = new Date();
+      maxDate.setDate(now.getDate() + 5);
+      maxDate.setHours(23, 59, 59, 999); // End of the 5th day
       
       if (proposedDateTime <= now) {
         newErrors.proposedTime = 'Please select a future date and time';
+      } else if (proposedDateTime > maxDate) {
+        newErrors.proposedDate = 'Please select a date within the next 5 days';
       }
     }
 
@@ -264,9 +274,9 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
         buyerId: buyerId,
         sellerId: sellerId,
         proposedDateTime: proposedDateTime,
-        location: formData.location,
-        meetingType: formData.meetingType,
-        buyerNotes: formData.buyerNotes,
+        location: 'GemNet Office',
+        meetingType: 'IN_PERSON',
+        buyerNotes: '',
         purchaseId: purchaseId,
         status: "PENDING"
       };
@@ -306,7 +316,7 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
         buyerId: "user123", // Using test IDs
         sellerId: "seller123",
         proposedDateTime: proposedDateTime,
-        location: formData.location,
+        location: 'GemNet Office',
         meetingType: "IN_PERSON"
       };
       
@@ -501,6 +511,7 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
                   value={formData.proposedDate}
                   onChange={handleInputChange}
                   min={getMinDate()}
+                  max={getMaxDate()}
                   className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                     errors.proposedDate ? 'border-red-300' : 'border-gray-300'
                   }`}
@@ -508,6 +519,7 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
                 {errors.proposedDate && (
                   <p className="mt-1 text-sm text-red-600">{errors.proposedDate}</p>
                 )}
+                <p className="mt-1 text-xs text-gray-500">Select a date within the next 5 days</p>
               </div>
 
               {/* Time Selection */}
@@ -533,62 +545,30 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
               </div>
             </div>
 
-            {/* Meeting Type */}
+            {/* Meeting Type - Static */}
             <div>
-              <label htmlFor="meetingType" className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Meeting Type
               </label>
-              <select
-                id="meetingType"
-                name="meetingType"
-                value={formData.meetingType}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="PHYSICAL">Physical Meeting</option>
-                <option value="PICKUP">Pickup Location</option>
-                <option value="VIRTUAL">Virtual Meeting</option>
-              </select>
+              <div className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-gray-700 font-medium">
+                Physical Meeting
+              </div>
+              <p className="mt-1 text-xs text-gray-500">All meetings are conducted as physical meetings</p>
             </div>
 
             {/* Location */}
             <div>
-              <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 <MapPin className="w-4 h-4 inline mr-2" />
                 Meeting Location
               </label>
-              <input
-                type="text"
-                id="location"
-                name="location"
-                value={formData.location}
-                onChange={handleInputChange}
-                placeholder="Enter the meeting location or address"
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  errors.location ? 'border-red-300' : 'border-gray-300'
-                }`}
-              />
-              {errors.location && (
-                <p className="mt-1 text-sm text-red-600">{errors.location}</p>
-              )}
+              <div className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-gray-700 font-medium">
+                GemNet Office
+              </div>
+              <p className="mt-1 text-xs text-gray-500">All meetings are held at our secure GemNet office location</p>
             </div>
 
-            {/* Notes */}
-            <div>
-              <label htmlFor="buyerNotes" className="block text-sm font-medium text-gray-700 mb-2">
-                <MessageSquare className="w-4 h-4 inline mr-2" />
-                Additional Notes (Optional)
-              </label>
-              <textarea
-                id="buyerNotes"
-                name="buyerNotes"
-                value={formData.buyerNotes}
-                onChange={handleInputChange}
-                rows={4}
-                placeholder="Any additional information or special requests for the meeting..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
+
 
             {/* Error Message */}
             {errors.submit && (

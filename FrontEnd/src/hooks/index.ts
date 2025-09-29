@@ -44,45 +44,72 @@ export const useRegistration = () => {
   };
 
   const registerUser = async (userData: UserRegistrationRequest): Promise<string | null> => {
-    try {
-      setLoading(true);
-      console.log('🔄 Starting registration API call...');
-      console.log('🔄 User data:', userData);
-      
-      const response = await authAPI.register(userData);
-      
-      console.log('📨 Full API response:', response);
-      console.log('📨 Response success:', response.success);
-      console.log('📨 Response message:', response.message);
-      console.log('📨 Response data:', response.data);
-      
-      if (response.success && response.data) {
-        const userId = response.data;
-        console.log('✅ Registration successful, userId:', userId);
+    const maxRetries = 2;
+    let lastError: any;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        setLoading(true);
+        console.log(`🔄 Starting registration attempt ${attempt}/${maxRetries}...`);
         
-        const newProgress = {
-          ...progress,
-          currentStep: RegistrationStep.FACE_VERIFICATION,
-          personalInfoCompleted: true,
-          userId,
-        };
+        if (attempt > 1) {
+          console.log('� Retrying registration after previous timeout...');
+          toast.loading(`Retrying registration (attempt ${attempt}/${maxRetries})...`);
+        }
         
-        saveProgress(newProgress);
-        toast.success('Registration successful! Please proceed to face verification.');
-        return userId;
-      } else {
-        console.log('❌ Registration failed - success:', response.success, 'data:', response.data);
-        toast.error(response.message || 'Registration failed');
-        return null;
+        const response = await authAPI.register(userData);
+        
+        console.log('📨 Registration API response received');
+        
+        if (response.success && response.data) {
+          const userId = response.data;
+          console.log('✅ Registration successful, userId:', userId);
+          
+          const newProgress = {
+            ...progress,
+            currentStep: RegistrationStep.FACE_VERIFICATION,
+            personalInfoCompleted: true,
+            userId,
+          };
+          
+          saveProgress(newProgress);
+          toast.success('Registration successful! Please proceed to face verification.');
+          return userId;
+        } else {
+          console.log('❌ Registration failed - success:', response.success, 'data:', response.data);
+          toast.error(response.message || 'Registration failed');
+          return null;
+        }
+      } catch (error: any) {
+        lastError = error;
+        console.error(`❌ Registration attempt ${attempt} failed:`, error);
+        
+        // Check if it's a timeout error
+        if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+          if (attempt < maxRetries) {
+            console.log(`⏱️ Timeout detected, will retry (${attempt}/${maxRetries})`);
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second before retry
+            continue;
+          } else {
+            toast.error('Registration is taking longer than expected. Please try again.');
+          }
+        } else {
+          // Non-timeout error, don't retry
+          const errorMessage = apiUtils.formatErrorMessage(error);
+          toast.error(errorMessage);
+          return null;
+        }
+      } finally {
+        if (attempt === maxRetries) {
+          setLoading(false);
+        }
       }
-    } catch (error) {
-      console.error('❌ Registration error caught:', error);
-      const errorMessage = apiUtils.formatErrorMessage(error);
-      toast.error(errorMessage);
-      return null;
-    } finally {
-      setLoading(false);
     }
+    
+    // If we get here, all attempts failed
+    const errorMessage = apiUtils.formatErrorMessage(lastError);
+    toast.error(errorMessage);
+    return null;
   };
 
   const verifyFace = async (userId: string, faceImage: File): Promise<boolean> => {

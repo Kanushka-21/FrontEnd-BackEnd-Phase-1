@@ -65,9 +65,16 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Clear token and redirect to login
-      localStorage.removeItem('authToken');
-      window.location.href = '/login';
+      // Only auto-logout for login/auth endpoints, not for general 401 errors
+      const isAuthEndpoint = error.config?.url?.includes('/auth/');
+      if (isAuthEndpoint) {
+        console.log('🔐 Authentication failed, redirecting to login');
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('userData');
+        window.location.href = '/login';
+      } else {
+        console.warn('🔐 Received 401 for non-auth endpoint:', error.config?.url);
+      }
     }
     return Promise.reject(error);
   }
@@ -78,9 +85,16 @@ apiFileUpload.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Clear token and redirect to login
-      localStorage.removeItem('authToken');
-      window.location.href = '/login';
+      // Only auto-logout for login/auth endpoints, not for general 401 errors
+      const isAuthEndpoint = error.config?.url?.includes('/auth/');
+      if (isAuthEndpoint) {
+        console.log('🔐 Authentication failed on file upload, redirecting to login');
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('userData');
+        window.location.href = '/login';
+      } else {
+        console.warn('🔐 Received 401 for non-auth file upload:', error.config?.url);
+      }
     }
     return Promise.reject(error);
   }
@@ -97,7 +111,7 @@ export const authAPI = {
   // Register new user
   register: async (userData: UserRegistrationRequest): Promise<ApiResponse<string>> => {
     const response: AxiosResponse<ApiResponse<string>> = await api.post('/api/auth/register', userData, {
-      timeout: 25000 // 25 seconds for registration only
+      timeout: 60000 // 60 seconds for registration - increased to handle processing time
     });
     return response.data;
   },

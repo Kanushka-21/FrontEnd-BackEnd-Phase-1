@@ -150,7 +150,6 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
   });
   const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
   const [confirmingMeeting, setConfirmingMeeting] = useState<string | null>(null); // Track which meeting is being confirmed
-  const [deletingMeeting, setDeletingMeeting] = useState<string | null>(null); // Track which meeting is being deleted
   const [reschedulingMeeting, setReschedulingMeeting] = useState<string | null>(null); // Track which meeting is being rescheduled
   
   // Unable to participate management state
@@ -312,47 +311,7 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
     }
   };
 
-  // Handle delete meeting (only for buyers and only for pending meetings)
-  const handleDeleteMeeting = async (meetingId: string) => {
-    if (!confirm('Are you sure you want to delete this meeting request? This action cannot be undone.')) return;
 
-    setDeletingMeeting(meetingId);
-    setMessage({ type: 'info', text: 'Deleting meeting...' });
-
-    try {
-      const userId = user.userId || user.id;
-      console.log('🔄 Deleting meeting with user ID:', userId);
-      
-      const response = await fetch(`http://localhost:9092/api/meetings/${meetingId}/delete`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: userId
-        })
-      });
-
-      const data = await response.json();
-      console.log('📤 Meeting deletion response:', data);
-      
-      if (data.success) {
-        console.log('✅ Meeting deleted successfully');
-        setMessage({ type: 'success', text: 'Meeting request deleted successfully.' });
-        
-        // Refresh data
-        await fetchMeetings();
-      } else {
-        console.error('❌ Failed to delete meeting:', data.message);
-        setMessage({ type: 'error', text: `Failed to delete meeting: ${data.message}` });
-      }
-    } catch (error) {
-      console.error('❌ Error deleting meeting:', error);
-      setMessage({ type: 'error', text: 'Error deleting meeting. Please try again.' });
-    } finally {
-      setDeletingMeeting(null);
-    }
-  };
 
   // Handle download meeting card
   const handleDownloadMeetingCard = (meeting: Meeting) => {
@@ -953,30 +912,7 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
                       </>
                     )}
 
-                    {/* Delete option for buyers (only for pending meetings) */}
-                    {meeting.status === 'PENDING' && !isSeller && (
-                      <button
-                        onClick={() => handleDeleteMeeting(meeting.id)}
-                        disabled={deletingMeeting === meeting.id}
-                        className={`px-4 py-2 ${
-                          deletingMeeting === meeting.id
-                            ? 'bg-gray-400 cursor-not-allowed'
-                            : 'bg-red-600 hover:bg-red-700'
-                        } text-white rounded-md transition-colors text-sm flex items-center space-x-1`}
-                      >
-                        {deletingMeeting === meeting.id ? (
-                          <>
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                            <span>Deleting...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Ban className="w-4 h-4" />
-                            <span>Delete</span>
-                          </>
-                        )}
-                      </button>
-                    )}
+
 
                     {/* Reschedule option for confirmed meetings */}
                     {meeting.status === 'CONFIRMED' && (
@@ -1145,8 +1081,14 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
                   value={rescheduleData.newDateTime}
                   onChange={(e) => setRescheduleData({ ...rescheduleData, newDateTime: e.target.value })}
                   min={new Date().toISOString().slice(0, 16)}
+                  max={(() => {
+                    const maxDate = new Date();
+                    maxDate.setDate(maxDate.getDate() + 5);
+                    return maxDate.toISOString().slice(0, 16);
+                  })()}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
+                <p className="mt-1 text-xs text-gray-500">Select a new date and time within the next 5 days</p>
               </div>
               
               <div className="mb-4">

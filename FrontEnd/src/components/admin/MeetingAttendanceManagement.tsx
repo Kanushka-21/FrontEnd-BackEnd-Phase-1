@@ -151,7 +151,7 @@ const MeetingAttendanceManagement: React.FC<MeetingAttendanceManagementProps> = 
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
         }
       });
       
@@ -259,7 +259,7 @@ const MeetingAttendanceManagement: React.FC<MeetingAttendanceManagementProps> = 
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
         },
         body: JSON.stringify({
           meetingId: data.meetingId,
@@ -300,7 +300,7 @@ const MeetingAttendanceManagement: React.FC<MeetingAttendanceManagementProps> = 
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
         }
       });
 

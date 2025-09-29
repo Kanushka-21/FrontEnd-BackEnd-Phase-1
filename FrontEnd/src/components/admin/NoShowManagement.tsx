@@ -73,7 +73,7 @@ const NoShowManagement: React.FC<NoShowManagementProps> = ({ user: _user }) => {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
         }
       });
       
@@ -101,7 +101,7 @@ const NoShowManagement: React.FC<NoShowManagementProps> = ({ user: _user }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
         },
         body: JSON.stringify({
           meetingId: selectedRecord?.meetingId,
@@ -137,7 +137,7 @@ const NoShowManagement: React.FC<NoShowManagementProps> = ({ user: _user }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
         }
       });
 

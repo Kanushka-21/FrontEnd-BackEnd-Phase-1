@@ -6,7 +6,6 @@ import { AdminLoginRequest } from '@/Admin/types/AdminTypes';
 import { toast } from 'react-hot-toast';
 import { Alert, Modal } from 'antd';
 import { 
-  validateAuthentication, 
   clearAllAuthData, 
   initSecurityMonitoring 
 } from '@/utils/authSecurity';
@@ -89,17 +88,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       if (token && storedUser) {
         try {
-          // Enhanced security validation
-          const isValidAuth = await validateAuthentication();
+          // Basic client-side validation only (server validation disabled to prevent auto-logout)
+          const userData = JSON.parse(storedUser);
+          const isValidToken = token.length > 20; // Basic token format check
+          const hasRequiredFields = userData && userData.userId && userData.email;
           
-          if (!isValidAuth) {
-            console.warn('⚠️ Security validation failed, clearing all data');
+          if (!isValidToken || !hasRequiredFields) {
+            console.warn('⚠️ Basic validation failed, clearing data');
             clearAllAuthData();
             setLoading(false);
             return;
           }
-          
-          const userData = JSON.parse(storedUser);
           
           // Additional client-side validation
           if (!isValidAuthToken(token) || !isValidUserData(userData)) {

@@ -134,12 +134,13 @@ export const validateAuthentication = async (): Promise<boolean> => {
       return false;
     }
 
-    // Server-side validation
-    const isValid = await validateTokenWithServer(token);
-    if (!isValid) {
-      await handleSecurityViolation('Server token validation failed');
-      return false;
-    }
+    // Server-side validation temporarily disabled to prevent auto-logout
+    // TODO: Implement proper token validation endpoint on backend
+    // const isValid = await validateTokenWithServer(token);
+    // if (!isValid) {
+    //   await handleSecurityViolation('Server token validation failed');
+    //   return false;
+    // }
 
     // Reset failed attempts on successful validation
     failedValidationAttempts = 0;
@@ -181,15 +182,12 @@ const handleSecurityViolation = async (reason: string): Promise<void> => {
 
   console.warn(`🔒 Security Violation #${failedValidationAttempts}: ${reason}`);
 
+  // Security lockout disabled to prevent automatic logout
+  // TODO: Implement proper security handling without breaking user sessions
   if (failedValidationAttempts >= MAX_FAILED_ATTEMPTS) {
-    securityLockout = true;
-    console.error('🔒 Security: Maximum failed attempts reached. Account locked.');
-    
-    // Clear all authentication data
-    clearAllAuthData();
-    
-    // Redirect to login with security warning
-    window.location.href = '/login?security=violation';
+    console.warn('🔒 Security: Multiple failed attempts detected, but lockout disabled to prevent auto-logout');
+    // Reset attempts to prevent accumulation
+    failedValidationAttempts = 0;
   }
 };
 

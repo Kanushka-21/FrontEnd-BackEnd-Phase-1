@@ -22,8 +22,8 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
   const [formData, setFormData] = useState({
     proposedDate: '',
     proposedTime: '',
-    location: '',
-    meetingType: 'PHYSICAL',
+    location: 'GemNet Office',
+    meetingType: 'Physical Meeting',
     buyerNotes: ''
   });
   const [errors, setErrors] = useState<any>({});
@@ -45,7 +45,7 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            ...(localStorage.getItem('token') && { 'Authorization': `Bearer ${localStorage.getItem('token')}` })
+            ...(localStorage.getItem('authToken') && { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` })
           }
         });
         
@@ -72,7 +72,7 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            ...(localStorage.getItem('token') && { 'Authorization': `Bearer ${localStorage.getItem('token')}` })
+            ...(localStorage.getItem('authToken') && { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` })
           }
         });
         
@@ -131,6 +131,14 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
     return today.toISOString().split('T')[0];
   };
 
+  // Get maximum date (5 days from today)
+  const getMaxDate = () => {
+    const today = new Date();
+    const maxDate = new Date(today);
+    maxDate.setDate(today.getDate() + 5);
+    return maxDate.toISOString().split('T')[0];
+  };
+
   // Get minimum time for today
   const getMinTime = () => {
     const now = new Date();
@@ -168,17 +176,18 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
       newErrors.proposedTime = 'Please select a time';
     }
 
-    if (!formData.location.trim()) {
-      newErrors.location = 'Please specify a location';
-    }
-
-    // Check if proposed date/time is in the future
+    // Check if proposed date/time is in the future and within 5 days
     if (formData.proposedDate && formData.proposedTime) {
       const proposedDateTime = new Date(`${formData.proposedDate}T${formData.proposedTime}`);
       const now = new Date();
+      const maxDate = new Date();
+      maxDate.setDate(now.getDate() + 5);
+      maxDate.setHours(23, 59, 59, 999); // End of the 5th day
       
       if (proposedDateTime <= now) {
         newErrors.proposedTime = 'Please select a future date and time';
+      } else if (proposedDateTime > maxDate) {
+        newErrors.proposedDate = 'Please select a date within the next 5 days';
       }
     }
 
@@ -300,8 +309,8 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
             buyerId: buyerId,
             proposedDateTime,
             location: formData.location,
-            meetingType: formData.meetingType,
-            buyerNotes: formData.buyerNotes
+            meetingType: 'IN_PERSON',
+            buyerNotes: ''
           };
 
           console.log(`🔄 Attempting meeting creation with ID: ${idToTry}`, requestData);
@@ -620,6 +629,7 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
                   value={formData.proposedDate}
                   onChange={handleInputChange}
                   min={getMinDate()}
+                  max={getMaxDate()}
                   className={`w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
                     errors.proposedDate ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-gray-400'
                   }`}
@@ -630,7 +640,7 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
                     {errors.proposedDate}
                   </p>
                 )}
-                <p className="mt-1 text-xs text-gray-500">Select a date from today onwards</p>
+                <p className="mt-1 text-xs text-gray-500">Select a date within the next 5 days</p>
               </div>
 
               {/* Time Selection - Enhanced */}
@@ -660,67 +670,27 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
               </div>
             </div>
 
-            {/* Meeting Type - Enhanced */}
+            {/* Meeting Type - Static */}
             <div>
-              <label htmlFor="meetingType" className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Meeting Type
               </label>
-              <select
-                id="meetingType"
-                name="meetingType"
-                value={formData.meetingType}
-                onChange={handleInputChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-400 transition-colors"
-              >
-                <option value="PHYSICAL">Physical Meeting - Meet in person</option>
-                <option value="PICKUP">Pickup Location - Collect from specified address</option>
-                <option value="VIRTUAL">Virtual Meeting - Video call first</option>
-              </select>
-              <p className="mt-1 text-xs text-gray-500">Choose the type of meeting that works best for you</p>
+              <div className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-700 font-medium">
+                Physical Meeting
+              </div>
+              <p className="mt-1 text-xs text-gray-500">All meetings are conducted as physical meetings</p>
             </div>
 
             {/* Location - Enhanced */}
             <div>
-              <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 <MapPin className="w-4 h-4 inline mr-2" />
                 Meeting Location
               </label>
-              <input
-                type="text"
-                id="location"
-                name="location"
-                value={formData.location}
-                onChange={handleInputChange}
-                placeholder="Enter the meeting location or address"
-                className={`w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                  errors.location ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-gray-400'
-                }`}
-              />
-              {errors.location && (
-                <p className="mt-1 text-sm text-red-600 flex items-center">
-                  <XCircle className="w-4 h-4 mr-1" />
-                  {errors.location}
-                </p>
-              )}
-              <p className="mt-1 text-xs text-gray-500">Provide a specific address or landmark</p>
-            </div>
-
-            {/* Notes - Enhanced */}
-            <div>
-              <label htmlFor="buyerNotes" className="block text-sm font-medium text-gray-700 mb-2">
-                <MessageSquare className="w-4 h-4 inline mr-2" />
-                Additional Notes (Optional)
-              </label>
-              <textarea
-                id="buyerNotes"
-                name="buyerNotes"
-                value={formData.buyerNotes}
-                onChange={handleInputChange}
-                rows={4}
-                placeholder="Any additional information or special requests for the meeting..."
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-gray-400 transition-colors"
-              />
-              <p className="mt-1 text-xs text-gray-500">Add any special instructions or requirements</p>
+              <div className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 text-gray-700 font-medium">
+                GemNet Office
+              </div>
+              <p className="mt-1 text-xs text-gray-500">All meetings are held at our secure GemNet office location</p>
             </div>
 
             {/* Error Message - Enhanced */}
@@ -876,14 +846,8 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Meeting Type:</span>
-                        <span className="font-medium text-gray-900">{confirmationData.meetingType}</span>
+                        <span className="font-medium text-gray-900">Physical Meeting</span>
                       </div>
-                      {confirmationData.buyerNotes && (
-                        <div className="pt-2 border-t border-gray-200">
-                          <span className="text-gray-600">Your Notes:</span>
-                          <p className="font-medium text-gray-900 mt-1">{confirmationData.buyerNotes}</p>
-                        </div>
-                      )}
                     </div>
                   </div>
 

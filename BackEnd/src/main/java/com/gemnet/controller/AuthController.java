@@ -75,7 +75,7 @@ public class AuthController {
                                                    dbEx.getMessage()));
                     }
                     System.out.println("⚠️ MongoDB connection attempt " + (i+1) + " failed. Retrying...");
-                    Thread.sleep(1000); // Wait before retrying
+                    Thread.sleep(500); // Reduced wait time from 1000ms to 500ms
                 }
             }
             
