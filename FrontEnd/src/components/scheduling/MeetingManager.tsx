@@ -116,7 +116,7 @@ interface Meeting {
   };
   createdAt: string;
   updatedAt: string;
-  // No-show management fields
+  // Unable to Participate management fields
   buyerAttended?: boolean;
   sellerAttended?: boolean;
   buyerAbsenceReason?: string;
@@ -153,7 +153,7 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
   const [deletingMeeting, setDeletingMeeting] = useState<string | null>(null); // Track which meeting is being deleted
   const [reschedulingMeeting, setReschedulingMeeting] = useState<string | null>(null); // Track which meeting is being rescheduled
   
-  // No-show management state
+  // Unable to participate management state
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
   const [showAbsenceReasonModal, setShowAbsenceReasonModal] = useState(false);
   const [showNoShowModal, setShowNoShowModal] = useState(false);
@@ -532,7 +532,7 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
     // Show immediate feedback message
     setMessage({ 
       type: 'info', 
-      text: attended ? 'Marking attendance...' : 'Reporting no-show...' 
+      text: attended ? 'Marking attendance...' : 'Reporting unable to participate...' 
     });
 
     try {
@@ -556,7 +556,7 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
         // Update success message
         setMessage({ 
           type: 'success', 
-          text: attended ? 'Attendance marked successfully!' : 'No-show reported successfully!' 
+          text: attended ? 'Attendance marked successfully!' : 'Unable to participate reported successfully!' 
         });
         
         // Refresh data in background
@@ -603,7 +603,7 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
     }
   };
 
-  // Handle report no-show functionality
+  // Handle report unable to participate functionality
   const handleReportNoShow = async (meetingId: string, reason?: string) => {
     // Immediate UI feedback - close modal instantly
     setShowNoShowModal(false);
@@ -613,7 +613,7 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
     // Show immediate feedback message
     setMessage({ 
       type: 'info', 
-      text: 'Reporting no-show...' 
+      text: 'Reporting unable to participate...' 
     });
 
     try {
@@ -627,8 +627,8 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
           meetingId,
           userId,
           userType,
-          attended: false, // This is a no-show report
-          reason: reason || 'No-show reported by user'
+          attended: false, // This is an unable to participate report
+          reason: reason || 'Unable to participate reported by user'
         })
       });
 
@@ -650,17 +650,17 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
         // Update success message
         setMessage({ 
           type: 'success', 
-          text: 'No-show reported successfully!' 
+          text: 'Unable to participate reported successfully!' 
         });
         
         // Refresh data in background
         await fetchMeetings();
       } else {
-        setMessage({ type: 'error', text: `Failed to report no-show: ${data.message}` });
+        setMessage({ type: 'error', text: `Failed to report unable to participate: ${data.message}` });
       }
     } catch (error) {
-      console.error('Error reporting no-show:', error);
-      setMessage({ type: 'error', text: 'Error reporting no-show. Please try again.' });
+      console.error('Error reporting unable to participate:', error);
+      setMessage({ type: 'error', text: 'Error reporting unable to participate. Please try again.' });
     }
   };
 
@@ -840,7 +840,7 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
                     </div>
                   )}
 
-                  {/* No-Show Notification Alert */}
+                  {/* Unable to Participate Notification Alert */}
                   {meeting.status === 'CONFIRMED' && (
                     ((!isSeller && meeting.sellerReasonSubmission) || 
                      (isSeller && meeting.buyerReasonSubmission)) && (
@@ -849,7 +849,7 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
                         <AlertTriangle className="w-5 h-5 text-orange-600 mt-0.5" />
                         <div className="flex-1">
                           <h4 className="font-medium text-orange-800">
-                            {isSeller ? 'Buyer' : 'Seller'} Reported No-Show
+                            {isSeller ? 'Buyer' : 'Seller'} Reported Unable to Participate
                           </h4>
                           <p className="text-sm text-orange-700 mt-1">
                             The {isSeller ? 'buyer' : 'seller'} has reported they could not attend this meeting.
@@ -994,22 +994,21 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
 
                     {meeting.status === 'CONFIRMED' && (
                       <>
-                        {/* Report No-Show Button - Prominent Design */}
+                        {/* Unable to Participate Button - Regular Design */}
                         <button
                           onClick={() => {
                             setSelectedMeeting(meeting);
                             setShowNoShowModal(true);
                             setNoShowData({ reason: '' });
                           }}
-                          className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm flex items-center space-x-1 font-medium"
+                          className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm font-medium"
                         >
-                          <AlertTriangle className="w-4 h-4" />
-                          <span>Report No-Show</span>
+                          <span>Unable to Participate</span>
                         </button>
                       </>
                     )}
 
-                    {/* No-Show Management Buttons */}
+                    {/* Unable to Participate Management Buttons */}
                     {meeting.status === 'CONFIRMED' && new Date(meeting.confirmedDateTime || meeting.proposedDateTime) <= new Date() && (
                       <>
                         {/* Mark Attendance Button */}
@@ -1025,17 +1024,16 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
                           <span>Attended</span>
                         </button>
                         
-                        {/* Mark No-Show Button */}
+                        {/* Mark Unable to Participate Button */}
                         <button
                           onClick={() => {
                             setSelectedMeeting(meeting);
                             setShowAttendanceModal(true);
                             setAttendanceData({ attended: false, reason: '' });
                           }}
-                          className="px-3 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors text-sm flex items-center space-x-1"
+                          className="px-3 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors text-sm"
                         >
-                          <AlertTriangle className="w-4 h-4" />
-                          <span>No-Show</span>
+                          <span>Unable to Participate</span>
                         </button>
                       </>
                     )}
@@ -1056,17 +1054,17 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
                       </button>
                     )}
 
-                    {/* Show No-Show Status */}
+                    {/* Show Unable to Participate Status */}
                     {meeting.status === 'CONFIRMED' && (meeting.buyerAttended !== undefined || meeting.sellerAttended !== undefined) && (
                       <div className="text-xs text-gray-600">
                         {userType === 'buyer' && meeting.buyerAttended !== undefined && (
                           <span className={`px-2 py-1 rounded ${meeting.buyerAttended ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                            {meeting.buyerAttended ? 'You Attended' : 'You No-Show'}
+                            {meeting.buyerAttended ? 'You Attended' : 'You Unable to Participate'}
                           </span>
                         )}
                         {userType === 'seller' && meeting.sellerAttended !== undefined && (
                           <span className={`px-2 py-1 rounded ${meeting.sellerAttended ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                            {meeting.sellerAttended ? 'You Attended' : 'You No-Show'}
+                            {meeting.sellerAttended ? 'You Attended' : 'You Unable to Participate'}
                           </span>
                         )}
                       </div>
@@ -1202,20 +1200,20 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                {attendanceData.attended ? 'Confirm Attendance' : 'Report No-Show'}
+                {attendanceData.attended ? 'Confirm Attendance' : 'Report Unable to Participate'}
               </h3>
               
               <p className="text-sm text-gray-600 mb-4">
                 {attendanceData.attended 
                   ? `Confirm that you attended the meeting with ${userType === 'buyer' ? selectedMeeting.sellerName : selectedMeeting.buyerName}.`
-                  : `Report that the other party (${userType === 'buyer' ? selectedMeeting.sellerName : selectedMeeting.buyerName}) did not attend the meeting.`
+                  : `Report that the other party (${userType === 'buyer' ? selectedMeeting.sellerName : selectedMeeting.buyerName}) was unable to participate in the meeting.`
                 }
               </p>
 
               {!attendanceData.attended && (
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Reason for No-Show (Optional)
+                    Reason for Unable to Participate (Optional)
                   </label>
                   <textarea
                     value={attendanceData.reason}
@@ -1246,7 +1244,7 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
                       : 'bg-orange-600 hover:bg-orange-700'
                   }`}
                 >
-                  {attendanceData.attended ? 'Confirm Attendance' : 'Report No-Show'}
+                  {attendanceData.attended ? 'Confirm Attendance' : 'Report Unable to Participate'}
                 </button>
               </div>
             </div>
@@ -1310,19 +1308,19 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
           </div>
         )}
 
-        {/* Report No-Show Modal */}
+        {/* Unable to Participate Modal */}
         {showNoShowModal && selectedMeeting && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Report No-Show</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Unable to Participate</h3>
               
               <p className="text-sm text-gray-600 mb-4">
-                Report that the other party ({userType === 'buyer' ? selectedMeeting.sellerName : selectedMeeting.buyerName}) did not attend the meeting.
+                Report that you are unable to participate in this meeting.
               </p>
 
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Reason for No-Show (Optional)
+                  Reason for Unable to Participate (Optional)
                 </label>
                 <textarea
                   value={noShowData.reason}
@@ -1346,27 +1344,27 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
                 </button>
                 <button
                   onClick={() => setShowConfirmNoShowModal(true)}
-                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                  className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
                 >
-                  Report No-Show
+                  Submit Unable to Participate
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* Confirmation Modal for No-Show Report */}
+        {/* Confirmation Modal for Unable to Participate Report */}
         {showConfirmNoShowModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
               <div className="flex items-center mb-4">
                 <AlertTriangle className="h-6 w-6 text-orange-500 mr-3" />
-                <h3 className="text-lg font-semibold text-gray-900">Confirm No-Show Report</h3>
+                <h3 className="text-lg font-semibold text-gray-900">Confirm Unable to Participate</h3>
               </div>
               
               <div className="mb-6">
                 <p className="text-gray-700 mb-3">
-                  Are you sure you want to report this meeting as a no-show?
+                  Are you sure you want to report that you are unable to participate in this meeting?
                 </p>
                 <p className="text-sm text-gray-600">
                   This action will notify the admin and may affect meeting statistics.
@@ -1385,9 +1383,9 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
                     setShowConfirmNoShowModal(false);
                     handleReportNoShow(selectedMeeting.id, noShowData.reason);
                   }}
-                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                  className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
                 >
-                  Yes, Report No-Show
+                  Yes, Submit Report
                 </button>
               </div>
             </div>

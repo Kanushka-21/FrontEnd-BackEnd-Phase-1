@@ -166,12 +166,12 @@ const BuyerUserManual: React.FC<BuyerUserManualProps> = ({ onNavigate }) => {
           features: [
             { icon: <Clock className="w-4 h-4 text-yellow-500" />, text: 'Scheduled: Meeting confirmed and pending' },
             { icon: <CheckCircle className="w-4 h-4 text-green-500" />, text: 'Completed: Meeting successfully completed' },
-            { icon: <AlertCircle className="w-4 h-4 text-red-500" />, text: 'No-Show: Missed meeting (affects your account)' },
+            { icon: <AlertCircle className="w-4 h-4 text-red-500" />, text: 'Not Participated: Missed meeting (affects your account)' },
             { icon: <Calendar className="w-4 h-4 text-blue-500" />, text: 'Rescheduled: Meeting moved to new time' }
           ],
           warning: {
             icon: <AlertCircle className="w-5 h-5 text-red-500" />,
-            text: 'No-Show Policy: Missing meetings without notice may result in account warnings or restrictions.'
+            text: 'Participation Policy: Missing meetings without notice may result in account warnings or restrictions.'
           }
         }
       ]

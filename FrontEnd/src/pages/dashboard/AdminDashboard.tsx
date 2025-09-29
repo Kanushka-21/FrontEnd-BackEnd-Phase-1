@@ -14,14 +14,13 @@ import {
   UserManagement,
   ListingsManagement,
   Meetings,
-  SystemSettings,
   ModalState,
   AdvertisementsManagement,
   FeedbackManagement,
   formatLKR
 } from './AdminDashboardComponents';
 
-// Import no-show management components
+// Import not participated management components
 import NoShowManagement from '@/components/admin/NoShowManagement';
 import MeetingAttendanceManagement from '@/components/admin/MeetingAttendanceManagement';
 import BlockedUsersManagement from '@/components/admin/BlockedUsersManagement';
@@ -53,7 +52,7 @@ const AdminDashboard: React.FC = () => {
     
     console.log('🔧 AdminDashboard URL params:', { section, pathname: location.pathname });
     
-    if (section && ['overview', 'users', 'listings', 'advertisements', 'meetings', 'attendance', 'no-show', 'blocked-users', 'feedback', 'user-manual', 'settings'].includes(section)) {
+    if (section && ['overview', 'users', 'listings', 'advertisements', 'meetings', 'attendance', 'no-show', 'blocked-users', 'feedback', 'user-manual'].includes(section)) {
       console.log('🔧 Setting active tab from URL parameter:', section);
       setActiveTab(section);
     }
@@ -103,7 +102,7 @@ const AdminDashboard: React.FC = () => {
     },
     { 
       id: 'no-show', 
-      label: 'No-Show Management', 
+      label: 'Not Participants Management', 
       icon: <Shield size={24} />,
       notificationCount: 0
     },
@@ -124,12 +123,6 @@ const AdminDashboard: React.FC = () => {
       label: 'User Manual', 
       icon: <BookOpen size={24} />,
       notificationCount: 0
-    },
-    { 
-      id: 'settings', 
-      label: 'System Settings', 
-      icon: <Settings size={24} />,
-      notificationCount: getNotificationCount('admin', 'systemAlerts') || 0
     }
   ];
 
@@ -172,8 +165,6 @@ const AdminDashboard: React.FC = () => {
         return <FeedbackManagement user={user} onTabChange={setActiveTab} />;
       case 'user-manual':
         return <UserManual onNavigateToSection={(section) => setActiveTab(section)} />;
-      case 'settings':
-        return <SystemSettings />;
       default:
         return <Overview user={user} onTabChange={setActiveTab} />;
     }

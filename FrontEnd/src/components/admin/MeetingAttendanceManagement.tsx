@@ -57,7 +57,7 @@ interface Meeting {
   sellerNotes?: string;
   createdAt?: string;
   updatedAt?: string;
-  // No-show reason fields
+  // Not participated reason fields
   buyerReasonSubmission?: string;
   sellerReasonSubmission?: string;
   buyerReasonSubmittedAt?: string;
@@ -219,11 +219,11 @@ const MeetingAttendanceManagement: React.FC<MeetingAttendanceManagementProps> = 
   const markAttendance = async () => {
     if (!selectedMeeting) return;
 
-    // Check if any user is marked as not attended (no-show)
+    // Check if any user is marked as not attended (not participated)
     const hasNoShow = !attendanceData.buyerAttended || !attendanceData.sellerAttended;
     
     if (hasNoShow) {
-      // Show confirmation modal for no-show
+      // Show confirmation modal for not participated
       const noShowUsers = [];
       if (!attendanceData.buyerAttended) noShowUsers.push(selectedMeeting.buyerName + ' (Buyer)');
       if (!attendanceData.sellerAttended) noShowUsers.push(selectedMeeting.sellerName + ' (Seller)');
@@ -370,7 +370,7 @@ const MeetingAttendanceManagement: React.FC<MeetingAttendanceManagementProps> = 
       if (meeting.buyerAttended && meeting.sellerAttended) {
         return { text: 'Both Attended', color: 'bg-green-100 text-green-800 border-green-200', icon: CheckCircle };
       } else if (!meeting.buyerAttended && !meeting.sellerAttended) {
-        return { text: 'Both No-Show', color: 'bg-red-100 text-red-800 border-red-200', icon: XCircle };
+        return { text: 'Both Not Participated', color: 'bg-red-100 text-red-800 border-red-200', icon: XCircle };
       } else {
         return { text: 'Partial Attendance', color: 'bg-yellow-100 text-yellow-800 border-yellow-200', icon: AlertTriangle };
       }
@@ -421,7 +421,7 @@ const MeetingAttendanceManagement: React.FC<MeetingAttendanceManagementProps> = 
                 <Calendar className="w-8 h-8 text-blue-600 mr-3" />
                 Meeting Attendance Management
               </h1>
-              <p className="text-gray-600 mt-1">Mark attendance for confirmed meetings and manage no-shows</p>
+              <p className="text-gray-600 mt-1">Mark attendance for confirmed meetings and manage non-participants</p>
             </div>
             <div className="text-sm text-gray-500">
               {totalElements} meeting{totalElements !== 1 ? 's' : ''} found
@@ -483,7 +483,7 @@ const MeetingAttendanceManagement: React.FC<MeetingAttendanceManagementProps> = 
             <div className="flex items-center">
               <XCircle className="w-8 h-8 text-red-600" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">No-Shows</p>
+                <p className="text-sm font-medium text-gray-600">Not Participated</p>
                 <p className="text-2xl font-bold text-red-600">
                   {meetings.filter(m => m.adminVerified && (!m.buyerAttended || !m.sellerAttended)).length}
                 </p>
@@ -693,10 +693,10 @@ const MeetingAttendanceManagement: React.FC<MeetingAttendanceManagementProps> = 
                           {meeting.adminVerified && (
                             <div className="mt-2 space-y-1">
                               <div className="text-xs text-gray-600">
-                                Buyer: {meeting.buyerAttended ? '✅ Attended' : '❌ No-show'}
+                                Buyer: {meeting.buyerAttended ? '✅ Attended' : '❌ Not participated'}
                               </div>
                               <div className="text-xs text-gray-600">
-                                Seller: {meeting.sellerAttended ? '✅ Attended' : '❌ No-show'}
+                                Seller: {meeting.sellerAttended ? '✅ Attended' : '❌ Not participated'}
                               </div>
                             </div>
                           )}
@@ -734,7 +734,7 @@ const MeetingAttendanceManagement: React.FC<MeetingAttendanceManagementProps> = 
                               <Eye className="w-4 h-4" />
                             </button>
 
-                            {/* Delete button for completed or no-show meetings */}
+                            {/* Delete button for completed or non-participant meetings */}
                             {(meeting.status === 'COMPLETED' || meeting.status === 'NO_SHOW_RECORDED') && (
                               <button
                                 onClick={() => handleDeleteButtonClick(meeting)}
@@ -860,12 +860,12 @@ const MeetingAttendanceManagement: React.FC<MeetingAttendanceManagementProps> = 
                     </div>
                   </div>
 
-                  {/* Submitted No-Show Reasons */}
+                  {/* Submitted Not Participated Reasons */}
                   {(selectedMeeting.buyerReasonSubmission || selectedMeeting.sellerReasonSubmission) && (
                     <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                       <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
                         <AlertTriangle className="w-5 h-5 text-yellow-600 mr-2" />
-                        Submitted No-Show Reasons
+                        Submitted Not Participated Reasons
                       </h4>
                       
                       <div className="space-y-3">
@@ -1038,7 +1038,7 @@ const MeetingAttendanceManagement: React.FC<MeetingAttendanceManagementProps> = 
           </div>
         )}
 
-        {/* Confirmation Modal for No-Shows */}
+        {/* Confirmation Modal for Not Participated */}
         {showConfirmationModal && pendingAttendanceAction && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg max-w-md w-full">
@@ -1050,12 +1050,12 @@ const MeetingAttendanceManagement: React.FC<MeetingAttendanceManagementProps> = 
                 </div>
                 
                 <h3 className="text-xl font-bold text-gray-900 text-center mb-4">
-                  Confirm No-Show Action
+                  Confirm Not Participated Action
                 </h3>
                 
                 <div className="mb-6">
                   <p className="text-gray-700 text-center mb-4">
-                    You are about to mark the following users as no-show:
+                    You are about to mark the following users as not participated:
                   </p>
                   <div className="bg-red-50 rounded-lg p-4 border border-red-200">
                     <ul className="space-y-2">
@@ -1071,8 +1071,8 @@ const MeetingAttendanceManagement: React.FC<MeetingAttendanceManagementProps> = 
                     This action will:
                   </p>
                   <ul className="text-sm text-gray-600 mt-2 space-y-1">
-                    <li>• Send email notifications to no-show users</li>
-                    <li>• Update their no-show count</li>
+                    <li>• Send email notifications to non-participant users</li>
+                    <li>• Update their missed meeting count</li>
                     <li>• Apply warning or blocking status if applicable</li>
                     <li>• Cannot be undone once confirmed</li>
                   </ul>
@@ -1101,7 +1101,7 @@ const MeetingAttendanceManagement: React.FC<MeetingAttendanceManagementProps> = 
                     ) : (
                       <>
                         <AlertCircle className="w-4 h-4" />
-                        <span>Confirm No-Show</span>
+                        <span>Confirm Not Participated</span>
                       </>
                     )}
                   </button>

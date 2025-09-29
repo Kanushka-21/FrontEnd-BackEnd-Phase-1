@@ -927,7 +927,7 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
                         <ul className="space-y-1">
                           <li>• This request will be sent directly to the seller</li>
                           <li>• You are committing to attend if the seller confirms</li>
-                          <li>• No-shows may affect your account standing</li>
+                          <li>• Missed meetings may affect your account standing</li>
                           <li>• Please ensure your availability before confirming</li>
                         </ul>
                       </div>

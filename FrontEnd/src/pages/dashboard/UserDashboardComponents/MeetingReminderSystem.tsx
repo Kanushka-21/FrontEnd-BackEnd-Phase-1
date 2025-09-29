@@ -331,9 +331,9 @@ const MeetingReminderSystem: React.FC = () => {
           message={`Account Status: ${userStats.accountStatus}`}
           description={
             userStats.accountStatus === 'WARNED' 
-              ? `You have ${userStats.noShowCount} no-show(s). Please attend your scheduled meetings to avoid account suspension.`
+              ? `You have ${userStats.noShowCount} missed meeting(s). Please attend your scheduled meetings to avoid account suspension.`
               : userStats.accountStatus === 'BLOCKED'
-              ? 'Your account has been blocked due to multiple no-shows. Please contact admin.'
+              ? 'Your account has been blocked due to multiple missed meetings. Please contact admin.'
               : ''
           }
           type={userStats.accountStatus === 'WARNED' ? 'warning' : 'error'}
@@ -378,7 +378,7 @@ const MeetingReminderSystem: React.FC = () => {
           <Col span={6}>
             <Card>
               <Statistic
-                title="No-Shows"
+                title="Missed Meetings"
                 value={userStats.noShowCount}
                 prefix={<WarningOutlined />}
                 valueStyle={{ color: userStats.noShowCount > 0 ? '#f5222d' : '#52c41a' }}
@@ -621,7 +621,7 @@ const MeetingReminderSystem: React.FC = () => {
         >
           <Alert
             message="Important"
-            description="Submitting a valid reason for your absence may help avoid no-show penalties. Please provide accurate and detailed information."
+            description="Submitting a valid reason for your absence may help avoid missed meeting penalties. Please provide accurate and detailed information."
             type="info"
             showIcon
             style={{ marginBottom: 16 }}

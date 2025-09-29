@@ -253,7 +253,7 @@ const SellerUserManual: React.FC<SellerUserManualProps> = ({ onNavigate }) => {
             { icon: <Calendar className="w-4 h-4 text-yellow-500" />, text: 'Requested: Buyer has requested a meeting' },
             { icon: <CheckCircle className="w-4 h-4 text-blue-500" />, text: 'Scheduled: Meeting time and location confirmed' },
             { icon: <Trophy className="w-4 h-4 text-green-500" />, text: 'Completed: Meeting held and sale finalized' },
-            { icon: <AlertCircle className="w-4 h-4 text-red-500" />, text: 'No-Show: Buyer failed to attend scheduled meeting' }
+            { icon: <AlertCircle className="w-4 h-4 text-red-500" />, text: 'Not Participated: Buyer failed to attend scheduled meeting' }
           ]
         }
       ]
@@ -360,7 +360,7 @@ const SellerUserManual: React.FC<SellerUserManualProps> = ({ onNavigate }) => {
           steps: [
             'Listing Rejections: Ensure all documentation is complete and accurate',
             'Low Bidding Activity: Review pricing strategy and listing quality',
-            'Meeting No-Shows: Follow up with buyers and report to admin if needed',
+            'Meeting Missed Meetings: Follow up with buyers and report to admin if needed',
             'Payment Issues: Verify buyer payment methods before finalizing sales',
             'Technical Problems: Clear browser cache or contact support'
           ]

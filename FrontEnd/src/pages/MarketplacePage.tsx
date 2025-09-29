@@ -1044,11 +1044,11 @@ const MarketplacePage: React.FC = () => {
               </li>
               <li className="flex items-start">
                 <span className="text-orange-500 font-bold mr-2">•</span>
-                <span className="text-gray-800">If unable to attend, <strong>immediately use "Report No-Show"</strong> option</span>
+                <span className="text-gray-800">If unable to attend, <strong>immediately use "Unable to Participate"</strong> option</span>
               </li>
               <li className="flex items-start">
                 <span className="text-red-600 font-bold mr-2">⚠</span>
-                <span className="text-red-700 font-semibold">No-show without reporting = Admin penalty (Warning → Account Suspension)</span>
+                <span className="text-red-700 font-semibold">Not participating without reporting = Admin penalty (Warning → Account Suspension)</span>
               </li>
               <li className="flex items-start">
                 <span className="text-blue-500 font-bold mr-2">•</span>

@@ -218,7 +218,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                   description={
                     <div>
                       <p style={{ marginBottom: '12px', fontSize: '14px' }}>
-                        <strong>Status:</strong> Your account access has been suspended due to multiple no-shows or policy violations.
+                        <strong>Status:</strong> Your account access has been suspended due to multiple missed meetings or policy violations.
                       </p>
                       <p style={{ marginBottom: '8px', fontSize: '13px', color: '#dc2626' }}>
                         🔒 <strong>Impact:</strong> You cannot book new meetings or access platform features until resolved.
