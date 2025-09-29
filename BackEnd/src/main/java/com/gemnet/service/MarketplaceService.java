@@ -32,50 +32,78 @@ public class MarketplaceService {
             // ALWAYS include sold items by default to show complete marketplace
             boolean forceIncludeSold = true;
             System.out.println("🔍 MarketplaceService - Getting marketplace listings (forcibly including sold items for complete view)");
+            System.out.println("📋 Filters - Search: " + search + ", Category: " + category + ", MinPrice: " + minPrice + ", MaxPrice: " + maxPrice + ", CertifiedOnly: " + certifiedOnly);
             
             Page<GemListing> listingsPage;
             
-            // Apply filters based on search criteria (ALWAYS include sold items)
-            if (search != null && !search.trim().isEmpty()) {
-                // Search by name - always include sold items
-                listingsPage = gemListingRepository.searchByNameInMarketplaceIncludingSold(search.trim(), pageable);
-            } else if (category != null && !category.trim().isEmpty()) {
-                // Filter by category and certification - always include sold items
-                listingsPage = gemListingRepository.findByCategoryAndCertificationInMarketplaceIncludingSold(category.trim(), certifiedOnly, pageable);
-            } else if (minPrice != null) {
-                // Filter by minimum price - always include sold items
-                listingsPage = gemListingRepository.findByMinPriceInMarketplaceIncludingSold(minPrice, pageable);
-            } else {
-                // Get all marketplace listings - always include sold items
-                listingsPage = gemListingRepository.findAllMarketplaceListings(pageable);
-            }
+            // Get base listings (all approved/active including sold)
+            listingsPage = gemListingRepository.findAllMarketplaceListings(pageable);
             
-            // Additional filtering in memory if needed
-            if (maxPrice != null || certifiedOnly) {
-                List<GemListing> filteredList = listingsPage.getContent().stream()
-                    .filter(listing -> {
-                        boolean priceMatch = maxPrice == null || listing.getPrice().doubleValue() <= maxPrice;
-                        boolean certMatch = !certifiedOnly || listing.getIsCertified();
-                        return priceMatch && certMatch;
-                    })
-                    .toList();
-                
-                // For simplicity, we'll return the filtered list as part of the response
-                // In a real implementation, you might want to create a custom query
-            }
+            // Apply filters in memory (more flexible for complex filtering)
+            List<GemListing> filteredList = listingsPage.getContent().stream()
+                .filter(listing -> {
+                    // Search filter - check multiple fields
+                    boolean searchMatch = true;
+                    if (search != null && !search.trim().isEmpty()) {
+                        String searchLower = search.toLowerCase();
+                        searchMatch = listing.getGemName().toLowerCase().contains(searchLower) ||
+                                    listing.getSpecies().toLowerCase().contains(searchLower) ||
+                                    listing.getVariety().toLowerCase().contains(searchLower) ||
+                                    listing.getColor().toLowerCase().contains(searchLower) ||
+                                    (listing.getCategory() != null && listing.getCategory().toLowerCase().contains(searchLower));
+                    }
+                    
+                    // Category filter - check multiple category-related fields
+                    boolean categoryMatch = true;
+                    if (category != null && !category.trim().isEmpty()) {
+                        String[] categories = category.split(",");
+                        categoryMatch = false; // Start with false, then OR the conditions
+                        
+                        for (String cat : categories) {
+                            String catLower = cat.trim().toLowerCase();
+                            if (listing.getSpecies().toLowerCase().contains(catLower) ||
+                                listing.getVariety().toLowerCase().contains(catLower) ||
+                                listing.getColor().toLowerCase().contains(catLower) ||
+                                (listing.getCategory() != null && listing.getCategory().toLowerCase().contains(catLower))) {
+                                categoryMatch = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // Price filters
+                    boolean minPriceMatch = minPrice == null || listing.getPrice().doubleValue() >= minPrice;
+                    boolean maxPriceMatch = maxPrice == null || listing.getPrice().doubleValue() <= maxPrice;
+                    
+                    // Certification filter
+                    boolean certMatch = !certifiedOnly || listing.getIsCertified();
+                    
+                    boolean finalMatch = searchMatch && categoryMatch && minPriceMatch && maxPriceMatch && certMatch;
+                    
+                    if (!finalMatch) {
+                        System.out.println("🚫 Filtered out: " + listing.getGemName() + " - Search:" + searchMatch + ", Cat:" + categoryMatch + ", MinP:" + minPriceMatch + ", MaxP:" + maxPriceMatch + ", Cert:" + certMatch);
+                    }
+                    
+                    return finalMatch;
+                })
+                .toList();
             
-            // Prepare response data
+            System.out.println("✅ Filtering results: " + listingsPage.getContent().size() + " → " + filteredList.size() + " listings after filters");
+            
+            // Prepare response data using filtered results
             Map<String, Object> responseData = new HashMap<>();
-            responseData.put("listings", listingsPage.getContent());
+            responseData.put("listings", filteredList);
             responseData.put("currentPage", listingsPage.getNumber());
             responseData.put("totalPages", listingsPage.getTotalPages());
-            responseData.put("totalElements", listingsPage.getTotalElements());
+            responseData.put("totalElements", (long) filteredList.size()); // Use filtered count
             responseData.put("pageSize", listingsPage.getSize());
             responseData.put("hasNext", listingsPage.hasNext());
             responseData.put("hasPrevious", listingsPage.hasPrevious());
+            responseData.put("actualFilteredCount", filteredList.size()); // Add debug info
+            responseData.put("originalTotalCount", listingsPage.getTotalElements()); // Add debug info
             
-            System.out.println("✅ Retrieved " + listingsPage.getNumberOfElements() + 
-                             " marketplace listings out of " + listingsPage.getTotalElements() + " total");
+            System.out.println("✅ Retrieved " + filteredList.size() + 
+                             " filtered marketplace listings out of " + listingsPage.getTotalElements() + " total");
             
             return ApiResponse.success("Marketplace listings retrieved successfully", responseData);
             

@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Tester</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { display: flex; gap: 15px; }
+        .left-panel, .right-panel { flex: 1; }
+        table { width: 100%; border-collapse: collapse; }
+        td { padding: 5px; border: 1px solid #ccc; }
+        input, select, textarea { width: 95%; padding: 5px; }
+        textarea { height: 80px; }
+        button { padding: 8px 15px; margin: 5px; background: #007bff; color: white; border: none; cursor: pointer; }
+        .response { border: 1px solid #ccc; padding: 10px; font-family: monospace; white-space: pre-wrap; height: 400px; overflow-y: auto; }
+        .status { padding: 5px; margin: 5px 0; }
+        .success { background: #d4edda; }
+        .error { background: #f8d7da; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="left-panel">
+            <h2>GemNet Professional API Tester</h2>
+            
+            <table>
+        <tr>
+            <td width="120"><strong>Base URL:</strong></td>
+            <td><input type="text" id="baseUrl" value="http://localhost:9092"></td>
+        </tr>
+        <tr>
+            <td><strong>Method:</strong></td>
+            <td>
+                <select id="method">
+                    <option value="GET">GET</option>
+                    <option value="POST">POST</option>
+                    <option value="PUT">PUT</option>
+                    <option value="DELETE">DELETE</option>
+                </select>
+            </td>
+        </tr>
+        <tr>
+            <td><strong>Endpoint:</strong></td>
+            <td>
+                <select id="endpoint">
+                    <optgroup label="Public APIs">
+                        <option value="/api/public/homepage-stats">GET - Homepage Stats</option>
+                        <option value="/health">GET - Health Check</option>
+                        <option value="/">GET - Root</option>
+                    </optgroup>
+                    
+                    <optgroup label="Authentication">
+                        <option value="/api/auth/register">POST - Register User</option>
+                        <option value="/api/auth/login">POST - Login User</option>
+                        <option value="/api/auth/verify-face/{userId}">POST - Verify Face</option>
+                        <option value="/api/auth/verify-nic/{userId}">POST - Verify NIC</option>
+                        <option value="/api/auth/user-status/{userId}">GET - User Status</option>
+                        <option value="/api/auth/health">GET - Auth Health</option>
+                        <option value="/api/auth/admin/register">POST - Admin Register</option>
+                        <option value="/api/auth/admin/login">POST - Admin Login</option>
+                    </optgroup>
+
+                    <optgroup label="User Management">
+                        <option value="/api/users/profile/{userId}">GET - User Profile</option>
+                        <option value="/api/users/profile/{userId}">PUT - Update Profile</option>
+                        <option value="/api/users/profile/current">GET - Current Profile</option>
+                        <option value="/api/users/image/{imageType}/{userId}">GET - User Image</option>
+                        <option value="/api/users/meetings">POST - Create Meeting (User)</option>
+                        <option value="/api/users/meetings/user/{userId}">GET - User Meetings (User)</option>
+                        <option value="/api/users/meetings/{meetingId}/confirm">PUT - Confirm Meeting (User)</option>
+                    </optgroup>
+
+                    <optgroup label="User Statistics">
+                        <option value="/api/user-stats/seller/{userId}">GET - Seller Stats</option>
+                        <option value="/api/user-stats/buyer/{userId}">GET - Buyer Stats</option>
+                    </optgroup>
+
+                    <optgroup label="Marketplace">
+                        <option value="/api/marketplace/listings">GET - All Listings</option>
+                        <option value="/api/marketplace/listings/{listingId}">GET - Listing Details</option>
+                        <option value="/api/marketplace/search">GET - Search Listings</option>
+                        <option value="/api/marketplace/stats">GET - Marketplace Stats</option>
+                        <option value="/api/marketplace/listings/{listingId}/debug">GET - Debug Listing</option>
+                        <option value="/api/marketplace/update-prices">POST - Update Prices</option>
+                        <option value="/api/marketplace/update-listing/{listingId}">POST - Update Listing</option>
+                        <option value="/api/marketplace/sri-lankan-stats">GET - Sri Lankan Stats</option>
+                        <option value="/api/marketplace/health">GET - Marketplace Health</option>
+                    </optgroup>
+
+                    <optgroup label="Gem Certificate Management">
+                        <option value="/api/gemsData/extract-certificate-data">POST - Extract Certificate</option>
+                        <option value="/api/gemsData/sample-csl-data">GET - Sample CSL Data</option>
+                        <option value="/api/gemsData/validate-csl-certificate">POST - Validate Certificate</option>
+                        <option value="/api/gemsData/certificate-ocr-status">GET - OCR Status</option>
+                        <option value="/api/gemsData/get-all-listings">GET - All Gem Listings</option>
+                        <option value="/api/gemsData/get-user-listings/{userId}">GET - User Gem Listings</option>
+                        <option value="/api/gemsData/list-gem-data">POST - List Gem Data</option>
+                        <option value="/api/gemsData/delete-listing/{listingId}">DELETE - Delete Listing</option>
+                        <option value="/api/gemsData/update-listing/{listingId}">PUT - Update Gem Listing</option>
+                        <option value="/api/gemsData/certificate-health">GET - Certificate Health</option>
+                        <option value="/api/gemsData/test-certificate-extraction">POST - Test Certificate Extraction</option>
+                    </optgroup>
+
+                    <optgroup label="Meeting Management">
+                        <option value="/api/meetings/create">POST - Create Meeting</option>
+                        <option value="/api/meetings/user/{userId}">GET - User Meetings</option>
+                        <option value="/api/meetings/{meetingId}">GET - Meeting Details</option>
+                        <option value="/api/meetings/{meetingId}/confirm">PUT - Confirm Meeting</option>
+                        <option value="/api/meetings/{meetingId}/reschedule">PUT - Reschedule Meeting</option>
+                        <option value="/api/meetings/{meetingId}/complete">PUT - Complete Meeting</option>
+                        <option value="/api/meetings/{meetingId}/cancel">PUT - Cancel Meeting</option>
+                        <option value="/api/meetings/admin/all">GET - All Meetings (Admin)</option>
+                        <option value="/api/meetings/admin/summary">GET - Meeting Summary</option>
+                        <option value="/api/meetings/upcoming">GET - Upcoming Meetings</option>
+                        <option value="/api/meetings/status/{status}">GET - Meetings by Status</option>
+                        <option value="/api/meetings/admin/{meetingId}/complete">PUT - Admin Complete Meeting</option>
+                        <option value="/api/meetings/admin/{meetingId}/mark-attendance">POST - Mark Attendance</option>
+                        <option value="/api/meetings/{meetingId}/submit-absence-reason">POST - Submit Absence Reason</option>
+                        <option value="/api/meetings/admin/{meetingId}/review-absence-reason">POST - Review Absence Reason</option>
+                        <option value="/api/meetings/user/{userId}/no-show-stats">GET - User No-Show Stats</option>
+                        <option value="/api/meetings/admin/search/{displayId}">GET - Search by Display ID</option>
+                        <option value="/api/meetings/{meetingId}/download-info">GET - Download Meeting Info</option>
+                        <option value="/api/meetings/{meetingId}/delete">DELETE - Delete Meeting</option>
+                        <option value="/api/meetings/admin/{meetingId}/update-commission">PUT - Update Commission</option>
+                        <option value="/api/meetings/admin/delete/{meetingId}">DELETE - Admin Delete Meeting</option>
+                    </optgroup>
+
+                    <optgroup label="Price Prediction">
+                        <option value="/api/predictions/predict">POST - Predict Price</option>
+                        <option value="/api/predictions/predict/{listingId}">GET - Get Prediction</option>
+                        <option value="/api/predictions/predict/bulk">POST - Bulk Prediction</option>
+                        <option value="/api/predictions/accuracy-analysis">GET - Accuracy Analysis</option>
+                        <option value="/api/predictions/health">GET - Prediction Health</option>
+                        <option value="/api/predictions/sri-lankan-test">POST - Sri Lankan Test</option>
+                    </optgroup>
+
+                    <optgroup label="Notifications">
+                        <option value="/api/notifications/{userId}">GET - User Notifications</option>
+                        <option value="/api/notifications/{userId}/unread-count">GET - Unread Count</option>
+                        <option value="/api/notifications/{notificationId}/mark-read">PUT - Mark Read</option>
+                        <option value="/api/notifications/{userId}/mark-all-read">PUT - Mark All Read</option>
+                        <option value="/api/notifications/{notificationId}">DELETE - Delete Notification</option>
+                    </optgroup>
+
+                    <optgroup label="Feedback">
+                        <option value="/api/feedbacks">POST - Submit Feedback</option>
+                        <option value="/api/feedbacks">GET - All Feedback</option>
+                        <option value="/api/feedbacks/user/{userId}">GET - User Feedback</option>
+                        <option value="/api/feedbacks/recipients">GET - Feedback Recipients</option>
+                        <option value="/api/feedbacks/user-info">GET - User Info</option>
+                    </optgroup>
+
+                    <optgroup label="No-Show Management">
+                        <option value="/api/no-show/mark-attendance">POST - Mark Attendance</option>
+                        <option value="/api/no-show/submit-reason">POST - Submit Reason</option>
+                    </optgroup>
+
+                    <optgroup label="Bidding System">
+                        <option value="/api/bidding/place-bid">POST - Place Bid</option>
+                        <option value="/api/bidding/listing/{listingId}/bids">GET - Listing Bids</option>
+                        <option value="/api/bidding/user/{userId}/bids">GET - User Bids</option>
+                        <option value="/api/bidding/bid/{bidId}/accept">POST - Accept Bid</option>
+                        <option value="/api/bidding/bid/{bidId}/reject">POST - Reject Bid</option>
+                        <option value="/api/bidding/listing/{listingId}/end-auction">POST - End Auction</option>
+                        <option value="/api/bidding/listing/{listingId}/extend-auction">POST - Extend Auction</option>
+                        <option value="/api/bidding/user/{userId}/notifications">GET - Bid Notifications</option>
+                        <option value="/api/bidding/user/{userId}/purchases">GET - User Purchases</option>
+                        <option value="/api/bidding/admin/stats">GET - Bidding Stats</option>
+                    </optgroup>
+
+                    <optgroup label="Advertisements">
+                        <option value="/api/advertisements/create">POST - Create Ad</option>
+                        <option value="/api/advertisements">GET - All Ads</option>
+                        <option value="/api/advertisements/{adId}">GET - Ad Details</option>
+                        <option value="/api/advertisements/user/{userId}">GET - User Ads</option>
+                        <option value="/api/advertisements/{adId}">PUT - Update Ad</option>
+                        <option value="/api/advertisements/{adId}">DELETE - Delete Ad</option>
+                        <option value="/api/advertisements/admin/pending">GET - Pending Ads</option>
+                        <option value="/api/advertisements/admin/{adId}/approve">POST - Approve Ad</option>
+                        <option value="/api/advertisements/admin/{adId}/reject">POST - Reject Ad</option>
+                    </optgroup>
+
+                    <optgroup label="Admin User Management">
+                        <option value="/api/admin/users">GET - All Users</option>
+                        <option value="/api/admin/users/{userId}">GET - User Details</option>
+                        <option value="/api/admin/users/{userId}/verify">PUT - Verify User</option>
+                        <option value="/api/admin/users/{userId}/block">PUT - Block User</option>
+                        <option value="/api/admin/users/{userId}/unblock">PUT - Unblock User</option>
+                        <option value="/api/admin/users/stats">GET - Admin User Stats</option>
+                    </optgroup>
+
+                    <optgroup label="System Health">
+                        <option value="/api/health">GET - System Health</option>
+                        <option value="/api/public/diagnostic">GET - System Diagnostic</option>
+                        <option value="/api/system/database-health">GET - Database Health</option>
+                        <option value="/api/email-test/send">POST - Test Email</option>
+                    </optgroup>
+
+                    <optgroup label="File Management">
+                        <option value="/uploads/gems/{filename}">GET - Gem Image</option>
+                        <option value="/uploads/face-images/{filename}">GET - Face Image</option>
+                        <option value="/uploads/nic-images/{filename}">GET - NIC Image</option>
+                        <option value="/uploads/gemstone-certificates/{filename}">GET - Certificate</option>
+                        <option value="/uploads/advertisement-images/{filename}">GET - Ad Image</option>
+                        <option value="/uploads/advertisement-videos/{filename}">GET - Ad Video</option>
+                    </optgroup>
+
+                    <optgroup label="Testing APIs">
+                        <option value="/api/test/verify-nic-full">POST - Full NIC Test</option>
+                        <option value="/api/test/extract-nic-number">POST - Extract NIC Number</option>
+                        <option value="/api/test/validate-face">POST - Face Validation Test</option>
+                        <option value="/api/test/service-status">GET - Service Status</option>
+                        <option value="/api/test/meetings">POST - Test Meeting</option>
+                        <option value="/api/test/meetings/user/{userId}">GET - Test User Meetings</option>
+                    </optgroup>
+                </select>
+            </td>
+        </tr>
+        <tr>
+            <td><strong>Parameters:</strong></td>
+            <td><input type="text" id="params" placeholder="userId=66f8d4e12a3b5c001f9e7d8a, listingId=66f9a2c15d7e8f002e1a3b4c, meetingId=66fa5e7f8c9d1a003f2b4d5e"></td>
+        </tr>
+        <tr>
+            <td><strong>Query:</strong></td>
+            <td><input type="text" id="query" placeholder="page=0&size=12&search=sapphire&category=blue&minPrice=50000&maxPrice=500000&certifiedOnly=true"></td>
+        </tr>
+        <tr>
+            <td><strong>Auth Token:</strong></td>
+            <td><input type="text" id="token" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0QGV4YW1wbGUuY29tIiwiaWF0IjoxNjk0NTIwMDAwLCJleHAiOjE2OTQ2MDY0MDB9..."></td>
+        </tr>
+        <tr>
+            <td><strong>Request Body:</strong></td>
+            <td><textarea id="body" rows="8" placeholder="Select an endpoint to see example JSON data format"></textarea></td>
+        </tr>
+    </table>
+
+    <button onclick="sendRequest()">Send Request</button>
+    <button onclick="clearResponse()">Clear</button>
+    <button onclick="loadExample()">Load Login Example</button>
+        </div>
+        
+        <div class="right-panel">
+            <h3>Response:</h3>
+            <div id="status"></div>
+            <div id="response" class="response">Click "Send Request" to see the API response here...</div>
+        </div>
+
+    <script>
+        function sendRequest() {
+            const baseUrl = document.getElementById('baseUrl').value.trim();
+            const method = document.getElementById('method').value;
+            const endpoint = document.getElementById('endpoint').value;
+            const params = document.getElementById('params').value.trim();
+            const query = document.getElementById('query').value.trim();
+            const token = document.getElementById('token').value.trim();
+            const body = document.getElementById('body').value.trim();
+
+            // Build URL
+            let url = baseUrl + endpoint;
+            
+            // Replace parameters like {userId}
+            if (params) {
+                const paramPairs = params.split(',');
+                paramPairs.forEach(pair => {
+                    const [key, value] = pair.split('=');
+                    if (key && value) {
+                        url = url.replace(`{${key.trim()}}`, value.trim());
+                    }
+                });
+            }
+            
+            // Add query parameters
+            if (query) {
+                url += (url.includes('?') ? '&' : '?') + query;
+            }
+
+            // Setup request
+            const options = {
+                method: method,
+                headers: { 'Content-Type': 'application/json' }
+            };
+
+            if (token) {
+                options.headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            if ((method === 'POST' || method === 'PUT') && body) {
+                options.body = body;
+            }
+
+            // Show loading
+            document.getElementById('status').innerHTML = '<div class="status">Sending request...</div>';
+            document.getElementById('response').textContent = 'Loading...';
+
+            // Send request
+            fetch(url, options)
+                .then(response => {
+                    const status = response.status;
+                    const statusClass = status >= 200 && status < 300 ? 'success' : 'error';
+                    
+                    document.getElementById('status').innerHTML = 
+                        `<div class="status ${statusClass}">Status: ${status} - ${method} ${url}</div>`;
+                    
+                    return response.text().then(text => {
+                        try {
+                            return JSON.parse(text);
+                        } catch {
+                            return text;
+                        }
+                    });
+                })
+                .then(data => {
+                    const responseDiv = document.getElementById('response');
+                    responseDiv.textContent = typeof data === 'object' ? JSON.stringify(data, null, 2) : data;
+                })
+                .catch(error => {
+                    document.getElementById('status').innerHTML = 
+                        '<div class="status error">Error: ' + error.message + '</div>';
+                    document.getElementById('response').textContent = 'Network error or server not running';
+                });
+        }
+
+        function clearResponse() {
+            document.getElementById('status').innerHTML = '';
+            document.getElementById('response').textContent = 'Click "Send Request" to see the API response here...';
+        }
+
+        function loadExample() {
+            document.getElementById('method').value = 'POST';
+            document.getElementById('endpoint').value = '/api/auth/login';
+            document.getElementById('body').value = JSON.stringify({
+                "email": "john.doe@gemnet.com",
+                "password": "SecurePass123!"
+            }, null, 2);
+        }
+
+        // Comprehensive examples for different endpoints
+        const endpointExamples = {
+            // Authentication Examples
+            '/api/auth/register': {
+                method: 'POST',
+                body: {
+                    "email": "newuser@gemnet.com",
+                    "password": "SecurePass123!",
+                    "firstName": "John",
+                    "lastName": "Smith",
+                    "phoneNumber": "0771234567",
+                    "address": "123 Gem Street, Ratnapura, Sri Lanka",
+                    "nicNumber": "941234567V",
+                    "userType": "BUYER",
+                    "dateOfBirth": "1994-05-15"
+                }
+            },
+            '/api/auth/login': {
+                method: 'POST',
+                body: {
+                    "email": "john.doe@gemnet.com",
+                    "password": "SecurePass123!"
+                }
+            },
+            '/api/auth/admin/register': {
+                method: 'POST',
+                body: {
+                    "username": "admin.gemnet",
+                    "email": "admin@gemnet.com",
+                    "password": "AdminPass123!",
+                    "firstName": "Admin",
+                    "lastName": "User",
+                    "department": "Operations",
+                    "employeeId": "EMP001",
+                    "contactNumber": "0112345678"
+                }
+            },
+            '/api/auth/admin/login': {
+                method: 'POST',
+                body: {
+                    "username": "admin.gemnet",
+                    "password": "AdminPass123!"
+                }
+            },
+
+            // Meeting Management Examples
+            '/api/meetings/create': {
+                method: 'POST',
+                body: {
+                    "purchaseId": "66f9a2c15d7e8f002e1a3b4c",
+                    "buyerId": "66f8d4e12a3b5c001f9e7d8a",
+                    "proposedDateTime": "2025-10-15T14:30:00",
+                    "location": "Gem Palace, Ratnapura",
+                    "meetingType": "IN_PERSON",
+                    "buyerNotes": "Interested in viewing the blue sapphire collection"
+                }
+            },
+            '/api/meetings/{meetingId}/reschedule': {
+                method: 'PUT',
+                body: {
+                    "userId": "66f8d4e12a3b5c001f9e7d8a",
+                    "newDateTime": "2025-10-16T10:00:00",
+                    "notes": "Changed due to travel schedule conflict"
+                }
+            },
+            '/api/meetings/{meetingId}/confirm': {
+                method: 'PUT',
+                body: {
+                    "sellerId": "66f8d4e12a3b5c001f9e7d9b",
+                    "sellerNotes": "Looking forward to meeting. Gems will be ready for inspection."
+                }
+            },
+
+            // Price Prediction Examples
+            '/api/predictions/predict': {
+                method: 'POST',
+                body: {
+                    "species": "Corundum",
+                    "variety": "Blue Sapphire",
+                    "carat": 2.45,
+                    "color": "Royal Blue",
+                    "clarity": "VVS",
+                    "cut": "Oval",
+                    "origin": "Sri Lanka",
+                    "treatment": "Heated",
+                    "certification": "GRS",
+                    "fluorescence": "None"
+                }
+            },
+            '/api/predictions/predict/bulk': {
+                method: 'POST',
+                body: [
+                    "66f9a2c15d7e8f002e1a3b4c",
+                    "66f9a2c15d7e8f002e1a3b4d",
+                    "66f9a2c15d7e8f002e1a3b4e"
+                ]
+            },
+
+            // Gem Data Management Examples
+            '/api/gemsData/list-gem-data': {
+                method: 'POST',
+                body: {
+                    "userId": "66f8d4e12a3b5c001f9e7d8a",
+                    "userName": "John Smith",
+                    "userRole": "SELLER",
+                    "gemName": "Ceylon Blue Sapphire",
+                    "variety": "Blue Sapphire",
+                    "species": "Corundum",
+                    "weight": 3.25,
+                    "color": "Cornflower Blue",
+                    "clarity": "VVS1",
+                    "cut": "Cushion",
+                    "origin": "Ratnapura, Sri Lanka",
+                    "price": 125000,
+                    "currency": "LKR",
+                    "description": "Natural unheated Ceylon blue sapphire with excellent color saturation",
+                    "isCertified": true,
+                    "certificateNumber": "GRS2024-123456",
+                    "treatment": "No Heat",
+                    "isActive": true,
+                    "biddingActive": true,
+                    "biddingStartTime": "2025-10-01T09:00:00",
+                    "biddingEndTime": "2025-10-15T18:00:00"
+                }
+            },
+
+            // Feedback Examples
+            '/api/feedbacks': {
+                method: 'POST',
+                body: {
+                    "toUserId": "66f8d4e12a3b5c001f9e7d9b",
+                    "name": "John Smith",
+                    "title": "Excellent Gem Quality",
+                    "message": "Outstanding service and gem quality. The sapphire was exactly as described and the certification was authentic. Highly recommended seller!",
+                    "rating": 5,
+                    "transactionId": "TXN-2025-001234"
+                }
+            },
+
+            // Bidding Examples
+            '/api/bidding/place-bid': {
+                method: 'POST',
+                body: {
+                    "listingId": "66f9a2c15d7e8f002e1a3b4c",
+                    "bidderId": "66f8d4e12a3b5c001f9e7d8a",
+                    "bidAmount": 95000,
+                    "currency": "LKR",
+                    "notes": "Interested in this beautiful sapphire for my collection"
+                }
+            },
+            '/api/bidding/bid/{bidId}/accept': {
+                method: 'POST',
+                body: {
+                    "sellerId": "66f8d4e12a3b5c001f9e7d9b",
+                    "sellerNotes": "Bid accepted. Please arrange payment and meeting."
+                }
+            },
+
+            // Advertisement Examples
+            '/api/advertisements/create': {
+                method: 'POST',
+                body: {
+                    "userId": "66f8d4e12a3b5c001f9e7d8a",
+                    "title": "Premium Ceylon Sapphires Available",
+                    "description": "Authentic Ceylon sapphires from Ratnapura mines. Various sizes and colors available. GRS certified.",
+                    "category": "GEMSTONE",
+                    "contactInfo": {
+                        "phone": "0771234567",
+                        "email": "gems@example.com"
+                    },
+                    "duration": 30,
+                    "targetAudience": "COLLECTORS"
+                }
+            },
+
+            // User Profile Examples
+            '/api/users/profile/{userId}': {
+                method: 'PUT',
+                body: {
+                    "firstName": "John",
+                    "lastName": "Smith",
+                    "phoneNumber": "0771234567",
+                    "address": "456 New Address, Colombo 03, Sri Lanka",
+                    "bio": "Gemstone collector with 15 years experience. Specializing in Ceylon sapphires and rubies."
+                }
+            },
+
+            // No-Show Management Examples
+            '/api/no-show/mark-attendance': {
+                method: 'POST',
+                body: {
+                    "meetingId": "66fa5e7f8c9d1a003f2b4d5e",
+                    "userId": "66f8d4e12a3b5c001f9e7d8a",
+                    "userType": "BUYER",
+                    "attended": false,
+                    "reason": "Traffic emergency prevented me from attending the meeting on time"
+                }
+            },
+            '/api/no-show/submit-reason': {
+                method: 'POST',
+                body: {
+                    "meetingId": "66fa5e7f8c9d1a003f2b4d5e",
+                    "userId": "66f8d4e12a3b5c001f9e7d8a",
+                    "userType": "SELLER",
+                    "reason": "Family emergency required immediate attention"
+                }
+            },
+
+            // Admin Examples
+            '/api/admin/users/{userId}/verify': {
+                method: 'PUT',
+                body: {
+                    "verificationStatus": "VERIFIED",
+                    "adminNotes": "All documents verified successfully. User approved for trading."
+                }
+            },
+            '/api/meetings/admin/{meetingId}/mark-attendance': {
+                method: 'POST',
+                body: {
+                    "adminId": "66f8d4e12a3b5c001f9e7d9c",
+                    "buyerAttended": true,
+                    "sellerAttended": false,
+                    "adminNotes": "Buyer attended but seller did not show up. Seller cited traffic issues."
+                }
+            }
+        };
+
+        // Auto-update method and body when endpoint changes
+        document.getElementById('endpoint').addEventListener('change', function() {
+            const endpoint = this.value;
+            const bodyTextarea = document.getElementById('body');
+            
+            // Update HTTP method
+            if (endpoint.includes('POST') || endpoint.includes('PUT')) {
+                if (endpoint.startsWith('POST:')) {
+                    document.getElementById('method').value = 'POST';
+                } else if (endpoint.startsWith('PUT:')) {
+                    document.getElementById('method').value = 'PUT';
+                } else if (endpoint.startsWith('DELETE:')) {
+                    document.getElementById('method').value = 'DELETE';
+                } else {
+                    document.getElementById('method').value = 'GET';
+                }
+            } else {
+                document.getElementById('method').value = 'GET';
+            }
+            
+            // Update request body with example
+            const cleanEndpoint = endpoint.replace(/^(GET|POST|PUT|DELETE):\s*/, '');
+            const example = endpointExamples[cleanEndpoint];
+            
+            if (example && example.body) {
+                bodyTextarea.value = JSON.stringify(example.body, null, 2);
+                bodyTextarea.placeholder = 'Example data loaded for this endpoint';
+            } else {
+                bodyTextarea.value = '';
+                // Set appropriate placeholder based on endpoint type
+                if (cleanEndpoint.includes('/auth/')) {
+                    bodyTextarea.placeholder = 'Authentication data: email, password, user details';
+                } else if (cleanEndpoint.includes('/meetings/')) {
+                    bodyTextarea.placeholder = 'Meeting data: buyerId, sellerId, dateTime, location';
+                } else if (cleanEndpoint.includes('/predictions/')) {
+                    bodyTextarea.placeholder = 'Gem data: species, variety, carat, color, clarity, origin';
+                } else if (cleanEndpoint.includes('/feedbacks/')) {
+                    bodyTextarea.placeholder = 'Feedback data: toUserId, rating, message, title';
+                } else if (cleanEndpoint.includes('/bidding/')) {
+                    bodyTextarea.placeholder = 'Bid data: listingId, bidAmount, bidderId';
+                } else if (cleanEndpoint.includes('/gemsData/')) {
+                    bodyTextarea.placeholder = 'Gem listing data: gemName, variety, weight, price, description';
+                } else {
+                    bodyTextarea.placeholder = 'JSON data for POST/PUT requests';
+                }
+            }
+        });
+    </script>
+    </div>
+</body>
+</html>
