@@ -749,7 +749,7 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
                       listingStatus={gemstone.listingStatus}
                       className="text-center"
                       showIcon={true}
-                      showTester={false}  // Disable testing tools for demonstration
+                      showTester={true}  
                       biddingEndTime={countdownData.biddingEndTime}
                       onCountdownUpdate={onCountdownUpdated} // Pass the callback to notify marketplace
                       onCountdownComplete={() => {
