@@ -21,7 +21,6 @@ export const advertisementService = {
   getApprovedAdvertisements: async (): Promise<Advertisement[]> => {
     try {
       const response = await axios.get(`${API_BASE_URL}?approved=approved`);
-      console.log('Advertisement API response:', response.data);
       
       // Check if response.data is an array (direct array response) or has a success field
       let advertisements: any[] = [];

@@ -5,6 +5,40 @@ import { LoginRequest, AuthenticationResponse } from '@/types';
 import { AdminLoginRequest } from '@/Admin/types/AdminTypes';
 import { toast } from 'react-hot-toast';
 import { Alert, Modal } from 'antd';
+import { 
+  validateAuthentication, 
+  clearAllAuthData, 
+  initSecurityMonitoring 
+} from '@/utils/authSecurity';
+
+// SECURITY: Helper functions for authentication validation
+const isValidAuthToken = (token: string): boolean => {
+  if (!token || typeof token !== 'string') return false;
+  // Basic JWT format validation (3 parts separated by dots)
+  const parts = token.split('.');
+  return parts.length === 3 && parts.every(part => part.length > 0);
+};
+
+const isValidUserData = (userData: any): boolean => {
+  if (!userData || typeof userData !== 'object') return false;
+  // Validate required user data structure
+  const requiredFields = ['userId', 'email', 'role'];
+  return requiredFields.every(field => userData[field]);
+};
+
+const clearSecureStorage = (): void => {
+  // Clear all authentication-related storage
+  const authKeys = ['authToken', 'userData', 'registrationProgress', 'user', 'token', 'userId', 'userRole'];
+  authKeys.forEach(key => {
+    localStorage.removeItem(key);
+    sessionStorage.removeItem(key);
+  });
+  
+  // Clear any cookies if they exist
+  document.cookie.split(";").forEach(function(c) { 
+    document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+  });
+};
 
 // Define the context type
 interface AuthContextType {
@@ -40,36 +74,58 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState<boolean>(true);
   const navigate = useNavigate();
   const location = useLocation();
-  // Check if user is authenticated on mount
+  // Check if user is authenticated on mount with enhanced security
   useEffect(() => {
-    const token = localStorage.getItem('authToken');
-    const storedUser = localStorage.getItem('userData');
-    
-    console.log('🔍 AuthContext: Checking stored authentication data...');
-    console.log('🔍 Token exists:', !!token);
-    console.log('🔍 User data exists:', !!storedUser);
-    
-    if (token && storedUser) {
-      try {
-        const userData = JSON.parse(storedUser);
-        console.log('🔍 Parsed user data:', userData);
-        
-        // Add token back to userData for complete AuthenticationResponse
-        const completeUserData = { ...userData, token };
-        setUser(completeUserData);
-        setIsAuthenticated(true);
-        
-        console.log('✅ Authentication restored for user:', userData.role || 'unknown role');
-      } catch (error) {
-        console.error('❌ Error parsing stored user data:', error);
-        // Clear invalid data
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('userData');
+    const initializeAuth = async () => {
+      console.log('🔍 AuthContext: Initializing secure authentication...');
+      
+      // Initialize security monitoring
+      initSecurityMonitoring();
+      
+      const token = localStorage.getItem('authToken');
+      const storedUser = localStorage.getItem('userData');
+      
+      // Authentication data checked securely
+      
+      if (token && storedUser) {
+        try {
+          // Enhanced security validation
+          const isValidAuth = await validateAuthentication();
+          
+          if (!isValidAuth) {
+            console.warn('⚠️ Security validation failed, clearing all data');
+            clearAllAuthData();
+            setLoading(false);
+            return;
+          }
+          
+          const userData = JSON.parse(storedUser);
+          
+          // Additional client-side validation
+          if (!isValidAuthToken(token) || !isValidUserData(userData)) {
+            console.warn('⚠️ Client-side validation failed, clearing storage');
+            clearAllAuthData();
+            setLoading(false);
+            return;
+          }
+          
+          // Add token back to userData for complete AuthenticationResponse
+          const completeUserData = { ...userData, token };
+          setUser(completeUserData);
+          setIsAuthenticated(true);
+          
+          console.log('✅ Authentication restored successfully');
+        } catch (error) {
+          console.error('❌ Error during secure authentication check:', error);
+          clearAllAuthData();
+        }
+      } else {
+        console.log('ℹ️ Authentication initialization complete');
       }
-    } else {
-      console.log('ℹ️ No stored authentication data found');
-    }
-    setLoading(false);
+      setLoading(false);
+    };
+    
+    initializeAuth();
   }, []);
 
   // Login function
@@ -94,8 +150,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Role-based routing
         const userRole = response.data.role?.toLowerCase() || 'buyer';
 
-        console.log("user role",userRole)
-        console.log('🔄 Redirecting user based on role:', userRole);
+        console.log('🔄 Redirecting user to dashboard');
         
         if (userRole === 'admin') {
           console.log('👑 Redirecting to admin dashboard');
@@ -145,8 +200,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                                 textDecoration: 'none',
                                 marginLeft: '8px'
                               }}
-                              onMouseOver={(e) => e.target.style.textDecoration = 'underline'}
-                              onMouseOut={(e) => e.target.style.textDecoration = 'none'}
+                              onMouseOver={(e) => (e.target as HTMLElement).style.textDecoration = 'underline'}
+                              onMouseOut={(e) => (e.target as HTMLElement).style.textDecoration = 'none'}
                             >
                               gemnetsystem@gmail.com
                             </a>
@@ -262,15 +317,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const adminLogin = async (credentials: AdminLoginRequest): Promise<boolean> => {
     try {
       setLoading(true);
-      console.log('🔑 Admin login attempt for username:', credentials.username);
+      console.log('🔑 Admin login attempt initiated');
       const response = await authAPI.adminLogin(credentials);
       
       if (response.success && response.data) {
         console.log('✅ Admin login successful');
         
-        // Store admin token and data
-        localStorage.setItem('authToken', response.data.token);
-        localStorage.setItem('userData', JSON.stringify({
+        // Securely store admin token and data
+        const adminData = {
           userId: response.data.userId,
           username: response.data.username,
           email: response.data.email,
@@ -281,7 +335,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           employeeId: response.data.employeeId,
           accessLevel: response.data.accessLevel,
           isActive: response.data.isActive
-        }));
+        };
+        
+        localStorage.setItem('authToken', response.data.token);
+        localStorage.setItem('userData', JSON.stringify(adminData));
         
         // Convert admin response to AuthenticationResponse format for compatibility
         const adminUserData: AuthenticationResponse = {
@@ -325,14 +382,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const currentPath = location.pathname;
     
     console.log('🚪 Logout initiated...');
-    console.log('🔍 User role:', user?.role);
     console.log('🔍 Current path:', currentPath);
     console.log('🔍 Is admin user:', isAdminUser);
     
-    // Clear stored data
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('userData');
-    localStorage.removeItem('registrationProgress');
+    // SECURITY: Clear all sensitive browser data
+    clearSecureStorage();
+    
+    // Securely clear all authentication data
+    clearAllAuthData();
     
     // Clear context state
     setUser(null);
