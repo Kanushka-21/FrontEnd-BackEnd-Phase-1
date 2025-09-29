@@ -168,12 +168,6 @@ This guide provides multiple options for sharing your backend with repository co
 
 ## Recommended Approach
 
-### For Small Team (2-5 developers):
-**Docker + MongoDB Atlas**
-- Each developer runs backend locally with Docker
-- Shared MongoDB Atlas database
-- Cost: Free (Atlas free tier)
-
 ### For Larger Team (5+ developers):
 **Railway/Heroku Deployment**
 - Single shared backend instance
