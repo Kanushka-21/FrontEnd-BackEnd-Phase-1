@@ -752,6 +752,11 @@ const GemstoneDetailModal: React.FC<GemstoneModalProps> = ({
                       showTester={true}  // Enable testing tools
                       biddingEndTime={countdownData.biddingEndTime}
                       onCountdownUpdate={onCountdownUpdated} // Pass the callback to notify marketplace
+                      onCountdownComplete={() => {
+                        // Refresh modal data when countdown completes
+                        console.log('🏁 Countdown completed in modal - refreshing data');
+                        loadModalData();
+                      }}
                     />
                   </div>
                 </div>

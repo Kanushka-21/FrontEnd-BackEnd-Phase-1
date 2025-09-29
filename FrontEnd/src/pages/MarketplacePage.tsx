@@ -949,6 +949,7 @@ const MarketplacePage: React.FC = () => {
                       key={gemstone.id}
                       gemstone={gemstone}
                       onViewDetails={handleViewDetails}
+                      onCountdownComplete={refreshAllCountdowns} // Refresh when countdown expires
                     />
                   ))}
                 </div>
