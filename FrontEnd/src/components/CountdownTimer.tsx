@@ -279,7 +279,7 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
         </div>
       </div>
       
-      {/* Testing Tools - Only show if enabled */}
+      {/* Testing Tools - Only show if enabled (set to false for demonstrations) */}
       {showTester && (
         <CountdownTester 
           listingId={listingId}
