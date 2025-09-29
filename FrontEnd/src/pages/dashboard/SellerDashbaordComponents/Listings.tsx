@@ -70,10 +70,11 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
   const [dataError, setDataError] = useState<string | null>(null);
   const [pagination, setPagination] = useState({
     current: 1,
-    pageSize: 10,
+    pageSize: 50, // Show 50 items per page by default to accommodate all listings
     total: 0,
     showSizeChanger: true,
     showQuickJumper: true,
+    pageSizeOptions: ['10', '20', '50', '100'],
   });
 
   // Load listings data on component mount
@@ -82,8 +83,21 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
   }, []);
 
   // Function to load listings data from backend
-  const loadListingsData = async (page = 0, size = 10, status?: string) => {
+  const loadListingsData = async (page = 0, size = 50, status?: string) => {
     console.log('📥 Loading listings data from backend...');
+    console.log('📊 Parameters - page:', page, 'size:', size, 'status:', status);
+    
+    // Validate parameters
+    if (typeof page !== 'number' || page < 0) {
+      console.warn('⚠️ Invalid page parameter:', page, 'using 0');
+      page = 0;
+    }
+    
+    if (typeof size !== 'number' || size < 1 || size > 100) {
+      console.warn('⚠️ Invalid size parameter:', size, 'using 10');
+      size = 10;
+    }
+    
     setDataLoading(true);
     setDataError(null);
 
@@ -97,6 +111,7 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
       }
 
       console.log('🔐 Using user ID:', userId);
+      console.log('📊 Final parameters - page:', page, 'size:', size);
 
       // Build query parameters
       const params = new URLSearchParams({
@@ -227,10 +242,19 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
   };
 
   // Handle table pagination change
-  const handleTableChange = (newPagination: any) => {
+  const handleTableChange = (newPagination: any, filters?: any, sorter?: any, extra?: any) => {
     console.log('📄 Table pagination changed:', newPagination);
-    const page = newPagination.current - 1; // Convert to 0-based for backend
-    const size = newPagination.pageSize;
+    console.log('🔍 Additional params:', { filters, sorter, extra });
+    
+    if (!newPagination) {
+      console.warn('⚠️ Pagination object is null/undefined');
+      return;
+    }
+    
+    const page = (newPagination.current || 1) - 1; // Convert to 0-based for backend
+    const size = newPagination.pageSize || 10;
+    
+    console.log('📊 Calling loadListingsData with page:', page, 'size:', size);
     loadListingsData(page, size);
   };
 
@@ -2148,7 +2172,17 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
                 ...pagination,
                 showTotal: (total, range) => 
                   `${range[0]}-${range[1]} of ${total} listings`,
-                onChange: handleTableChange,
+                pageSizeOptions: ['10', '20', '50', '100'],
+                showSizeChanger: true,
+                showQuickJumper: true,
+                onChange: (page, pageSize) => {
+                  console.log('📄 Pagination onChange called:', { page, pageSize });
+                  handleTableChange({ current: page, pageSize: pageSize });
+                },
+                onShowSizeChange: (current, size) => {
+                  console.log('📄 Page size changed:', { current, size });
+                  handleTableChange({ current: current, pageSize: size });
+                }
               }}
               className="rounded-none"
               bordered={false}

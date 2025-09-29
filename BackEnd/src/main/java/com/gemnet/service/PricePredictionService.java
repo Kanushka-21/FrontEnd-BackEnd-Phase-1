@@ -210,15 +210,44 @@ public class PricePredictionService {
             response.setMethodUsed("Rule-based Sri Lankan Market Estimation");
             response.setAccuracyScore(0.65); // Rule-based accuracy
             
-            // Calculate price ranges
+            // Calculate price ranges - consider seller's price for tighter ranges
             BigDecimal minPrice, maxPrice;
-            if (Boolean.TRUE.equals(request.getIsCertified())) {
-                BigDecimal variance = predictedPrice.multiply(BigDecimal.valueOf(0.15));
-                minPrice = predictedPrice.subtract(variance).max(BigDecimal.ZERO);
-                maxPrice = predictedPrice.add(variance);
+            if (request.getSellerPrice() != null && request.getSellerPrice() > 0) {
+                // If seller's price is available, create a range that gives more weight to seller's price
+                BigDecimal sellerPrice = BigDecimal.valueOf(request.getSellerPrice());
+                
+                // Give 70% weight to seller's price and 30% to AI prediction for more realistic ranges
+                BigDecimal weightedPrice = sellerPrice.multiply(BigDecimal.valueOf(0.7))
+                                                   .add(predictedPrice.multiply(BigDecimal.valueOf(0.3)));
+                
+                BigDecimal variance;
+                if (Boolean.TRUE.equals(request.getIsCertified())) {
+                    // For certified gems, use 6% variance around the weighted price
+                    variance = weightedPrice.multiply(BigDecimal.valueOf(0.06));
+                } else {
+                    // For non-certified gems, use 5% variance
+                    variance = weightedPrice.multiply(BigDecimal.valueOf(0.05));
+                }
+                
+                minPrice = weightedPrice.subtract(variance).max(BigDecimal.ZERO);
+                maxPrice = weightedPrice.add(variance);
+                
+                // Ensure seller's price is within the range
+                minPrice = minPrice.min(sellerPrice.multiply(BigDecimal.valueOf(0.85)));
+                maxPrice = maxPrice.max(sellerPrice.multiply(BigDecimal.valueOf(1.15)));
+                
+                logger.info("🎯 Seller-weighted range: Predicted: {} LKR, Seller: {} LKR, Final: {} - {} LKR", 
+                           predictedPrice, sellerPrice, minPrice, maxPrice);
             } else {
-                minPrice = predictedPrice;
-                maxPrice = predictedPrice;
+                // Original logic when seller's price is not available
+                if (Boolean.TRUE.equals(request.getIsCertified())) {
+                    BigDecimal variance = predictedPrice.multiply(BigDecimal.valueOf(0.15));
+                    minPrice = predictedPrice.subtract(variance).max(BigDecimal.ZERO);
+                    maxPrice = predictedPrice.add(variance);
+                } else {
+                    minPrice = predictedPrice;
+                    maxPrice = predictedPrice;
+                }
             }
 
             // Round to nearest 1000 LKR
@@ -376,6 +405,11 @@ public class PricePredictionService {
         request.setTreatment(gemListing.getTreatment());
         request.setOrigin(gemListing.getOrigin());
         request.setShape(gemListing.getShape());
+        
+        // Add seller's asking price for range adjustment
+        if (gemListing.getPrice() != null) {
+            request.setSellerPrice(gemListing.getPrice().doubleValue());
+        }
 
         return request;
     }
