@@ -1,0 +1,53 @@
+# Multi-stage Docker build for Spring Boot application
+FROM openjdk:17-jdk-slim AS builder
+
+# Set working directory
+WORKDIR /app
+
+# Copy Maven wrapper and pom.xml
+COPY mvnw .
+COPY mvnw.cmd .
+COPY pom.xml .
+COPY .mvn .mvn
+
+# Download dependencies
+RUN chmod +x ./mvnw
+RUN ./mvnw dependency:go-offline -B
+
+# Copy source code
+COPY src src
+
+# Build the application
+RUN ./mvnw clean package -DskipTests
+
+# Production stage
+FROM openjdk:17-jdk-slim
+
+# Install necessary packages
+RUN apt-get update && apt-get install -y \
+    tesseract-ocr \
+    tesseract-ocr-eng \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
+
+# Copy the built JAR from builder stage
+COPY --from=builder /app/target/*.jar app.jar
+
+# Create uploads directory
+RUN mkdir -p uploads/advertisement-images uploads/advertisement-videos uploads/face-images uploads/nic-images uploads/gems uploads/gemstone-certificates
+
+# Expose port
+EXPOSE 9092
+
+# Set environment variables
+ENV SPRING_PROFILES_ACTIVE=production
+ENV TESSERACT_DATAPATH=/usr/share/tesseract-ocr/4.00/tessdata
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:9092/health || exit 1
+
+# Run the application
+ENTRYPOINT ["java", "-jar", "app.jar"]

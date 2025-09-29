@@ -214,8 +214,9 @@ public class MeetingService {
             meeting.setMeetingDisplayId(displayId);
             meeting.setStatus("PENDING");
             
-            // Calculate commission (5% by default)
-            double commissionRate = 0.05; // 5%
+            // Calculate commission (6% by default)
+            double commissionRate = 0.06; // 6%
+            meeting.setCommissionRate(commissionRate);
             meeting.setCommissionAmount(meetingPrice * commissionRate);
             meeting.setPaymentStatus("PENDING");
             
@@ -330,6 +331,10 @@ public class MeetingService {
                     meetingDetail.put("gemName", meeting.getGemName());
                     meetingDetail.put("gemType", meeting.getGemType());
                     meetingDetail.put("finalPrice", meeting.getFinalPrice());
+                    
+                    // Add commission information
+                    meetingDetail.put("commissionRate", meeting.getCommissionRate() != null ? meeting.getCommissionRate() : 0.06);
+                    meetingDetail.put("commissionAmount", meeting.getCommissionAmount());
                     
                     // Fetch gem listing details to get the primary image
                     String primaryImageUrl = null;
@@ -1275,6 +1280,113 @@ public class MeetingService {
             logger.error("❌ [MeetingService] Error in adminDeleteMeeting(): {}", e.getMessage(), e);
             response.put("success", false);
             response.put("message", "Failed to delete meeting: " + e.getMessage());
+            response.put("error", e.getClass().getSimpleName());
+            return response;
+        }
+    }
+    
+    /**
+     * Update commission rate for a meeting (Admin only)
+     */
+    public Map<String, Object> updateMeetingCommission(String meetingId, Double newCommissionRate) {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            logger.info("🔄 [MeetingService] Updating commission rate for meeting: {} to {}%", 
+                       meetingId, newCommissionRate * 100);
+            
+            Optional<Meeting> meetingOpt = meetingRepository.findById(meetingId);
+            
+            if (!meetingOpt.isPresent()) {
+                response.put("success", false);
+                response.put("message", "Meeting not found");
+                return response;
+            }
+            
+            Meeting meeting = meetingOpt.get();
+            Double oldCommissionRate = meeting.getCommissionRate();
+            Double oldCommissionAmount = meeting.getCommissionAmount();
+            
+            // Update commission rate and amount
+            meeting.setCommissionRate(newCommissionRate);
+            // The setCommissionRate method automatically recalculates the commission amount
+            
+            // Save the updated meeting
+            Meeting updatedMeeting = meetingRepository.save(meeting);
+            
+            logger.info("✅ [MeetingService] Successfully updated commission for meeting: {}", meetingId);
+            logger.info("   - Old rate: {}%, Old amount: LKR {}", 
+                       oldCommissionRate != null ? oldCommissionRate * 100 : "N/A", 
+                       oldCommissionAmount != null ? oldCommissionAmount : "N/A");
+            logger.info("   - New rate: {}%, New amount: LKR {}", 
+                       newCommissionRate * 100, updatedMeeting.getCommissionAmount());
+            
+            // Prepare response with updated meeting details
+            response.put("success", true);
+            response.put("message", "Commission rate updated successfully");
+            response.put("meetingId", meetingId);
+            response.put("oldCommissionRate", oldCommissionRate);
+            response.put("newCommissionRate", newCommissionRate);
+            response.put("oldCommissionAmount", oldCommissionAmount);
+            response.put("newCommissionAmount", updatedMeeting.getCommissionAmount());
+            response.put("finalPrice", updatedMeeting.getFinalPrice());
+            
+            // Send notification to buyer and seller about commission update
+            try {
+                // Fetch buyer and seller details from User repository
+                Optional<User> buyerOpt = userRepository.findById(updatedMeeting.getBuyerId());
+                Optional<User> sellerOpt = userRepository.findById(updatedMeeting.getSellerId());
+                
+                if (buyerOpt.isPresent() && sellerOpt.isPresent()) {
+                    User buyer = buyerOpt.get();
+                    User seller = sellerOpt.get();
+                    
+                    String notificationTitle = "Commission Rate Updated";
+                    String meetingDisplayId = updatedMeeting.getMeetingDisplayId() != null ? 
+                        updatedMeeting.getMeetingDisplayId() : updatedMeeting.getId().substring(0, 8);
+                    
+                    String message = String.format(
+                        "The commission rate for Meeting #%s has been updated by admin.",
+                        meetingDisplayId
+                    );
+                    
+                    String details = String.format(
+                        "Meeting Details:\n" +
+                        "- Gem: %s (%s)\n" +
+                        "- Final Price: LKR %,.2f\n" +
+                        "- Previous Commission: %s (LKR %s)\n" +
+                        "- New Commission: %.1f%% (LKR %,.2f)\n\n" +
+                        "This change has been made based on admin review and negotiation.",
+                        updatedMeeting.getGemName(), updatedMeeting.getGemType(),
+                        updatedMeeting.getFinalPrice(),
+                        oldCommissionRate != null ? String.format("%.1f%%", oldCommissionRate * 100) : "N/A",
+                        oldCommissionAmount != null ? String.format("%,.2f", oldCommissionAmount) : "N/A",
+                        newCommissionRate * 100, updatedMeeting.getCommissionAmount()
+                    );
+                    
+                    // Try to send email notifications, but don't fail the operation if email fails
+                    try {
+                        emailService.sendNotificationEmail(buyer.getId(), "COMMISSION_UPDATE", notificationTitle, message, details);
+                        emailService.sendNotificationEmail(seller.getId(), "COMMISSION_UPDATE", notificationTitle, message, details);
+                        logger.info("✅ [MeetingService] Commission update notifications sent to buyer and seller");
+                    } catch (Exception emailError) {
+                        logger.warn("⚠️ [MeetingService] Failed to send commission update notifications: {}", emailError.getMessage());
+                        // Don't fail the whole operation due to email issues
+                    }
+                } else {
+                    logger.warn("⚠️ [MeetingService] Could not find buyer or seller users for email notifications");
+                }
+            } catch (Exception emailError) {
+                logger.error("⚠️ [MeetingService] Failed to send commission update notifications: {}", emailError.getMessage());
+                // Don't fail the whole operation due to email issues
+            }
+            
+            return response;
+            
+        } catch (Exception e) {
+            logger.error("❌ [MeetingService] Error updating commission for meeting {}: {}", meetingId, e.getMessage(), e);
+            response.put("success", false);
+            response.put("message", "Failed to update commission: " + e.getMessage());
             response.put("error", e.getClass().getSimpleName());
             return response;
         }

@@ -619,6 +619,60 @@ public class MeetingController {
     }
 
     /**
+     * Admin update commission rate for a meeting
+     */
+    @PutMapping("/admin/{meetingId}/update-commission")
+    public ResponseEntity<?> updateMeetingCommission(@PathVariable String meetingId, @RequestBody Map<String, Object> requestData) {
+        try {
+            System.out.println("🔄 [Admin] Updating commission for meeting: " + meetingId);
+            
+            Double newCommissionRate = null;
+            Object rateObj = requestData.get("commissionRate");
+            
+            if (rateObj instanceof Number) {
+                newCommissionRate = ((Number) rateObj).doubleValue();
+            } else if (rateObj instanceof String) {
+                try {
+                    newCommissionRate = Double.parseDouble((String) rateObj);
+                } catch (NumberFormatException e) {
+                    Map<String, Object> errorResponse = new HashMap<>();
+                    errorResponse.put("success", false);
+                    errorResponse.put("message", "Invalid commission rate format");
+                    return ResponseEntity.badRequest().body(errorResponse);
+                }
+            }
+            
+            if (newCommissionRate == null || newCommissionRate < 0 || newCommissionRate > 1) {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("success", false);
+                errorResponse.put("message", "Commission rate must be between 0 and 1 (0% to 100%)");
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+            
+            Map<String, Object> result = meetingService.updateMeetingCommission(meetingId, newCommissionRate);
+            
+            if ((Boolean) result.get("success")) {
+                System.out.println("✅ [Admin] Commission updated successfully for meeting: " + meetingId);
+                return ResponseEntity.ok(result);
+            } else {
+                System.out.println("❌ [Admin] Failed to update commission: " + result.get("message"));
+                return ResponseEntity.badRequest().body(result);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("❌ [Admin] Error updating commission: " + e.getMessage());
+            e.printStackTrace();
+            
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "Error updating commission: " + e.getMessage());
+            errorResponse.put("error", e.getClass().getSimpleName());
+            
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+    /**
      * Admin delete a meeting (allows deletion of completed and no-show meetings)
      */
     @DeleteMapping("/admin/delete/{meetingId}")

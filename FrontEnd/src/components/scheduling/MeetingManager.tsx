@@ -94,6 +94,8 @@ interface Meeting {
   gemName: string;
   gemType: string;
   finalPrice: number;
+  commissionRate?: number;
+  commissionAmount?: number;
   primaryImageUrl: string;
   proposedDateTime: string;
   confirmedDateTime?: string;
@@ -394,10 +396,11 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
     ctx.fillStyle = '#374151';
     
     const info = [
-      `Meeting ID: ${meeting.meetingDisplayId || `GEM-2025-${meeting.id.slice(-3)}`}`,
+      `Meeting ID: ${meeting.id.slice(-8)}`,
       `Purchase ID: ${meeting.purchaseId.slice(-8)}`,
       `Gem: ${meeting.gemName} (${meeting.gemType})`,
       `Price: LKR ${meeting.finalPrice.toLocaleString()}`,
+      `System Commission (${((meeting.finalPrice && meeting.commissionAmount) ? (meeting.commissionAmount / meeting.finalPrice * 100) : 6).toFixed(1)}%): LKR ${(meeting.commissionAmount || meeting.finalPrice * 0.06).toLocaleString()}`,
       `Date: ${datetime.date}`,
       `Time: ${datetime.time}`,
       `Location: ${meeting.location}`,
@@ -781,6 +784,12 @@ const MeetingManager: React.FC<MeetingManagerProps> = ({ user, userType = 'buyer
                         <p className="text-lg font-bold text-green-600 mt-1">
                           {formatCurrency(meeting.finalPrice)}
                         </p>
+                        <div className="text-sm text-gray-600 mt-1">
+                          <span className="font-medium">System Commission ({((meeting.finalPrice && meeting.commissionAmount) ? (meeting.commissionAmount / meeting.finalPrice * 100) : 6).toFixed(1)}%):</span>{' '}
+                          <span className="font-semibold text-blue-600">
+                            {formatCurrency(meeting.commissionAmount || meeting.finalPrice * 0.06)}
+                          </span>
+                        </div>
                         <div className="flex items-center space-x-2 mt-2">
                           <span className="text-sm text-gray-500">
                             {isSeller ? 'Buyer:' : 'Seller:'}
