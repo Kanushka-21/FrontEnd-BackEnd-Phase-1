@@ -162,6 +162,11 @@ public class GemListingPriceUpdateService {
             parseMeasurements(listing.getMeasurements(), request);
         }
         
+        // Add seller's asking price for range adjustment
+        if (listing.getPrice() != null) {
+            request.setSellerPrice(listing.getPrice().doubleValue());
+        }
+        
         return request;
     }
     

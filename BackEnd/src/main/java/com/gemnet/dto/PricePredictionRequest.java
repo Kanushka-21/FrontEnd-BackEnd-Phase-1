@@ -42,6 +42,9 @@ public class PricePredictionRequest {
     // Shape
     private String shape;
     
+    // Seller's asking price (for range adjustment)
+    private Double sellerPrice;
+    
     // Default constructor
     public PricePredictionRequest() {}
     
@@ -153,6 +156,14 @@ public class PricePredictionRequest {
         this.shape = shape;
     }
     
+    public Double getSellerPrice() {
+        return sellerPrice;
+    }
+    
+    public void setSellerPrice(Double sellerPrice) {
+        this.sellerPrice = sellerPrice;
+    }
+    
     @Override
     public String toString() {
         return "PricePredictionRequest{" +
@@ -162,6 +173,7 @@ public class PricePredictionRequest {
                 ", clarity='" + clarity + '\'' +
                 ", species='" + species + '\'' +
                 ", isCertified=" + isCertified +
+                ", sellerPrice=" + sellerPrice +
                 '}';
     }
 }

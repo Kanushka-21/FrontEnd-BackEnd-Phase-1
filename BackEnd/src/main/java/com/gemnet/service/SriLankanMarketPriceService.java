@@ -119,11 +119,37 @@ public class SriLankanMarketPriceService {
             // Calculate weighted price based on similarity
             PriceAnalysis analysis = calculateWeightedPrice(similarGems, request);
             
+            // Adjust price range if seller's price is available
+            BigDecimal finalMinPrice = analysis.getMinPrice();
+            BigDecimal finalMaxPrice = analysis.getMaxPrice();
+            
+            if (request.getSellerPrice() != null && request.getSellerPrice() > 0) {
+                BigDecimal sellerPrice = BigDecimal.valueOf(request.getSellerPrice());
+                BigDecimal predictedPrice = analysis.getWeightedPrice();
+                
+                // Give 75% weight to seller's price and 25% to market prediction
+                BigDecimal weightedPrice = sellerPrice.multiply(BigDecimal.valueOf(0.75))
+                                                   .add(predictedPrice.multiply(BigDecimal.valueOf(0.25)));
+                
+                // Create a tight range with 7% variance for Sri Lankan market
+                BigDecimal tighterVariance = weightedPrice.multiply(BigDecimal.valueOf(0.07));
+                
+                finalMinPrice = weightedPrice.subtract(tighterVariance).max(BigDecimal.ZERO);
+                finalMaxPrice = weightedPrice.add(tighterVariance);
+                
+                // Ensure seller's price is within reasonable bounds
+                finalMinPrice = finalMinPrice.min(sellerPrice.multiply(BigDecimal.valueOf(0.88)));
+                finalMaxPrice = finalMaxPrice.max(sellerPrice.multiply(BigDecimal.valueOf(1.12)));
+                
+                logger.info("🎯 Sri Lankan seller-weighted range: Market: {} LKR, Seller: {} LKR, Final: {} - {} LKR", 
+                           predictedPrice, sellerPrice, finalMinPrice, finalMaxPrice);
+            }
+            
             // Create enhanced response
             PricePredictionResponse response = new PricePredictionResponse();
             response.setPredictedPrice(analysis.getWeightedPrice());
-            response.setMinPrice(analysis.getMinPrice());
-            response.setMaxPrice(analysis.getMaxPrice());
+            response.setMinPrice(finalMinPrice);
+            response.setMaxPrice(finalMaxPrice);
             response.setConfidence(analysis.getConfidence());
             response.setMethodUsed("Sri Lankan Market Analysis");
             response.setDataPoints(similarGems.size());
