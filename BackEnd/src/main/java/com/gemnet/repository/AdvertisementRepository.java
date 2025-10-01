@@ -12,6 +12,9 @@ public interface AdvertisementRepository extends MongoRepository<Advertisement, 
     
     List<Advertisement> findByApproved(String approved);
     
+    // Find by approved status ordered by priority (desc) then creation date (desc) 
+    List<Advertisement> findByApprovedOrderByPriorityDescCreatedOnDesc(String approved);
+    
     List<Advertisement> findByUserId(String userId);
     
     List<Advertisement> findByApprovedAndUserId(String approved, String userId);

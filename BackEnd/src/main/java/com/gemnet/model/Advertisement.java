@@ -47,6 +47,9 @@ public class Advertisement {
     @Indexed
     private String approved;
     
+    // Priority for homepage display order (higher number = higher priority)
+    private Integer priority = 0;
+    
     @CreatedDate
     private LocalDateTime createdOn;
     
@@ -158,6 +161,14 @@ public class Advertisement {
 
     public void setApproved(String approved) {
         this.approved = approved;
+    }
+
+    public Integer getPriority() {
+        return priority;
+    }
+
+    public void setPriority(Integer priority) {
+        this.priority = priority;
     }
 
     public LocalDateTime getCreatedOn() {

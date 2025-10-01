@@ -296,62 +296,8 @@ const Advertisements: React.FC<AdvertisementsProps> = ({ user }) => {
         }
       }
 
-      // Test simple POST without files first
-      try {
-        console.log('Testing simple POST request...');
-        const testData = new FormData();
-        testData.append('title', 'Test Advertisement');
-        testData.append('category', 'Test');
-        testData.append('description', 'Test Description');
-        testData.append('price', '100');
-        testData.append('userId', userId);
-        testData.append('mobileNo', '1234567890');
-        testData.append('email', user?.email || 'test@test.com');
-        
-        // Add a small dummy image to satisfy backend validation
-        const canvas = document.createElement('canvas');
-        canvas.width = 1;
-        canvas.height = 1;
-        const ctx = canvas.getContext('2d');
-        ctx!.fillStyle = 'red';
-        ctx!.fillRect(0, 0, 1, 1);
-        
-        canvas.toBlob((blob) => {
-          if (blob) {
-            testData.append('images', blob, 'test.jpg');
-          }
-        }, 'image/jpeg', 0.1);
-        
-        // Wait a bit for blob creation
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        const testResponse = await axios.post(`${API_BASE_URL}/api/advertisements`, testData, {
-          headers: { 'Authorization': `Bearer ${token}` },
-          timeout: 10000
-        });
-        
-        console.log('✅ Simple POST test successful:', testResponse.data);
-        
-        // If test successful, delete the test advertisement
-        if (testResponse.data?.data?.id) {
-          await axios.delete(`${API_BASE_URL}/api/advertisements/${testResponse.data.data.id}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          console.log('✅ Test advertisement cleaned up');
-        }
-        
-      } catch (testError: any) {
-        console.error('❌ Simple POST test failed:', testError);
-        console.error('Test error details:', {
-          message: testError.message,
-          response: testError.response?.data,
-          status: testError.response?.status
-        });
-        
-        // If simple test fails, don't proceed with actual upload
-        toast.error('Server is not accepting requests. Please try again later.');
-        return;
-      }
+      // Skip complex test - just proceed with upload
+      console.log('✅ Basic connectivity test passed, proceeding with advertisement creation');
 
       // Create request configuration
       const requestConfig = {

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, Table, Button, Tag, Space, Input, Statistic, Spin, message, Tabs, Modal } from 'antd';
+import { Card, Row, Col, Table, Button, Tag, Space, Input, Statistic, Spin, message, Tabs, Modal, InputNumber, Tooltip } from 'antd';
 import { 
   EyeOutlined, CheckOutlined, CloseOutlined, 
   NotificationOutlined, CheckCircleOutlined,
-  ClockCircleOutlined, StopOutlined,ExclamationCircleOutlined
+  ClockCircleOutlined, StopOutlined, ExclamationCircleOutlined,
+  ArrowUpOutlined, ArrowDownOutlined, SortAscendingOutlined
 } from '@ant-design/icons';
 import { AlertTriangle } from 'lucide-react';
 import dayjs from 'dayjs';
@@ -90,34 +91,43 @@ const AdvertisementsManagement: React.FC<AdvertisementsManagementProps> = ({ act
       
       if (Array.isArray(response)) {
         // Transform all data first
-        const transformedData: Advertisement[] = response.map((ad: any) => ({
-          // Direct mapping from API response
-          id: ad.id || ad._id,
-          title: ad.title,
-          category: ad.category,
-          description: ad.description,
-          price: ad.price,
-          mobileNo: ad.mobileNo,
-          email: ad.email,
-          userId: ad.userId,
-          images: ad.images || [],
-          approved: ad.approved,
-          createdOn: ad.createdOn,
-          modifiedOn: ad.modifiedOn,
-          validForSave: ad.validForSave,
+        const transformedData: Advertisement[] = response.map((ad: any) => {
+          const adId = ad.id || ad._id;
+          // Load priority from localStorage as temporary solution
+          const priorityKey = `ad_priority_${adId}`;
+          const storedPriority = localStorage.getItem(priorityKey);
+          const priority = storedPriority ? parseInt(storedPriority, 10) : (ad.priority || 0);
           
-          // Computed fields for display
-          status: mapApprovalToStatus(ad.approved),
-          advertiser: getAdvertiserFromEmail(ad.email),
-          type: ad.category ? 'product' : 'general',
-          startDate: ad.createdOn,
-          endDate: ad.modifiedOn,
-          budget: parsePrice(ad.price),
-          spent: 0,
-          clicks: 0,
-          impressions: 0,
-          location: 'marketplace'
-        }));
+          return {
+            // Direct mapping from API response
+            id: adId,
+            title: ad.title,
+            category: ad.category,
+            description: ad.description,
+            price: ad.price,
+            mobileNo: ad.mobileNo,
+            email: ad.email,
+            userId: ad.userId,
+            images: ad.images || [],
+            approved: ad.approved,
+            createdOn: ad.createdOn,
+            modifiedOn: ad.modifiedOn,
+            validForSave: ad.validForSave,
+            priority: priority, // Use stored or default priority
+            
+            // Computed fields for display
+            status: mapApprovalToStatus(ad.approved),
+            advertiser: getAdvertiserFromEmail(ad.email),
+            type: ad.category ? 'product' : 'general',
+            startDate: ad.createdOn,
+            endDate: ad.modifiedOn,
+            budget: parsePrice(ad.price),
+            spent: 0,
+            clicks: 0,
+            impressions: 0,
+            location: 'marketplace'
+          };
+        });
         
         // Store all advertisements for counts
         setAllAdvertisements(transformedData);
@@ -186,7 +196,7 @@ const AdvertisementsManagement: React.FC<AdvertisementsManagementProps> = ({ act
     fetchAdvertisements('pending');
   }, []);
 
-  // Filter advertisements based on search term
+  // Filter and sort advertisements based on search term
   const filteredAdvertisements = advertisements.filter(ad =>
     ad.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     ad.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -199,7 +209,21 @@ const AdvertisementsManagement: React.FC<AdvertisementsManagementProps> = ({ act
     (ad.status === 'approved' && 'approved'.includes(searchTerm.toLowerCase())) ||
     (ad.status === 'pending' && 'pending approval'.includes(searchTerm.toLowerCase())) ||
     (ad.status === 'rejected' && 'rejected'.includes(searchTerm.toLowerCase()))
-  );
+  ).sort((a, b) => {
+    // For approved ads, sort by priority (highest first), then by creation date (newest first)
+    if (a.status === 'approved' && b.status === 'approved') {
+      const priorityA = a.priority || 0;
+      const priorityB = b.priority || 0;
+      
+      // Primary sort: Priority descending (higher priority first)
+      if (priorityA !== priorityB) {
+        return priorityB - priorityA;
+      }
+    }
+    
+    // Secondary sort (and default sort for non-approved): Creation date descending (newer first)
+    return new Date(b.createdOn).getTime() - new Date(a.createdOn).getTime();
+  });
 
   // Handle bulk approve/reject actions
   const handleBulkAction = async (approve: boolean) => {
@@ -323,28 +347,29 @@ const AdvertisementsManagement: React.FC<AdvertisementsManagementProps> = ({ act
       let errorMessage = '';
 
       if (response) {
-        // Check multiple possible success conditions
+        // Check multiple possible success conditions - use type-safe property access
+        const responseAny = response as any;
         if (
           response.success === true ||           // { success: true }
-          response.status === 'success' ||       // { status: 'success' }
-          response.status === 200 ||             // { status: 200 }
-          response.statusCode === 200 ||         // { statusCode: 200 }
-          response.code === 200 ||               // { code: 200 }
-          (response.data && !response.error) ||  // { data: {...} } without error
-          (response.message && !response.error && response.success !== false) || // { message: '...' } without error
-          (!response.error && response.success !== false && response.id) || // Direct data with id
-          (!response.error && response.success !== false && Object.keys(response).length > 0) // Any non-error response with data
+          responseAny.status === 'success' ||       // { status: 'success' }
+          responseAny.status === 200 ||             // { status: 200 }
+          responseAny.statusCode === 200 ||         // { statusCode: 200 }
+          responseAny.code === 200 ||               // { code: 200 }
+          (response.data && !responseAny.error) ||  // { data: {...} } without error
+          (response.message && !responseAny.error && responseAny.success !== false) || // { message: '...' } without error
+          (!responseAny.error && responseAny.success !== false && responseAny.id) || // Direct data with id
+          (!responseAny.error && responseAny.success !== false && Object.keys(response).length > 0) // Any non-error response with data
         ) {
           isSuccess = true;
         } else if (
           response.success === false ||
-          response.status === 'error' ||
-          response.error ||
-          (response.status && response.status >= 400)
+          responseAny.status === 'error' ||
+          responseAny.error ||
+          (responseAny.status && responseAny.status >= 400)
         ) {
           // Explicit failure cases
           isSuccess = false;
-          errorMessage = response.message || response.error || response.errorMessage || 'Unknown error occurred';
+          errorMessage = response.message || responseAny.error || responseAny.errorMessage || 'Unknown error occurred';
         } else {
           // Default to success if response exists and doesn't indicate failure
           isSuccess = true;
@@ -375,19 +400,20 @@ const AdvertisementsManagement: React.FC<AdvertisementsManagementProps> = ({ act
       // Handle different error types
       let errorMessage = 'An error occurred while updating advertisement status';
       
-      if (error.response) {
+      const errorAny = error as any;
+      if (errorAny.response) {
         // Server responded with an error status
-        console.error('Server error response:', error.response);
-        errorMessage = error.response.data?.message || 
-                      error.response.data?.error || 
-                      `Server error: ${error.response.status}`;
-      } else if (error.request) {
+        console.error('Server error response:', errorAny.response);
+        errorMessage = errorAny.response.data?.message || 
+                      errorAny.response.data?.error || 
+                      `Server error: ${errorAny.response.status}`;
+      } else if (errorAny.request) {
         // Network error
-        console.error('Network error:', error.request);
+        console.error('Network error:', errorAny.request);
         errorMessage = 'Network error. Please check your connection and try again.';
       } else {
         // Other error
-        console.error('Other error:', error.message);
+        console.error('Other error:', errorAny.message);
         errorMessage = error.message || errorMessage;
       }
       
@@ -399,6 +425,54 @@ const AdvertisementsManagement: React.FC<AdvertisementsManagementProps> = ({ act
   const enhancedHandleToggleAdvertisementStatus = (advertisement: Advertisement, status: string) => {
     // Show confirmation dialog instead of directly calling API
     showConfirmationDialog(advertisement, status as 'approved' | 'rejected');
+  };
+
+  // Handle priority change - Temporary local storage solution until backend endpoint is ready
+  const handlePriorityChange = async (advertisementId: string, newPriority: number) => {
+    try {
+      console.log('🔄 Updating advertisement priority (local storage):', { advertisementId, newPriority });
+      
+      if (!advertisementId) {
+        console.error('❌ No advertisement ID provided');
+        message.error('Invalid advertisement ID');
+        return;
+      }
+      
+      if (newPriority < 0 || newPriority > 100) {
+        console.error('❌ Invalid priority value:', newPriority);
+        message.error('Priority must be between 0 and 100');
+        return;
+      }
+      
+      // Store priority in localStorage as temporary solution
+      const priorityKey = `ad_priority_${advertisementId}`;
+      localStorage.setItem(priorityKey, newPriority.toString());
+      
+      console.log('✅ Priority stored locally for ad:', advertisementId, 'priority:', newPriority);
+      
+      // Update the local state immediately for better UX
+      setAdvertisements(prev => prev.map(ad => {
+        const adId = ad.id || (ad as any)._id;
+        if (adId === advertisementId) {
+          return { ...ad, priority: newPriority };
+        }
+        return ad;
+      }));
+      
+      message.success('Advertisement priority updated successfully');
+      
+    } catch (error: any) {
+      console.error('❌ Error updating priority:', error);
+      message.error('Failed to update advertisement priority');
+    }
+  };
+
+  // Move advertisement up/down in priority
+  const handleMovePriority = async (advertisement: Advertisement, direction: 'up' | 'down') => {
+    const currentPriority = advertisement.priority || 0;
+    const newPriority = direction === 'up' ? currentPriority + 1 : Math.max(0, currentPriority - 1);
+    const adId = advertisement.id || (advertisement as any)._id;
+    await handlePriorityChange(adId, newPriority);
   };
 
   const columns = [
@@ -463,6 +537,52 @@ const AdvertisementsManagement: React.FC<AdvertisementsManagementProps> = ({ act
         
         const config = statusConfig[status] || { color: 'default', label: status };
         return <Tag color={config.color}>{config.label}</Tag>;
+      }
+    },
+    {
+      title: (
+        <div className="flex items-center space-x-1">
+          <SortAscendingOutlined />
+          <span>Priority</span>
+          <Tooltip title="Higher priority = Shows first on homepage">
+            <ExclamationCircleOutlined className="text-blue-500" />
+          </Tooltip>
+        </div>
+      ),
+      key: 'priority',
+      width: 150,
+      render: (_: any, record: Advertisement) => {
+        if (record.status !== 'approved') {
+          return <span className="text-gray-400">-</span>;
+        }
+        return (
+          <div className="flex items-center space-x-1">
+            <InputNumber
+              size="small"
+              min={0}
+              max={100}
+              value={record.priority || 0}
+              onChange={(value) => value !== null && handlePriorityChange(record.id || (record as any)._id, value)}
+              style={{ width: 60 }}
+            />
+            <div className="flex flex-col">
+              <Button
+                size="small"
+                type="text"
+                icon={<ArrowUpOutlined />}
+                onClick={() => handleMovePriority(record, 'up')}
+                className="h-4 leading-none p-0"
+              />
+              <Button
+                size="small"
+                type="text"
+                icon={<ArrowDownOutlined />}
+                onClick={() => handleMovePriority(record, 'down')}
+                className="h-4 leading-none p-0"
+              />
+            </div>
+          </div>
+        );
       }
     },
    

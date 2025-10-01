@@ -97,6 +97,7 @@ public class AdvertisementController {
 
     /**
      * Get all advertisements with optional approved filter
+     * For approved advertisements, orders by priority (highest first) then by creation date
      */
     @GetMapping
     public ResponseEntity<List<Advertisement>> getAllAdvertisements(
@@ -106,7 +107,9 @@ public class AdvertisementController {
             List<Advertisement> advertisements;
             
             if (approved != null) {
-                advertisements = advertisementRepository.findByApproved(approved);
+                // Get approved advertisements ordered by priority (highest first), then by creation date (newest first)
+                advertisements = advertisementRepository.findByApprovedOrderByPriorityDescCreatedOnDesc(approved);
+                System.out.println("📢 Fetched " + advertisements.size() + " approved advertisements ordered by priority");
             } else {
                 advertisements = advertisementRepository.findAll();
             }
@@ -114,6 +117,7 @@ public class AdvertisementController {
             return ResponseEntity.ok(advertisements);
             
         } catch (Exception e) {
+            System.err.println("❌ Error fetching advertisements: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
@@ -313,6 +317,64 @@ public class AdvertisementController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error updating advertisement approval: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Update advertisement priority (Admin functionality)
+     */
+    @PutMapping("/{id}/priority")
+    public ResponseEntity<ApiResponse<Advertisement>> updateAdvertisementPriority(
+            @PathVariable String id, 
+            @RequestBody java.util.Map<String, Object> request) {
+        try {
+            System.out.println("🔄 Updating advertisement priority for ID: " + id);
+            
+            Optional<Advertisement> advertisementOptional = advertisementRepository.findById(id);
+            
+            if (!advertisementOptional.isPresent()) {
+                return ResponseEntity.notFound()
+                        .body(ApiResponse.error("Advertisement not found"));
+            }
+            
+            Advertisement advertisement = advertisementOptional.get();
+            
+            // Extract priority from request
+            Object priorityObj = request.get("priority");
+            Integer priority = 0;
+            
+            if (priorityObj instanceof Integer) {
+                priority = (Integer) priorityObj;
+            } else if (priorityObj instanceof String) {
+                try {
+                    priority = Integer.parseInt((String) priorityObj);
+                } catch (NumberFormatException e) {
+                    return ResponseEntity.badRequest()
+                            .body(ApiResponse.error("Invalid priority value"));
+                }
+            }
+            
+            // Validate priority range
+            if (priority < 0 || priority > 100) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Priority must be between 0 and 100"));
+            }
+            
+            advertisement.setPriority(priority);
+            advertisement.updateTimestamp();
+            
+            Advertisement savedAdvertisement = advertisementRepository.save(advertisement);
+            
+            System.out.println("✅ Advertisement priority updated successfully: " + savedAdvertisement.getId() + 
+                             " -> Priority: " + savedAdvertisement.getPriority());
+            
+            return ResponseEntity.ok(ApiResponse.success("Priority updated successfully", savedAdvertisement));
+            
+        } catch (Exception e) {
+            System.err.println("❌ Error updating advertisement priority: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Error updating advertisement priority: " + e.getMessage()));
         }
     }
 }

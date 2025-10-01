@@ -11,6 +11,7 @@ export interface Advertisement {
   userId: string;
   createdOn: string;
   modifiedOn: string;
+  priority?: number; // Priority for homepage display order (higher = shows first)
   // UI-specific fields
   status?: 'Draft' | 'Pending Review' | 'Approved' | 'Rejected';
   dateCreated?: string;

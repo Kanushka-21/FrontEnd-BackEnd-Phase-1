@@ -14,6 +14,7 @@ export interface Advertisement {
   approved: boolean;
   createdOn: string;
   userId: string;
+  priority?: number;
 }
 
 export const advertisementService = {

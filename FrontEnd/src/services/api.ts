@@ -902,6 +902,16 @@ const extendedAPI = {
     }
   },
 
+  updateAdvertisementPriority: async (id: string, priority: number): Promise<ApiResponse> => {
+    try {
+      const response = await api.put(`/api/advertisements/${id}/priority`, { priority });
+      return response.data;
+    } catch (error) {
+      console.error('Error updating advertisement priority:', error);
+      return { success: false, message: apiUtils.formatErrorMessage(error) };
+    }
+  },
+
   // User Dashboard Stats APIs
   getUserStats: {
     // Get seller dashboard statistics
