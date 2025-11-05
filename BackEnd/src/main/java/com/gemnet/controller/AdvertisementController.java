@@ -333,7 +333,7 @@ public class AdvertisementController {
             Optional<Advertisement> advertisementOptional = advertisementRepository.findById(id);
             
             if (!advertisementOptional.isPresent()) {
-                return ResponseEntity.notFound()
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(ApiResponse.error("Advertisement not found"));
             }
             
