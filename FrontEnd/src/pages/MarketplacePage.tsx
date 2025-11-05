@@ -303,10 +303,20 @@ const MarketplacePage: React.FC = () => {
         search: searchTerm || undefined,
         minPrice: priceRange[0] > 0 ? priceRange[0] : undefined,
         maxPrice: priceRange[1] < 500000 ? priceRange[1] : undefined,
-        certifiedOnly: certifiedOnly || undefined
+        certifiedOnly: certifiedOnly || undefined,
+        // Map frontend filters to backend parameters
+        category: getFilteredCategories()
       };
+      
+      // Filter out undefined values
+      Object.keys(params).forEach(key => {
+        if (params[key] === undefined) {
+          delete params[key];
+        }
+      });
 
       console.log('🔍 Fetching real approved listings from gemnet_db.gem_listings with params:', params);
+      console.log('🎯 Active filters - Types:', selectedTypes, 'Colors:', selectedColors, 'Certified:', certifiedOnly, 'Price:', priceRange);
       const response = await api.marketplace.getListings(params);
       
       if (response.success && response.data) {
@@ -471,6 +481,12 @@ const MarketplacePage: React.FC = () => {
     }
   };
 
+  // Helper function to combine selected types and colors for category filter
+  const getFilteredCategories = () => {
+    const categories = [...selectedTypes, ...selectedColors];
+    return categories.length > 0 ? categories.join(',') : undefined;
+  };
+  
   // Helper functions to convert sortBy to API format
   const getSortField = () => {
     switch (sortBy) {
@@ -772,12 +788,16 @@ const MarketplacePage: React.FC = () => {
         </Checkbox>
       </div>
 
-      <Button        block 
+      <Button
+        block 
         onClick={() => {
+          console.log('🧹 Clearing all filters');
           setPriceRange([0, 500000]);
           setSelectedTypes([]);
           setSelectedColors([]);
           setCertifiedOnly(false);
+          setSearchTerm('');
+          setCurrentPage(1); // Reset to first page
         }}
       >
         Clear All Filters
@@ -863,6 +883,37 @@ const MarketplacePage: React.FC = () => {
               <Text type="secondary" className="text-xs sm:text-sm lg:text-base">
                 {loading ? 'Loading from gemnet_db.gem_listings...' : `Showing ${totalItems > 0 ? Math.min(totalItems, (currentPage - 1) * itemsPerPage + 1) : 0}-${Math.min(currentPage * itemsPerPage, totalItems)} of ${totalItems} approved listings from database`}
               </Text>
+              {/* Active filters indicator */}
+              {(selectedTypes.length > 0 || selectedColors.length > 0 || certifiedOnly || priceRange[0] > 0 || priceRange[1] < 500000 || searchTerm) && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  <Text type="secondary" className="text-xs">Active filters:</Text>
+                  {selectedTypes.map(type => (
+                    <span key={type} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                      {type} ✕
+                    </span>
+                  ))}
+                  {selectedColors.map(color => (
+                    <span key={color} className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
+                      {color} ✕
+                    </span>
+                  ))}
+                  {certifiedOnly && (
+                    <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded">
+                      Certified Only ✕
+                    </span>
+                  )}
+                  {(priceRange[0] > 0 || priceRange[1] < 500000) && (
+                    <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded">
+                      LKR {priceRange[0].toLocaleString()}-{priceRange[1].toLocaleString()} ✕
+                    </span>
+                  )}
+                  {searchTerm && (
+                    <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded">
+                      "{searchTerm}" ✕
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
             
             {/* Gemstones Grid */}
@@ -898,6 +949,7 @@ const MarketplacePage: React.FC = () => {
                       key={gemstone.id}
                       gemstone={gemstone}
                       onViewDetails={handleViewDetails}
+                      onCountdownComplete={refreshAllCountdowns} // Refresh when countdown expires
                     />
                   ))}
                 </div>
@@ -1044,11 +1096,11 @@ const MarketplacePage: React.FC = () => {
               </li>
               <li className="flex items-start">
                 <span className="text-orange-500 font-bold mr-2">•</span>
-                <span className="text-gray-800">If unable to attend, <strong>immediately use "Report No-Show"</strong> option</span>
+                <span className="text-gray-800">If unable to attend, <strong>immediately use "Unable to Participate"</strong> option</span>
               </li>
               <li className="flex items-start">
                 <span className="text-red-600 font-bold mr-2">⚠</span>
-                <span className="text-red-700 font-semibold">No-show without reporting = Admin penalty (Warning → Account Suspension)</span>
+                <span className="text-red-700 font-semibold">Not participating without reporting = Admin penalty (Warning → Account Suspension)</span>
               </li>
               <li className="flex items-start">
                 <span className="text-blue-500 font-bold mr-2">•</span>

@@ -915,6 +915,7 @@ const HomePage: React.FC = () => {
                       <GemstoneCard 
                         gemstone={gemstone}
                         onViewDetails={() => handleViewDetails(gemstone.id)}
+                        onCountdownComplete={fetchFeaturedGemstones} // Refresh when countdown expires
                       />
                     </motion.div>
                   </Col>

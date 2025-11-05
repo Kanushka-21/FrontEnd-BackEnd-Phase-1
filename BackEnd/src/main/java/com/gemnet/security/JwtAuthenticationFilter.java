@@ -32,17 +32,42 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         
         String jwt = getJwtFromRequest(request);
         
-        if (StringUtils.hasText(jwt) && jwtTokenProvider.validateToken(jwt)) {
-            String identifier = jwtTokenProvider.getIdentifierFromToken(jwt);
-            System.out.println("🔓 JWT Authentication - Processing token for identifier: " + identifier);
-            
-            UserDetails userDetails = userDetailsService.loadUserByUsername(identifier);
-            UsernamePasswordAuthenticationToken authentication = 
-                new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-            
-            SecurityContextHolder.getContext().setAuthentication(authentication);
-            System.out.println("✅ JWT Authentication successful for: " + identifier);
+        if (StringUtils.hasText(jwt)) {
+            try {
+                // Enhanced security validation
+                if (!jwtTokenProvider.validateToken(jwt)) {
+                    System.out.println("⚠️ JWT Authentication - Invalid token detected, clearing context and continuing");
+                    SecurityContextHolder.clearContext();
+                    // Don't return here - let the request continue to check if endpoint is public
+                } else {
+                    String identifier = jwtTokenProvider.getIdentifierFromToken(jwt);
+                    String userRole = jwtTokenProvider.getRoleFromToken(jwt);
+                    
+                    System.out.println("🔓 JWT Authentication - Processing token for identifier: " + identifier + ", role: " + userRole);
+                    
+                    // Load user details and validate against token claims
+                    UserDetails userDetails = userDetailsService.loadUserByUsername(identifier);
+                    
+                    // Additional security: Validate that the loaded user matches token claims
+                    if (userDetails == null) {
+                        System.out.println("⚠️ JWT Authentication - User not found: " + identifier + ", clearing context");
+                        SecurityContextHolder.clearContext();
+                        // Don't return here - let the request continue to check if endpoint is public
+                    } else {
+                        // Set up authentication context
+                        UsernamePasswordAuthenticationToken authentication = 
+                            new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                        authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                        
+                        SecurityContextHolder.getContext().setAuthentication(authentication);
+                        System.out.println("✅ JWT Authentication successful for: " + identifier);
+                    }
+                }
+            } catch (Exception e) {
+                System.out.println("❌ JWT Authentication failed: " + e.getMessage() + ", clearing context and continuing");
+                SecurityContextHolder.clearContext();
+                // Don't return here - let the request continue to check if endpoint is public
+            }
         }
         
         filterChain.doFilter(request, response);

@@ -42,8 +42,8 @@ const AdminNotificationComponent: React.FC<AdminNotificationComponentProps> = ({
   const [filter, setFilter] = useState<string>('all'); // 'all', 'unread', or specific section
 
   // Debug logging
-  console.log('🔔 AdminNotificationComponent rendered with userId:', userId);
-  console.log('🔔 Current notifications count:', notifications.length);
+  console.log('🔔 AdminNotificationComponent rendered');
+  console.log('🔔 Notifications loaded:', notifications.length);
   console.log('🔔 Unread count:', unreadCount);
 
   // Load admin notifications

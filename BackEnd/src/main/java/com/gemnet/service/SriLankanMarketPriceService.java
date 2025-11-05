@@ -127,21 +127,17 @@ public class SriLankanMarketPriceService {
                 BigDecimal sellerPrice = BigDecimal.valueOf(request.getSellerPrice());
                 BigDecimal predictedPrice = analysis.getWeightedPrice();
                 
-                // Give 75% weight to seller's price and 25% to market prediction
-                BigDecimal weightedPrice = sellerPrice.multiply(BigDecimal.valueOf(0.75))
-                                                   .add(predictedPrice.multiply(BigDecimal.valueOf(0.25)));
+                // Create a very tight range with 3% variance for Sri Lankan market around seller's price
+                BigDecimal tighterVariance = sellerPrice.multiply(BigDecimal.valueOf(0.03));
                 
-                // Create a tight range with 7% variance for Sri Lankan market
-                BigDecimal tighterVariance = weightedPrice.multiply(BigDecimal.valueOf(0.07));
+                finalMinPrice = sellerPrice.subtract(tighterVariance).max(BigDecimal.ZERO);
+                finalMaxPrice = sellerPrice.add(tighterVariance);
                 
-                finalMinPrice = weightedPrice.subtract(tighterVariance).max(BigDecimal.ZERO);
-                finalMaxPrice = weightedPrice.add(tighterVariance);
+                // Ensure seller's price is always within a tight ±5% bounds
+                finalMinPrice = finalMinPrice.max(sellerPrice.multiply(BigDecimal.valueOf(0.95)));
+                finalMaxPrice = finalMaxPrice.min(sellerPrice.multiply(BigDecimal.valueOf(1.05)));
                 
-                // Ensure seller's price is within reasonable bounds
-                finalMinPrice = finalMinPrice.min(sellerPrice.multiply(BigDecimal.valueOf(0.88)));
-                finalMaxPrice = finalMaxPrice.max(sellerPrice.multiply(BigDecimal.valueOf(1.12)));
-                
-                logger.info("🎯 Sri Lankan seller-weighted range: Market: {} LKR, Seller: {} LKR, Final: {} - {} LKR", 
+                logger.info("🎯 Sri Lankan seller-anchored range: Market: {} LKR, Seller: {} LKR, Final: {} - {} LKR", 
                            predictedPrice, sellerPrice, finalMinPrice, finalMaxPrice);
             }
             
@@ -318,8 +314,7 @@ public class SriLankanMarketPriceService {
         
         BigDecimal totalWeightedPrice = BigDecimal.ZERO;
         double totalWeight = 0.0;
-        BigDecimal minPrice = null;
-        BigDecimal maxPrice = null;
+        List<BigDecimal> prices = new ArrayList<>();
         
         for (SriLankanGemData gem : similarGems) {
             double similarity = calculateSimilarityScore(gem, request);
@@ -328,13 +323,36 @@ public class SriLankanMarketPriceService {
             BigDecimal price = gem.getPriceLkr();
             totalWeightedPrice = totalWeightedPrice.add(price.multiply(BigDecimal.valueOf(weight)));
             totalWeight += weight;
-            
-            if (minPrice == null || price.compareTo(minPrice) < 0) minPrice = price;
-            if (maxPrice == null || price.compareTo(maxPrice) > 0) maxPrice = price;
+            prices.add(price);
         }
         
         BigDecimal weightedPrice = totalWeight > 0 ? 
             totalWeightedPrice.divide(BigDecimal.valueOf(totalWeight), RoundingMode.HALF_UP) : BigDecimal.ZERO;
+        
+        // Calculate realistic min/max using statistical approach instead of extremes
+        Collections.sort(prices);
+        BigDecimal minPrice, maxPrice;
+        
+        if (request.getSellerPrice() != null && request.getSellerPrice() > 0) {
+            // When seller price is available, create tight bounds around it
+            BigDecimal sellerPrice = BigDecimal.valueOf(request.getSellerPrice());
+            // Use 10% variance as the base range for market analysis
+            BigDecimal variance = sellerPrice.multiply(BigDecimal.valueOf(0.10));
+            minPrice = sellerPrice.subtract(variance).max(BigDecimal.ZERO);
+            maxPrice = sellerPrice.add(variance);
+        } else {
+            // When no seller price, use 25th and 75th percentile for more reasonable range
+            int size = prices.size();
+            if (size >= 4) {
+                minPrice = prices.get(size / 4); // 25th percentile
+                maxPrice = prices.get((3 * size) / 4); // 75th percentile  
+            } else {
+                // For small datasets, use weighted price +/- 15%
+                BigDecimal variance = weightedPrice.multiply(BigDecimal.valueOf(0.15));
+                minPrice = weightedPrice.subtract(variance).max(BigDecimal.ZERO);
+                maxPrice = weightedPrice.add(variance);
+            }
+        }
         
         double confidence = calculateConfidence(similarGems, request);
         
@@ -441,10 +459,24 @@ public class SriLankanMarketPriceService {
     
     private PricePredictionResponse createFallbackResponse(PricePredictionRequest request) {
         PricePredictionResponse response = new PricePredictionResponse();
-        response.setPredictedPrice(BigDecimal.valueOf(50000)); // Default LKR price
-        response.setMinPrice(BigDecimal.valueOf(25000));
-        response.setMaxPrice(BigDecimal.valueOf(100000));
-        response.setConfidence(0.3);
+        
+        // If seller price is available, create a tight range around it
+        if (request.getSellerPrice() != null && request.getSellerPrice() > 0) {
+            BigDecimal sellerPrice = BigDecimal.valueOf(request.getSellerPrice());
+            BigDecimal variance = sellerPrice.multiply(BigDecimal.valueOf(0.02)); // 2% variance
+            
+            response.setPredictedPrice(sellerPrice);
+            response.setMinPrice(sellerPrice.subtract(variance).max(BigDecimal.ZERO));
+            response.setMaxPrice(sellerPrice.add(variance));
+            response.setConfidence(0.6); // Higher confidence when using seller price
+        } else {
+            // Conservative fallback when no seller price available
+            response.setPredictedPrice(BigDecimal.valueOf(100000)); // Default LKR price
+            response.setMinPrice(BigDecimal.valueOf(80000));
+            response.setMaxPrice(BigDecimal.valueOf(120000));
+            response.setConfidence(0.3);
+        }
+        
         response.setMethodUsed("Sri Lankan Market Fallback");
         response.setDataPoints(0);
         response.setMarketInsights("Limited Sri Lankan market data available for this specification.");

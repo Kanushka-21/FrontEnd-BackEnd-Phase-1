@@ -61,7 +61,7 @@ const NoShowManagement: React.FC<NoShowManagementProps> = ({ user: _user }) => {
   });
   const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
 
-  // Fetch no-show records
+  // Fetch participation records
   useEffect(() => {
     fetchNoShowRecords();
   }, []);
@@ -73,20 +73,20 @@ const NoShowManagement: React.FC<NoShowManagementProps> = ({ user: _user }) => {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
         }
       });
       
       const data = await response.json();
       if (data.success && data.records) {
         setNoShowRecords(data.records);
-        setMessage({ type: 'success', text: `Loaded ${data.records.length} no-show records from backend` });
+        setMessage({ type: 'success', text: `Loaded ${data.records.length} participation records from backend` });
       } else {
-        setMessage({ type: 'error', text: data.message || 'Failed to load no-show records' });
+        setMessage({ type: 'error', text: data.message || 'Failed to load participation records' });
         setNoShowRecords([]);
       }
     } catch (error) {
-      console.error('Error fetching no-show records:', error);
+      console.error('Error fetching participation records:', error);
       setMessage({ type: 'error', text: 'Failed to connect to backend. Please check if the server is running.' });
       setNoShowRecords([]);
     } finally {
@@ -101,7 +101,7 @@ const NoShowManagement: React.FC<NoShowManagementProps> = ({ user: _user }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
         },
         body: JSON.stringify({
           meetingId: selectedRecord?.meetingId,
@@ -137,7 +137,7 @@ const NoShowManagement: React.FC<NoShowManagementProps> = ({ user: _user }) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
         }
       });
 
@@ -192,7 +192,7 @@ const NoShowManagement: React.FC<NoShowManagementProps> = ({ user: _user }) => {
         <div className="max-w-7xl mx-auto">
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading no-show management data...</p>
+            <p className="text-gray-600">Loading participation management data...</p>
           </div>
         </div>
       </div>
@@ -227,7 +227,7 @@ const NoShowManagement: React.FC<NoShowManagementProps> = ({ user: _user }) => {
             <div>
               <h1 className="text-2xl font-bold text-gray-900 flex items-center">
                 <Shield className="w-8 h-8 text-red-600 mr-3" />
-                No-Show Management
+                Not Participants Management
               </h1>
               <p className="text-gray-600 mt-1">Monitor and manage user attendance violations</p>
             </div>
@@ -328,7 +328,7 @@ const NoShowManagement: React.FC<NoShowManagementProps> = ({ user: _user }) => {
                     User
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    No-Show History
+                    Not Participated History
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
@@ -336,17 +336,14 @@ const NoShowManagement: React.FC<NoShowManagementProps> = ({ user: _user }) => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Last Incident
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredRecords.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center">
+                    <td colSpan={4} className="px-6 py-12 text-center">
                       <Shield className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-500">No no-show records found</p>
+                      <p className="text-gray-500">No participation records found</p>
                     </td>
                   </tr>
                 ) : (
@@ -365,7 +362,7 @@ const NoShowManagement: React.FC<NoShowManagementProps> = ({ user: _user }) => {
                       
                       <td className="px-6 py-4">
                         <div className="text-sm text-gray-900">
-                          <span className="font-medium text-red-600">{record.noShowCount}</span> no-shows
+                          <span className="font-medium text-red-600">{record.noShowCount}</span> not participated
                         </div>
                         <div className="text-sm text-gray-500">
                           out of {record.totalMeetings} meetings
@@ -392,50 +389,6 @@ const NoShowManagement: React.FC<NoShowManagementProps> = ({ user: _user }) => {
                           </div>
                         )}
                       </td>
-                      
-                      <td className="px-6 py-4">
-                        <div className="flex items-center space-x-2">
-                          <button
-                            onClick={() => {
-                              setSelectedRecord(record);
-                              setShowDetailsModal(true);
-                            }}
-                            className="text-blue-600 hover:text-blue-800 text-sm"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          
-                          {record.absenceReason && !record.adminVerified && (
-                            <button
-                              onClick={() => {
-                                setSelectedRecord(record);
-                                setShowReviewModal(true);
-                              }}
-                              className="text-yellow-600 hover:text-yellow-800 text-sm"
-                            >
-                              <FileText className="w-4 h-4" />
-                            </button>
-                          )}
-                          
-                          {record.status !== 'BLOCKED' && record.noShowCount >= 2 && (
-                            <button
-                              onClick={() => handleUserAction(record.userId, 'BLOCK')}
-                              className="text-red-600 hover:text-red-800 text-sm"
-                            >
-                              <Ban className="w-4 h-4" />
-                            </button>
-                          )}
-                          
-                          {record.status === 'BLOCKED' && (
-                            <button
-                              onClick={() => handleUserAction(record.userId, 'UNBLOCK')}
-                              className="text-green-600 hover:text-green-800 text-sm"
-                            >
-                              <CheckCircle className="w-4 h-4" />
-                            </button>
-                          )}
-                        </div>
-                      </td>
                     </tr>
                   ))
                 )}
@@ -450,7 +403,7 @@ const NoShowManagement: React.FC<NoShowManagementProps> = ({ user: _user }) => {
             <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               <div className="p-6">
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-xl font-bold text-gray-900">No-Show Details</h3>
+                  <h3 className="text-xl font-bold text-gray-900">Not Participated Details</h3>
                   <button
                     onClick={() => {
                       setShowDetailsModal(false);
@@ -486,9 +439,9 @@ const NoShowManagement: React.FC<NoShowManagementProps> = ({ user: _user }) => {
                     </div>
                   </div>
 
-                  {/* Recent No-Shows */}
+                  {/* Recent Participation Issues */}
                   <div className="bg-red-50 rounded-lg p-4">
-                    <h4 className="font-semibold text-gray-900 mb-3">Recent No-Show Incidents</h4>
+                    <h4 className="font-semibold text-gray-900 mb-3">Recent Not Participated Incidents</h4>
                     <div className="space-y-3">
                       {selectedRecord.recentNoShows.map((incident, index) => (
                         <div key={index} className="bg-white rounded p-3 border border-red-200">

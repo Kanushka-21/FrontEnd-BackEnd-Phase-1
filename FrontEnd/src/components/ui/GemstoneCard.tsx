@@ -16,7 +16,7 @@ const formatLKR = (price: number) => {
   }).format(price);
 };
 
-const GemstoneCard: React.FC<GemstoneCardProps> = ({ gemstone, onViewDetails }) => {
+const GemstoneCard: React.FC<GemstoneCardProps> = ({ gemstone, onViewDetails, onCountdownComplete }) => {
   const [imageError, setImageError] = React.useState(false);
   const [showVideo, setShowVideo] = React.useState(false);
   
@@ -216,6 +216,7 @@ const GemstoneCard: React.FC<GemstoneCardProps> = ({ gemstone, onViewDetails }) 
               listingStatus={gemstone.listingStatus}
               className="justify-center"
               showIcon={true}
+              onCountdownComplete={onCountdownComplete} // Pass callback to refresh marketplace data
             />
           </div>
           

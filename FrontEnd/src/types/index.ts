@@ -370,6 +370,7 @@ export interface NotificationInfo {
 export interface GemstoneCardProps {
   gemstone: Gemstone;
   onViewDetails?: (id: string) => void;
+  onCountdownComplete?: () => void; // New callback for when countdown expires
 }
 
 export interface DetailedGemstone extends Gemstone {

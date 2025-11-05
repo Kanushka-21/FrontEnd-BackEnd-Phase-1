@@ -61,6 +61,7 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
 }) => {
   const [remainingSeconds, setRemainingSeconds] = useState(initialRemainingSeconds);
   const [countdown, setCountdown] = useState<CountdownTime>({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+  const [isLocallyExpired, setIsLocallyExpired] = useState(false); // Track local expiration
 
   // Function to refresh countdown data
   const refreshCountdown = async () => {
@@ -78,6 +79,10 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
           // Only update countdown if the item is not sold
           if (data.data.listingStatus !== 'sold' && data.data.listingStatus !== 'expired_no_bids') {
             setRemainingSeconds(data.data.remainingTimeSeconds || 0);
+            // Reset local expiration if we got new time from backend
+            if ((data.data.remainingTimeSeconds || 0) > 0) {
+              setIsLocallyExpired(false);
+            }
             
             // Notify parent component that countdown was updated
             if (onCountdownUpdate) {
@@ -126,6 +131,8 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
           
           if (newSeconds <= 0) {
             console.log(`⏰ COUNTDOWN COMPLETE for listing ${listingId}`);
+            // Set local expiration immediately for instant UI update
+            setIsLocallyExpired(true);
             // Process expired bid when countdown completes
             processExpiredBid(listingId);
             if (onCountdownComplete) {
@@ -157,6 +164,10 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
       listingStatus
     });
     setRemainingSeconds(initialRemainingSeconds);
+    // Reset local expiration if we have new time
+    if (initialRemainingSeconds > 0) {
+      setIsLocallyExpired(false);
+    }
     
     console.log(`⏰ FIXED: Timer will start if remainingSeconds > 0 for listing ${listingId} (status: ${listingStatus}, remainingSeconds: ${initialRemainingSeconds})`);
   }, [initialRemainingSeconds, biddingActive, isExpired, listingStatus, listingId]);
@@ -209,8 +220,8 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
     );
   }
 
-  // If expired or time has run out 
-  if (isExpired && listingStatus !== 'sold' && listingStatus !== 'expired_no_bids') {
+  // If expired or time has run out (including local expiration)
+  if ((isExpired || isLocallyExpired || remainingSeconds <= 0) && listingStatus !== 'sold' && listingStatus !== 'expired_no_bids') {
     // For expired items, check if there's a winner to show SOLD badge
     return (
       <div className={`flex items-center gap-2 text-red-600 ${className}`}>
@@ -218,6 +229,19 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
         <div className="flex flex-col items-center">
           <span className="text-sm font-bold">Bidding Closed</span>
           <span className="text-xs font-semibold bg-red-100 text-red-800 px-2 py-0.5 rounded">SOLD</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't show countdown if locally expired
+  if (isLocallyExpired || remainingSeconds <= 0) {
+    return (
+      <div className={`flex items-center gap-2 text-red-600 ${className}`}>
+        {showIcon && <AlertCircle className="w-4 h-4" />}
+        <div className="flex flex-col items-center">
+          <span className="text-sm font-bold">Bidding Closed</span>
+          <span className="text-xs font-semibold bg-red-100 text-red-800 px-2 py-0.5 rounded">EXPIRED</span>
         </div>
       </div>
     );
@@ -255,7 +279,7 @@ const CountdownTimer: React.FC<CountdownTimerProps> = ({
         </div>
       </div>
       
-      {/* Testing Tools - Only show if enabled */}
+      {/* Testing Tools - Only show if enabled (set to false for demonstrations) */}
       {showTester && (
         <CountdownTester 
           listingId={listingId}

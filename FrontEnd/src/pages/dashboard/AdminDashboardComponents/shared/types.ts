@@ -75,6 +75,7 @@ export interface Advertisement {
   clicks?: number;
   impressions?: number;
   location?: string;
+  priority?: number; // Priority for homepage display order (higher = shows first)
 }
 
 // Statistics interface

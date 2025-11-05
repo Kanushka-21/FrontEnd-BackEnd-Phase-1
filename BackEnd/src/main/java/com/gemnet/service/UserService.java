@@ -13,6 +13,7 @@ import com.gemnet.security.JwtTokenProvider;
 import com.gemnet.exception.UserAlreadyExistsException;
 import com.gemnet.exception.UserNotFoundException;
 import com.gemnet.exception.InvalidCredentialsException;
+import java.util.concurrent.CompletableFuture;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -97,26 +98,27 @@ public class UserService {
             // Save user
             User savedUser = userRepository.save(user);
             
-            // Notify admin of new user registration
-            try {
-                notificationService.notifyAdminOfNewUserRegistration(
-                    savedUser.getId(), 
-                    savedUser.getEmail(), 
-                    savedUser.getFirstName() + " " + savedUser.getLastName()
-                );
-            } catch (Exception e) {
-                System.err.println("⚠️ Failed to notify admin of new user registration: " + e.getMessage());
-                // Don't fail the registration if notification fails
-            }
-            
-            // Send welcome email to the new user
-            try {
-                emailService.sendWelcomeEmail(savedUser);
-                System.out.println("📧 Welcome email sent to new user: " + savedUser.getEmail());
-            } catch (Exception e) {
-                System.err.println("⚠️ Failed to send welcome email: " + e.getMessage());
-                // Don't fail the registration if welcome email fails
-            }
+            // Perform async operations after successful registration
+            CompletableFuture.runAsync(() -> {
+                // Notify admin of new user registration
+                try {
+                    notificationService.notifyAdminOfNewUserRegistration(
+                        savedUser.getId(), 
+                        savedUser.getEmail(), 
+                        savedUser.getFirstName() + " " + savedUser.getLastName()
+                    );
+                } catch (Exception e) {
+                    System.err.println("⚠️ Failed to notify admin of new user registration: " + e.getMessage());
+                }
+                
+                // Send welcome email to the new user
+                try {
+                    emailService.sendWelcomeEmail(savedUser);
+                    System.out.println("📧 Welcome email sent to new user: " + savedUser.getEmail());
+                } catch (Exception e) {
+                    System.err.println("⚠️ Failed to send welcome email: " + e.getMessage());
+                }
+            });
             
             System.out.println("✅ User registered successfully: " + savedUser.getId());
             return ApiResponse.success("User registered successfully. Proceed to face verification.", savedUser.getId());

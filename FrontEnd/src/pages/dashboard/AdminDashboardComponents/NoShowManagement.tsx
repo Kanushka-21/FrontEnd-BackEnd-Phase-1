@@ -212,7 +212,7 @@ const NoShowManagement: React.FC = () => {
       if (data.success) {
         const newNoShowCount = data.newNoShowCount !== undefined ? data.newNoShowCount : 'unknown';
         message.success(
-          `User unblocked successfully! No-show count reduced to ${newNoShowCount}.`,
+          `User unblocked successfully! Missed meeting count reduced to ${newNoShowCount}.`,
           5
         );
         fetchData();
@@ -232,14 +232,14 @@ const NoShowManagement: React.FC = () => {
       });
 
       if (response.data.success) {
-        message.success('No-show count reset successfully');
+        message.success('Missed meeting count reset successfully');
         fetchData();
       } else {
-        message.error(response.data.message || 'Failed to reset no-show count');
+        message.error(response.data.message || 'Failed to reset missed meeting count');
       }
     } catch (error) {
-      console.error('Error resetting no-show count:', error);
-      message.error('Failed to reset no-show count');
+      console.error('Error resetting missed meeting count:', error);
+      message.error('Failed to reset missed meeting count');
     }
   };
 
@@ -312,7 +312,7 @@ const NoShowManagement: React.FC = () => {
       ),
     },
     {
-      title: 'No-Shows',
+      title: 'Missed Meetings',
       dataIndex: 'noShowCount',
       key: 'noShowCount',
       render: (count: number) => (
@@ -320,7 +320,7 @@ const NoShowManagement: React.FC = () => {
       ),
     },
     {
-      title: 'Last No-Show',
+      title: 'Last Missed Meeting',
       dataIndex: 'lastNoShowDate',
       key: 'lastNoShowDate',
       render: (date: string) => date ? new Date(date).toLocaleDateString() : '-',
@@ -341,14 +341,14 @@ const NoShowManagement: React.FC = () => {
             View
           </Button>
           {record.accountStatus === 'BLOCKED' && (
-            <Tooltip title="Unblock user and reduce their no-show count by 1 as administrative grace">
+            <Tooltip title="Unblock user and reduce their missed meeting count by 1 as administrative grace">
               <Button
                 type="primary"
                 size="small"
                 icon={<UnlockOutlined />}
                 onClick={() => {
                   Modal.confirm({
-                    title: '🔓 Unblock User & Reduce No-Show Count',
+                    title: '🔓 Unblock User & Reduce Missed Meeting Count',
                     content: (
                       <div>
                         <p>Are you sure you want to unblock <strong>{record.firstName} {record.lastName}</strong>?</p>
@@ -364,7 +364,7 @@ const NoShowManagement: React.FC = () => {
                           </p>
                           <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px', color: '#666' }}>
                             <li>Change account status to ACTIVE</li>
-                            <li>Reduce no-show count by 1 (current: {record.noShowCount})</li>
+                            <li>Reduce missed meeting count by 1 (current: {record.noShowCount})</li>
                             <li>Send notification email to user</li>
                           </ul>
                         </div>

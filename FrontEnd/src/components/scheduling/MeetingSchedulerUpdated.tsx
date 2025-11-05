@@ -24,8 +24,8 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
   const [formData, setFormData] = useState({
     proposedDate: '',
     proposedTime: '',
-    location: '',
-    meetingType: 'PHYSICAL',
+    location: 'GemNet Office',
+    meetingType: 'Physical Meeting',
     buyerNotes: ''
   });
   const [errors, setErrors] = useState<any>({});
@@ -91,7 +91,7 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
         }
         
         // Get the authentication token - check both possible storage locations
-        const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+        const token = localStorage.getItem('authToken') || localStorage.getItem('token');
         
         // Create the authorization header if we have a token
         const authHeaders = token ? { 'Authorization': `Bearer ${token}` } : {};
@@ -189,7 +189,7 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
                   fullName: sellerData.fullName || `${sellerData.firstName || ''} ${sellerData.lastName || ''}`.trim(),
                   email: sellerData.email || '',
                   phoneNumber: sellerData.phoneNumber || sellerData.phone || '',
-                  location: sellerData.location || sellerData.address || '',
+                  location: 'GemNet Office',
                   sellerId: sellerData.id || sellerData.userId || sellerId
                 };
                 
@@ -226,7 +226,7 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
                         fullName: `${profileData.firstName || ''} ${profileData.lastName || ''}`.trim(),
                         email: profileData.email || '',
                         phoneNumber: profileData.phoneNumber || profileData.phone || '',
-                        location: profileData.address || profileData.location || '',
+                        location: 'GemNet Office',
                         sellerId: listingSellerId
                       };
                       
@@ -299,7 +299,7 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
                   fullName: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
                   email: user.email || '',
                   phoneNumber: user.phoneNumber || user.phone || '',
-                  location: user.address || user.location || '',
+                  location: 'GemNet Office',
                   sellerId: sellerId
                 };
                 
@@ -322,7 +322,7 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
             fullName: purchase.sellerFullName || purchase.sellerName || '',
             email: purchase.sellerEmail || '',
             phoneNumber: purchase.sellerPhone || purchase.sellerPhoneNumber || '',
-            location: purchase.sellerLocation || purchase.sellerAddress || '',
+            location: 'GemNet Office',
             sellerId: sellerId || purchase.sellerId || 'unknown'
           };
           
@@ -344,7 +344,7 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
               fullName: sellerObj.fullName || sellerObj.name || `${sellerObj.firstName || ''} ${sellerObj.lastName || ''}`.trim(),
               email: sellerObj.email || '',
               phoneNumber: sellerObj.phoneNumber || sellerObj.phone || '',
-              location: sellerObj.location || sellerObj.address || '',
+              location: 'GemNet Office',
               sellerId: sellerObj.id || sellerObj.userId || sellerId || 'unknown'
             };
             
@@ -404,7 +404,7 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
         fullName: purchase?.sellerName || purchase?.sellerFullName || purchase?.userName || purchase?.name || "Unknown Seller",
         email: purchase?.sellerEmail || purchase?.email || sellerId + "@gemnet.lk",
         phoneNumber: purchase?.sellerPhone || purchase?.sellerPhoneNumber || purchase?.phone || "+94 XX XXX XXXX",
-        location: purchase?.sellerLocation || purchase?.sellerAddress || purchase?.location || "Sri Lanka",
+        location: 'GemNet Office',
         sellerId: sellerId
       };
       
@@ -420,6 +420,14 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
   const getMinDate = () => {
     const today = new Date();
     return today.toISOString().split('T')[0];
+  };
+
+  // Get maximum date (5 days from today)
+  const getMaxDate = () => {
+    const today = new Date();
+    const maxDate = new Date(today);
+    maxDate.setDate(today.getDate() + 5);
+    return maxDate.toISOString().split('T')[0];
   };
 
   // Get minimum time for today
@@ -459,17 +467,18 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
       newErrors.proposedTime = 'Please select a time';
     }
 
-    if (!formData.location.trim()) {
-      newErrors.location = 'Please specify a location';
-    }
-
-    // Check if proposed date/time is in the future
+    // Check if proposed date/time is in the future and within 5 days
     if (formData.proposedDate && formData.proposedTime) {
       const proposedDateTime = new Date(`${formData.proposedDate}T${formData.proposedTime}`);
       const now = new Date();
+      const maxDate = new Date();
+      maxDate.setDate(now.getDate() + 5);
+      maxDate.setHours(23, 59, 59, 999); // End of the 5th day
       
       if (proposedDateTime <= now) {
         newErrors.proposedTime = 'Please select a future date and time';
+      } else if (proposedDateTime > maxDate) {
+        newErrors.proposedDate = 'Please select a date within the next 5 days';
       }
     }
 
@@ -545,8 +554,8 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
         // Backend expects proposedDateTime not requestedDateTime
         proposedDateTime: proposedDateTime,
         location: formData.location,
-        meetingType: formData.meetingType,
-        buyerNotes: formData.buyerNotes,
+        meetingType: 'IN_PERSON',
+        buyerNotes: '',
         
         // Include purchase ID for reference - using the right field name
         purchaseId: purchaseId || gemListingId || "test-purchase-123",
@@ -592,8 +601,8 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
         // Method 3: Direct fetch to the API for maximum flexibility
         console.log('📝 Attempt 3: Direct API call as last resort');
         
-        // Get the authentication token - check both possible storage locations
-        const token = localStorage.getItem('token') || localStorage.getItem('authToken');
+        // Get the authentication token
+        const token = localStorage.getItem('authToken');
         // Create the authorization header if we have a token
         const authHeaders = token ? { 'Authorization': `Bearer ${token}` } : {};
         const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:9092';
@@ -602,7 +611,7 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
           buyerId: "user123",
           sellerId: "seller123",
           proposedDateTime: proposedDateTime,
-          location: formData.location || "Colombo",
+          location: 'GemNet Office',
           meetingType: "IN_PERSON"
         };
         
@@ -858,6 +867,7 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
                   value={formData.proposedDate}
                   onChange={handleInputChange}
                   min={getMinDate()}
+                  max={getMaxDate()}
                   className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                     errors.proposedDate ? 'border-red-300' : 'border-gray-300'
                   }`}
@@ -865,6 +875,7 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
                 {errors.proposedDate && (
                   <p className="mt-1 text-sm text-red-600">{errors.proposedDate}</p>
                 )}
+                <p className="mt-1 text-xs text-gray-500">Select a date within the next 5 days</p>
               </div>
 
               {/* Time Selection */}
@@ -890,62 +901,30 @@ const MeetingScheduler: React.FC<MeetingSchedulerProps> = ({ purchase, user, onB
               </div>
             </div>
 
-            {/* Meeting Type */}
+            {/* Meeting Type - Static */}
             <div>
-              <label htmlFor="meetingType" className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Meeting Type
               </label>
-              <select
-                id="meetingType"
-                name="meetingType"
-                value={formData.meetingType}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="PHYSICAL">Physical Meeting</option>
-                <option value="PICKUP">Pickup Location</option>
-                <option value="VIRTUAL">Virtual Meeting</option>
-              </select>
+              <div className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-gray-700 font-medium">
+                Physical Meeting
+              </div>
+              <p className="mt-1 text-xs text-gray-500">All meetings are conducted as physical meetings</p>
             </div>
 
             {/* Location */}
             <div>
-              <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 <MapPin className="w-4 h-4 inline mr-2" />
                 Meeting Location
               </label>
-              <input
-                type="text"
-                id="location"
-                name="location"
-                value={formData.location}
-                onChange={handleInputChange}
-                placeholder="Enter the meeting location or address"
-                className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  errors.location ? 'border-red-300' : 'border-gray-300'
-                }`}
-              />
-              {errors.location && (
-                <p className="mt-1 text-sm text-red-600">{errors.location}</p>
-              )}
+              <div className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-gray-700 font-medium">
+                GemNet Office
+              </div>
+              <p className="mt-1 text-xs text-gray-500">All meetings are held at our secure GemNet office location</p>
             </div>
 
-            {/* Notes */}
-            <div>
-              <label htmlFor="buyerNotes" className="block text-sm font-medium text-gray-700 mb-2">
-                <MessageSquare className="w-4 h-4 inline mr-2" />
-                Additional Notes (Optional)
-              </label>
-              <textarea
-                id="buyerNotes"
-                name="buyerNotes"
-                value={formData.buyerNotes}
-                onChange={handleInputChange}
-                rows={4}
-                placeholder="Any additional information or special requests for the meeting..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
+
 
             {/* Error Message */}
             {errors.submit && (

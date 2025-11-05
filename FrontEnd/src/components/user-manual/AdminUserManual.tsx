@@ -59,7 +59,7 @@ const AdminUserManual: React.FC<AdminUserManualProps> = ({ onNavigate }) => {
             '📺 Advertisement Management: Approve promotional content',
             '📅 Meeting Requests: Oversee buyer-seller meeting coordination',
             '📊 Attendance Tracking: Monitor meeting completion rates',
-            '🚫 No-Show Management: Handle missed meeting incidents',
+            '🚫 Not Participants Management: Handle missed meeting incidents',
             '🔒 Blocked Users: Manage suspended and restricted accounts',
             '💬 Feedback Management: Review and respond to user feedback',
             '⚙️ System Settings: Configure platform parameters and policies'
@@ -246,23 +246,23 @@ const AdminUserManual: React.FC<AdminUserManualProps> = ({ onNavigate }) => {
         },
         {
           title: 'Attendance Tracking System',
-          description: 'Monitor meeting completion and no-show incidents:',
+          description: 'Monitor meeting completion and missed meeting incidents:',
           actionButton: { text: 'View Attendance', action: () => handleNavigateToSection('attendance') },
           features: [
             { icon: <CheckCircle className="w-4 h-4 text-green-500" />, text: 'COMPLETED: Both parties attended and transaction completed' },
-            { icon: <AlertCircle className="w-4 h-4 text-red-500" />, text: 'BUYER NO-SHOW: Buyer failed to attend scheduled meeting' },
-            { icon: <AlertCircle className="w-4 h-4 text-orange-500" />, text: 'SELLER NO-SHOW: Seller failed to attend scheduled meeting' },
+            { icon: <AlertCircle className="w-4 h-4 text-red-500" />, text: 'BUYER NOT PARTICIPATED: Buyer failed to attend scheduled meeting' },
+            { icon: <AlertCircle className="w-4 h-4 text-orange-500" />, text: 'SELLER NOT PARTICIPATED: Seller failed to attend scheduled meeting' },
             { icon: <Clock className="w-4 h-4 text-yellow-500" />, text: 'SCHEDULED: Meeting confirmed but not yet completed' }
           ]
         },
         {
-          title: 'No-Show Management',
+          title: 'Not Participants Management',
           description: 'Handle missed meeting incidents and policy enforcement:',
-          actionButton: { text: 'Manage No-Shows', action: () => handleNavigateToSection('no-show-management') },
+          actionButton: { text: 'Manage Not Participants', action: () => handleNavigateToSection('no-show-management') },
           steps: [
-            'Review reported no-show incidents',
+            'Review reported missed meeting incidents',
             'Verify attendance status with both parties',
-            'Issue warnings for first-time no-shows',
+            'Issue warnings for first-time missed meetings',
             'Apply account restrictions for repeat offenders',
             'Track user reliability and meeting completion rates'
           ]
@@ -311,7 +311,7 @@ const AdminUserManual: React.FC<AdminUserManualProps> = ({ onNavigate }) => {
           description: 'Typical policy violations and appropriate administrative responses:',
           violations: [
             { 
-              type: 'Meeting No-Shows', 
+              type: 'Meeting Missed Meetings', 
               severity: 'Medium', 
               action: 'Warning → Temporary bidding restriction → Account suspension',
               color: 'yellow'
@@ -429,7 +429,7 @@ const AdminUserManual: React.FC<AdminUserManualProps> = ({ onNavigate }) => {
             { icon: <Users className="w-4 h-4" />, text: 'User Statistics: Registration rates, verification status, active users' },
             { icon: <Package className="w-4 h-4" />, text: 'Listing Metrics: Submission rates, approval rates, auction success' },
             { icon: <DollarSign className="w-4 h-4" />, text: 'Transaction Volume: Sales completed, average values, commission earned' },
-            { icon: <Calendar className="w-4 h-4" />, text: 'Meeting Statistics: Completion rates, no-show incidents, scheduling efficiency' }
+            { icon: <Calendar className="w-4 h-4" />, text: 'Meeting Statistics: Completion rates, missed meeting incidents, scheduling efficiency' }
           ]
         },
         {

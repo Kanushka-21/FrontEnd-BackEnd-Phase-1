@@ -210,33 +210,35 @@ public class PricePredictionService {
             response.setMethodUsed("Rule-based Sri Lankan Market Estimation");
             response.setAccuracyScore(0.65); // Rule-based accuracy
             
-            // Calculate price ranges - consider seller's price for tighter ranges
+            // Calculate price ranges - create tight ranges around seller's price
             BigDecimal minPrice, maxPrice;
             if (request.getSellerPrice() != null && request.getSellerPrice() > 0) {
-                // If seller's price is available, create a range that gives more weight to seller's price
+                // Always prioritize seller's price for realistic ranges
                 BigDecimal sellerPrice = BigDecimal.valueOf(request.getSellerPrice());
                 
-                // Give 70% weight to seller's price and 30% to AI prediction for more realistic ranges
-                BigDecimal weightedPrice = sellerPrice.multiply(BigDecimal.valueOf(0.7))
-                                                   .add(predictedPrice.multiply(BigDecimal.valueOf(0.3)));
+                // Give 85% weight to seller's price and 15% to AI prediction for realistic ranges
+                BigDecimal weightedPrice = sellerPrice.multiply(BigDecimal.valueOf(0.85))
+                                                   .add(predictedPrice.multiply(BigDecimal.valueOf(0.15)));
                 
+                // Use very tight variance (3-4%) to keep ranges realistic
                 BigDecimal variance;
                 if (Boolean.TRUE.equals(request.getIsCertified())) {
-                    // For certified gems, use 6% variance around the weighted price
-                    variance = weightedPrice.multiply(BigDecimal.valueOf(0.06));
+                    // For certified gems, use 4% variance
+                    variance = sellerPrice.multiply(BigDecimal.valueOf(0.04));
                 } else {
-                    // For non-certified gems, use 5% variance
-                    variance = weightedPrice.multiply(BigDecimal.valueOf(0.05));
+                    // For non-certified gems, use 3% variance  
+                    variance = sellerPrice.multiply(BigDecimal.valueOf(0.03));
                 }
                 
-                minPrice = weightedPrice.subtract(variance).max(BigDecimal.ZERO);
-                maxPrice = weightedPrice.add(variance);
+                // Create tight bounds around seller's price
+                minPrice = sellerPrice.subtract(variance).max(BigDecimal.ZERO);
+                maxPrice = sellerPrice.add(variance);
                 
-                // Ensure seller's price is within the range
-                minPrice = minPrice.min(sellerPrice.multiply(BigDecimal.valueOf(0.85)));
-                maxPrice = maxPrice.max(sellerPrice.multiply(BigDecimal.valueOf(1.15)));
+                // Ensure the range stays within ±8% of seller's price maximum
+                minPrice = minPrice.max(sellerPrice.multiply(BigDecimal.valueOf(0.92)));
+                maxPrice = maxPrice.min(sellerPrice.multiply(BigDecimal.valueOf(1.08)));
                 
-                logger.info("🎯 Seller-weighted range: Predicted: {} LKR, Seller: {} LKR, Final: {} - {} LKR", 
+                logger.info("🎯 Seller-anchored range: Predicted: {} LKR, Seller: {} LKR, Final: {} - {} LKR", 
                            predictedPrice, sellerPrice, minPrice, maxPrice);
             } else {
                 // Original logic when seller's price is not available

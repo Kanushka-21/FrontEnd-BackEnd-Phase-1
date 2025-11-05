@@ -63,6 +63,7 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
   // Price prediction state
   const [showPricePrediction, setShowPricePrediction] = useState(false);
   const [isPredicting, setIsPredicting] = useState(false);
+  const [predictionTrigger, setPredictionTrigger] = useState(0); // Key to force AIPricePrediction re-render
   const [loading, setLoading] = useState(false);
   
   // New state for data loading
@@ -545,22 +546,51 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
 
   // Handle price prediction
   const handlePricePrediction = () => {
+    console.log('🎯 handlePricePrediction called');
+    console.log('🎯 Current wizardData:', wizardData);
+    console.log('🎯 Current certificationType:', wizardData.certificationType);
+    console.log('🎯 Current basicInfo:', wizardData.basicInfo);
+    
     // Only allow prediction for certified gemstones
     if (wizardData.certificationType !== 'certified') {
+      console.log('❌ Not certified, showing warning');
       message.warning('AI Price Prediction is only available for certified gemstones.');
       return;
     }
 
     // Validate that we have enough basic info for prediction
     if (!wizardData.basicInfo.weight || !wizardData.basicInfo.species || !wizardData.basicInfo.color) {
+      console.log('❌ Missing required fields:', {
+        weight: wizardData.basicInfo.weight,
+        species: wizardData.basicInfo.species,
+        color: wizardData.basicInfo.color
+      });
       message.warning('Please fill in weight, species, and color information for accurate price prediction.');
       return;
     }
 
+    console.log('✅ Validation passed, starting prediction process');
+    console.log('🔍 Detailed basicInfo data for prediction:', {
+      weight: wizardData.basicInfo.weight,
+      color: wizardData.basicInfo.color,
+      species: wizardData.basicInfo.species,
+      variety: wizardData.basicInfo.variety,
+      clarity: wizardData.basicInfo.clarity,
+      cut: wizardData.basicInfo.cut,
+      shape: wizardData.basicInfo.shape,
+      treatment: wizardData.basicInfo.treatment,
+      certificationType: wizardData.certificationType,
+      isCertified: wizardData.certificationType === 'certified'
+    });
+    
     setIsPredicting(true);
     setTimeout(() => {
       setIsPredicting(false);
       setShowPricePrediction(true);
+      // Increment trigger to force AIPricePrediction component to re-render with current form data
+      setPredictionTrigger(prev => prev + 1);
+      console.log('🎯 Price prediction triggered with current form data:', wizardData.basicInfo);
+      console.log('🎯 Prediction trigger incremented to:', predictionTrigger + 1);
     }, 1000); // Simulate prediction processing
   };
 
@@ -639,7 +669,9 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
         ...(wizardData.certificationType === 'certified' && {
           // Certificate information
           certificateNumber: wizardData.basicInfo.certificateNumber,
-          certifyingAuthority: wizardData.basicInfo.authority,
+          certifyingAuthority: Array.isArray(wizardData.basicInfo.authority) 
+            ? wizardData.basicInfo.authority[0] || '' 
+            : wizardData.basicInfo.authority || '',
           issueDate: Array.isArray(wizardData.basicInfo.issueDate) 
             ? wizardData.basicInfo.issueDate[0] || '' 
             : wizardData.basicInfo.issueDate || '',
@@ -650,6 +682,9 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
           origin: Array.isArray(wizardData.basicInfo.origin) 
             ? wizardData.basicInfo.origin[0] || '' 
             : wizardData.basicInfo.origin || '',
+          
+          // Set species field with default value for backend compatibility
+          species: wizardData.basicInfo.species || 'Not specified',
         }),
       };
 
@@ -1270,27 +1305,14 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
                   </Form.Item>
                 </Col>
                 
-                <Col xs={24} md={12}>
-                  <Form.Item
-                    label="Species"
-                    name="species"
-                    rules={[{ required: true, message: 'Please select species' }]}
-                  >
-                    <Select placeholder="Select species" size="large">
-                      <Select.Option value="Corundum">Corundum</Select.Option>
-                      <Select.Option value="Beryl">Beryl</Select.Option>
-                      <Select.Option value="Quartz">Quartz</Select.Option>
-                      <Select.Option value="Feldspar">Feldspar</Select.Option>
-                      <Select.Option value="Tourmaline">Tourmaline</Select.Option>
-                      <Select.Option value="Garnet">Garnet</Select.Option>
-                      <Select.Option value="Spinel">Spinel</Select.Option>
-                      <Select.Option value="Zircon">Zircon</Select.Option>
-                      <Select.Option value="Other">Other</Select.Option>
-                      <Select.Option value="Unknown">Unknown</Select.Option>
-                      <Select.Option value="Not specified">Not specified</Select.Option>
-                    </Select>
-                  </Form.Item>
-                </Col>
+                {/* Hidden species field to maintain backend compatibility */}
+                <Form.Item
+                  name="species"
+                  initialValue="Not specified"
+                  hidden
+                >
+                  <Input type="hidden" />
+                </Form.Item>
               </Row>
 
               <Row gutter={[24, 16]}>
@@ -1371,14 +1393,24 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
                       name="authority"
                       rules={[{ required: true, message: 'Please enter certifying authority' }]}
                     >
-                      <Select placeholder="Select authority" size="large">
+                      <Select 
+                        placeholder="Select or type certification authority" 
+                        size="large"
+                        mode="tags"
+                        maxTagCount={1}
+                        allowClear
+                        showSearch
+                      >
                         <Select.Option value="GIA">GIA (Gemological Institute of America)</Select.Option>
                         <Select.Option value="IGI">IGI (International Gemological Institute)</Select.Option>
                         <Select.Option value="SSEF">SSEF (Swiss Gemmological Institute)</Select.Option>
                         <Select.Option value="Gübelin">Gübelin Gem Lab</Select.Option>
                         <Select.Option value="AIGS">AIGS (Asian Institute of Gemological Sciences)</Select.Option>
                         <Select.Option value="CSL">CSL (Colored Stone Laboratory)</Select.Option>
-                        <Select.Option value="Other">Other</Select.Option>
+                        <Select.Option value="AGTA-GTC">AGTA Gemological Testing Center</Select.Option>
+                        <Select.Option value="LFG">Laboratory for Gemstone Research</Select.Option>
+                        <Select.Option value="NCGL">National Center for Gemstone Laboratories</Select.Option>
+                        <Select.Option value="TGL">Thai Gem Lab</Select.Option>
                         <Select.Option value="Unknown">Unknown</Select.Option>
                         <Select.Option value="Not specified">Not specified</Select.Option>
                       </Select>
@@ -1786,6 +1818,7 @@ const Listings: React.FC<ListingsProps> = ({ user }) => {
                 </div>
                 
                 <AIPricePrediction 
+                  key={`prediction-${predictionTrigger}`} // Force re-render when prediction is triggered
                   gemData={{
                     weight: wizardData.basicInfo.weight || '1.0',
                     color: wizardData.basicInfo.color || 'Blue',

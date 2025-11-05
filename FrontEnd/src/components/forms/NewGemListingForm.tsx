@@ -19,7 +19,6 @@ const { TextArea } = Input;
 // Comprehensive list of certified gemstone attributes
 const CERTIFIED_GEM_ATTRIBUTES = {
   identification: [
-    { name: 'species', label: 'Species', type: 'input' },
     { name: 'variety', label: 'Variety', type: 'input' }
   ],
   physical: [
@@ -261,6 +260,8 @@ const NewGemListingForm: React.FC<GemListingFormProps> = ({
         // Only include certificate file for certified gemstones
         ...(isCertified ? { certificateFile: certificateFile[0] } : {}),
         isCertified,
+        // Add default species value to maintain backend compatibility
+        species: formValues.species || 'Not specified',
         // For non-certified gemstones, explicitly set ALL certificate-related fields to null/empty
         ...(isCertified ? {} : {
           // CSL certificate fields

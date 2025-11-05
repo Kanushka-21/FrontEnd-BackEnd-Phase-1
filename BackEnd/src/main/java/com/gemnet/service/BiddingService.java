@@ -1330,10 +1330,10 @@ public class BiddingService {
             LocalDateTime newEndTime = currentEndTime.minusMinutes(reduceByMinutes);
             LocalDateTime now = LocalDateTime.now();
 
-            // Ensure the new end time is not in the past (minimum 30 seconds from now)
-            if (newEndTime.isBefore(now.plusSeconds(30))) {
-                newEndTime = now.plusSeconds(30);
-                System.out.println("⚠️ [TESTING] Adjusted minimum time to 30 seconds from now");
+            // Ensure the new end time is not in the past (minimum 10 seconds from now)
+            if (newEndTime.isBefore(now.plusSeconds(10))) {
+                newEndTime = now.plusSeconds(10);
+                System.out.println("⚠️ [TESTING] Adjusted minimum time to 10 seconds from now");
             }
 
             listing.setBiddingEndTime(newEndTime);

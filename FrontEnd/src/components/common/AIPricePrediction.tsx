@@ -32,6 +32,18 @@ const AIPricePrediction: React.FC<AIPricePredictionProps> = ({
   className = ''
 }) => {
   console.log('🎯 AIPricePrediction component initialized with gemData:', gemData);
+  console.log('🎯 isCertified value:', gemData.isCertified);
+  console.log('🎯 All gemData keys:', Object.keys(gemData));
+  console.log('🎯 Individual data values:', {
+    weight: gemData.weight,
+    color: gemData.color, 
+    species: gemData.species,
+    clarity: gemData.clarity,
+    cut: gemData.cut,
+    shape: gemData.shape,
+    treatment: gemData.treatment,
+    isCertified: gemData.isCertified
+  });
   
   const [prediction, setPrediction] = useState<PredictionResult | null>(null);
   const [loading, setLoading] = useState(true);
@@ -325,8 +337,15 @@ const AIPricePrediction: React.FC<AIPricePredictionProps> = ({
         console.log('🎯 fallbackCalculation returned result:', result);
         
         // Validate the result
-        if (!result || typeof result.predictedPrice !== 'number' || isNaN(result.predictedPrice)) {
+        if (!result || typeof result.predictedPrice !== 'number' || isNaN(result.predictedPrice) || result.predictedPrice <= 0) {
           console.error('❌ Invalid result from fallbackCalculation:', result);
+          console.error('❌ Result validation details:', {
+            resultExists: !!result,
+            predictedPriceType: typeof result?.predictedPrice,
+            predictedPriceValue: result?.predictedPrice,
+            isNaN: result?.predictedPrice ? isNaN(result.predictedPrice) : 'N/A',
+            isPositive: result?.predictedPrice ? result.predictedPrice > 0 : 'N/A'
+          });
           throw new Error('Invalid prediction result');
         }
         
